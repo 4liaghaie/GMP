@@ -22,6 +22,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 type RegisteredOrderListItem = {
   uuid: string;
+  verified?: boolean;
+  user?: string | null;
   order_number?: string | null;
 
   // optional legacy fields
@@ -98,6 +100,30 @@ async function deleteOrder(uuid: string) {
   }
 }
 
+async function setOrderVerified(uuid: string, verified: boolean) {
+  if (!API_BASE) throw new Error("متغیر NEXT_PUBLIC_API_BASE تنظیم نشده است");
+
+  const res = await authFetch(
+    `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/verify/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ verified }),
+    },
+  );
+
+  const data = (await res.json().catch(() => ({}))) as any;
+  if (!res.ok) {
+    const msg =
+      data?.detail ||
+      (typeof data === "object"
+        ? JSON.stringify(data)
+        : "خطا در تغییر وضعیت تایید");
+    throw new Error(msg);
+  }
+
+  return data as RegisteredOrderListItem;
+}
+
 export default function MyOrdersPage() {
   const router = useRouter();
 
@@ -106,8 +132,10 @@ export default function MyOrdersPage() {
   const [err, setErr] = React.useState("");
   const [items, setItems] = React.useState<RegisteredOrderListItem[]>([]);
   const [q, setQ] = React.useState("");
+  const [role, setRole] = React.useState<string>("user");
 
   const [deletingUuid, setDeletingUuid] = React.useState<string | null>(null);
+  const [verifyingUuid, setVerifyingUuid] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const access = localStorage.getItem("access");
@@ -115,8 +143,11 @@ export default function MyOrdersPage() {
       router.replace("/login");
       return;
     }
+    setRole(localStorage.getItem("role") || "user");
     setReady(true);
   }, [router]);
+
+  const isAdmin = role === "admin";
 
   const load = React.useCallback(() => {
     const ac = new AbortController();
@@ -161,6 +192,30 @@ export default function MyOrdersPage() {
       setErr(e?.message || "خطا در حذف");
     } finally {
       setDeletingUuid(null);
+    }
+  }
+
+  async function onToggleVerify(item: RegisteredOrderListItem) {
+    const next = !Boolean(item.verified);
+    const question = next
+      ? "این سفارش تایید شود؟"
+      : "تایید این سفارش لغو شود؟";
+
+    if (!window.confirm(question)) return;
+
+    setVerifyingUuid(item.uuid);
+    setErr("");
+    try {
+      const updated = await setOrderVerified(item.uuid, next);
+      setItems((prev) =>
+        prev.map((x) =>
+          x.uuid === item.uuid ? { ...x, verified: Boolean(updated.verified) } : x,
+        ),
+      );
+    } catch (e: any) {
+      setErr(e?.message || "خطا در تغییر وضعیت تایید");
+    } finally {
+      setVerifyingUuid(null);
     }
   }
 
@@ -227,6 +282,8 @@ export default function MyOrdersPage() {
                     <th>انقضا</th>
                     <th>ارز</th>
                     <th>کشور فروشنده</th>
+                    {isAdmin && <th>کاربر</th>}
+                    {isAdmin && <th>وضعیت تایید</th>}
                     <th>تعداد کالا</th>
                     <th>جمع تقریبی</th>
                     <th className="w-[180px]">عملیات</th>
@@ -238,7 +295,7 @@ export default function MyOrdersPage() {
                     <tr>
                       <td
                         className="px-3 py-6 text-center text-muted-foreground"
-                        colSpan={9}
+                        colSpan={isAdmin ? 11 : 9}
                       >
                         موردی یافت نشد.
                       </td>
@@ -271,6 +328,16 @@ export default function MyOrdersPage() {
                           <td>{o.expire_date || "-"}</td>
                           <td>{o.currency_type || "-"}</td>
                           <td>{o.seller_country || "-"}</td>
+                          {isAdmin && <td>{o.user || "-"}</td>}
+                          {isAdmin && (
+                            <td>
+                              {o.verified ? (
+                                <span className="text-emerald-700">تایید شده</span>
+                              ) : (
+                                <span className="text-amber-700">در انتظار تایید</span>
+                              )}
+                            </td>
+                          )}
                           <td>{goodsCount || "-"}</td>
                           <td>{total ? fmt(total) : "-"}</td>
                           <td>
@@ -291,6 +358,21 @@ export default function MyOrdersPage() {
                               >
                                 {deletingUuid === o.uuid ? "..." : "حذف"}
                               </Button>
+
+                              {isAdmin && (
+                                <Button
+                                  size="sm"
+                                  variant={o.verified ? "outline" : "secondary"}
+                                  onClick={() => onToggleVerify(o)}
+                                  disabled={verifyingUuid === o.uuid}
+                                >
+                                  {verifyingUuid === o.uuid
+                                    ? "..."
+                                    : o.verified
+                                      ? "لغو تایید"
+                                      : "تایید"}
+                                </Button>
+                              )}
                             </div>
                           </td>
                         </tr>

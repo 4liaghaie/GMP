@@ -165,6 +165,7 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "uuid",
+            "verified",
             "order_number",
             "user",
 
@@ -203,6 +204,7 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
         model = RegisteredOrder
         fields = [
             "uuid",
+            "verified",
             "order_number",
             "user",
 

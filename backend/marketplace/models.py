@@ -6,6 +6,7 @@ from accounts.models import User
 
 class RegisteredOrder(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    verified = models.BooleanField(default=False, db_index=True)
     order_number = models.CharField(max_length=55)
     user = models.ForeignKey(User, on_delete=models.CASCADE, )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)

@@ -30,8 +30,9 @@ export default function DashboardPage() {
   const role = localStorage.getItem("role") || "user";
 
   return (
-    <div className="">
+    <div>
       <main className="mx-auto max-w-6xl px-4 py-10">
+        {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold">داشبورد</h1>
@@ -59,36 +60,70 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Quick Actions */}
         <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="shadow-sm">
+          {/* Add Order */}
+          <Card
+            className="cursor-pointer transition hover:shadow-md"
+            onClick={() => router.push("/add-order")}
+          >
             <CardHeader>
-              <CardTitle className="text-base">ثبت‌سفارش‌ها</CardTitle>
-              <CardDescription>ایجاد و مدیریت درخواست‌ها</CardDescription>
+              <CardTitle className="text-base">ایجاد ثبت‌سفارش</CardTitle>
+              <CardDescription>ثبت سریع یک درخواست جدید</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground leading-6">
-              در مرحله بعد: مدل ثبت‌سفارش + لیست + فیلترها + وضعیت‌ها
+            <CardContent className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                فرم ثبت‌سفارش با جزئیات کامل
+              </p>
+              <Button size="sm" onClick={() => router.push("/add-order")}>
+                ورود
+              </Button>
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          {/* My Orders */}
+          <Card
+            className="cursor-pointer transition hover:shadow-md"
+            onClick={() => router.push("/my-orders")}
+          >
             <CardHeader>
-              <CardTitle className="text-base">کالاهای موجود</CardTitle>
-              <CardDescription>ثبت کالا برای مچ شدن</CardDescription>
+              <CardTitle className="text-base">ثبت‌سفارش‌های من</CardTitle>
+              <CardDescription>مشاهده و مدیریت درخواست‌ها</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground leading-6">
-              در مرحله بعد: تعریف کالا/محموله + مقدار + شرایط + محل گمرک
+            <CardContent className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                ویرایش، حذف و پیگیری وضعیت
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => router.push("/my-orders")}
+              >
+                مشاهده
+              </Button>
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          {/* Marketplace */}
+          <Card
+            className="cursor-pointer transition hover:shadow-md"
+            onClick={() => router.push("/marketplace")}
+          >
             <CardHeader>
-              <CardTitle className="text-base">مچ‌ها و پیشنهادها</CardTitle>
-              <CardDescription>
-                پیشنهاد قیمت و توافق ساختاریافته
-              </CardDescription>
+              <CardTitle className="text-base">مارکت‌پلیس</CardTitle>
+              <CardDescription>مشاهده فرصت‌ها و مچ‌ها</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground leading-6">
-              در مرحله بعد: پیشنهادها، پذیرش/رد، تاریخچه و پیگیری
+            <CardContent className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                لیست ثبت‌سفارش‌ها و کالاها
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => router.push("/marketplace")}
+              >
+                ورود
+              </Button>
             </CardContent>
           </Card>
         </div>
