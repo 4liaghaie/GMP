@@ -1,0 +1,312 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+}
+
+/*
+  Palette matched to your logo:
+  - Primary blue ~ #0076FA
+  - Deep blue ~ #0052B5
+  - Charcoal/near-black grays ~ #080808, #111111, #1C1C1C, #272727
+*/
+
+:root {
+  --radius: 0.625rem;
+
+  /* Surfaces (light) */
+  --background: oklch(1 0 0);
+  --foreground: oklch(from #0c2b56 l c h); /* navy text */
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(from #0c2b56 l c h);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(from #0c2b56 l c h);
+
+  /* Brand */
+  --primary: oklch(from #099da4 l c h); /* teal */
+  --primary-foreground: oklch(1 0 0);
+
+  /* UI neutrals (light) */
+  --secondary: oklch(from #e9f8fa l c h); /* very light cyan */
+  --secondary-foreground: oklch(from #0c2b56 l c h);
+
+  --muted: oklch(from #bad2da l c h); /* soft cool gray-blue */
+  --muted-foreground: oklch(from #0d4e7c l c h); /* readable blue */
+
+  /* Accent = hover/selected (teal-tinted) */
+  --accent: oklch(from #e9f8fa l c h);
+  --accent-foreground: oklch(from #0c2b56 l c h);
+
+  /* Destructive (keep shadcn-ish) */
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Borders/inputs/rings */
+  --border: oklch(from #bad2da l c h);
+  --input: oklch(from #bad2da l c h);
+  --ring: oklch(from #099da4 l c h);
+
+  /* Charts (logo-forward) */
+  --chart-1: oklch(from #099da4 l c h); /* teal */
+  --chart-2: oklch(from #0c2b56 l c h); /* navy */
+  --chart-3: oklch(from #0d4e7c l c h); /* mid blue */
+  --chart-4: oklch(from #7193a7 l c h); /* gray-blue */
+  --chart-5: oklch(from #bad2da l c h); /* light gray-blue */
+
+  /* Sidebar (light) */
+  --sidebar: oklch(from #e9f8fa l c h);
+  --sidebar-foreground: oklch(from #0c2b56 l c h);
+
+  --sidebar-primary: oklch(from #099da4 l c h);
+  --sidebar-primary-foreground: oklch(1 0 0);
+
+  --sidebar-accent: oklch(from #e9f8fa l c h);
+  --sidebar-accent-foreground: oklch(from #0c2b56 l c h);
+
+  --sidebar-border: oklch(from #bad2da l c h);
+  --sidebar-ring: oklch(from #099da4 l c h);
+}
+
+.dark {
+  /* Surfaces (dark) — navy-led, like the icon */
+  --background: oklch(from #07162b l c h);
+  --foreground: oklch(0.985 0 0);
+
+  --card: oklch(from #0a1e3a l c h);
+  --card-foreground: oklch(0.985 0 0);
+
+  --popover: oklch(from #0a1e3a l c h);
+  --popover-foreground: oklch(0.985 0 0);
+
+  /* Brand stays consistent */
+  --primary: oklch(from #099da4 l c h);
+  --primary-foreground: oklch(1 0 0);
+
+  /* UI neutrals (dark) */
+  --secondary: oklch(from #0c2b56 l c h); /* navy surface */
+  --secondary-foreground: oklch(0.985 0 0);
+
+  --muted: oklch(from #0d4e7c l c h); /* deep blue-muted blocks */
+  --muted-foreground: oklch(from #bad2da l c h); /* soft readable */
+
+  /* Accent = teal-tinted navy for hover/selected */
+  --accent: oklch(from #0b3b44 l c h); /* dark teal */
+  --accent-foreground: oklch(0.985 0 0);
+
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Borders/inputs/rings */
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(from #099da4 l c h);
+
+  /* Charts (brighten for dark bg) */
+  --chart-1: oklch(from #099da4 l c h);
+  --chart-2: oklch(from #bad2da l c h);
+  --chart-3: oklch(from #7193a7 l c h);
+  --chart-4: oklch(from #0d4e7c l c h);
+  --chart-5: oklch(from #0c2b56 l c h);
+
+  /* Sidebar (dark) */
+  --sidebar: oklch(from #0a1e3a l c h);
+  --sidebar-foreground: oklch(0.985 0 0);
+
+  --sidebar-primary: oklch(from #099da4 l c h);
+  --sidebar-primary-foreground: oklch(1 0 0);
+
+  --sidebar-accent: oklch(from #0b3b44 l c h);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(from #099da4 l c h);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ----------------------------
+   Light Bulb Theme Toggle Animations (fixed geometry)
+   ---------------------------- */
+
+.bulb-glow {
+  background: radial-gradient(
+    circle at center,
+    color-mix(in oklch, var(--color-primary) 60%, white 40%) 0%,
+    color-mix(in oklch, var(--color-primary) 30%, transparent 70%) 48%,
+    transparent 72%
+  );
+  filter: blur(8px);
+}
+
+.bulb-pop {
+  animation: bulbPop 650ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+@keyframes bulbPop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.07);
+  }
+  75% {
+    transform: scale(0.99);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.bulb-wiggle {
+  animation: bulbWiggle 650ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+@keyframes bulbWiggle {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  20% {
+    transform: rotate(-10deg) scale(1.03);
+  }
+  40% {
+    transform: rotate(8deg) scale(1.04);
+  }
+  60% {
+    transform: rotate(-6deg) scale(1.03);
+  }
+  80% {
+    transform: rotate(3deg) scale(1.01);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+/* Filament pulse line */
+.bulb-filament {
+  background: color-mix(in oklch, var(--color-primary) 70%, white 30%);
+  box-shadow:
+    0 0 10px color-mix(in oklch, var(--color-primary) 55%, transparent 45%),
+    0 0 18px color-mix(in oklch, var(--color-primary) 35%, transparent 65%);
+  animation: filamentPulse 650ms ease-out;
+}
+@keyframes filamentPulse {
+  0% {
+    transform: translateX(-50%) scaleX(0.6);
+    opacity: 0;
+  }
+  18% {
+    transform: translateX(-50%) scaleX(1.15);
+    opacity: 1;
+  }
+  55% {
+    transform: translateX(-50%) scaleX(0.98);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(-50%) scaleX(0.8);
+    opacity: 0;
+  }
+}
+
+/* Sparks – fixed so they don’t jump to wrong side */
+.bulb-spark {
+  --a: 0deg;
+  --d1: 8px;
+  --d2: 22px;
+
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  opacity: 0;
+  background: color-mix(in oklch, var(--color-primary) 70%, white 30%);
+  transform: translate(-50%, -50%) rotate(var(--a)) translateX(var(--d1));
+  transform-origin: center;
+}
+
+.bulb-sparks .bulb-spark {
+  animation: sparkOut 650ms ease-out;
+}
+
+@keyframes sparkOut {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--a)) translateX(var(--d1))
+      scaleX(0.8);
+  }
+  18% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) rotate(var(--a))
+      translateX(calc(var(--d1) + 8px)) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--a)) translateX(var(--d2))
+      scaleX(0.9);
+  }
+}
