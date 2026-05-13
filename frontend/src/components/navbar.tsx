@@ -24,9 +24,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+const AUTH_EVENT = "auth-changed";
+
 function hasToken() {
   if (typeof window === "undefined") return false;
   return Boolean(localStorage.getItem("access"));
+}
+
+function emitAuthChanged() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
 type MobileLink = {
@@ -50,12 +57,23 @@ export function Navbar() {
   const [authed, setAuthed] = React.useState(false);
   const [open, setOpen] = React.useState(false);
 
+  // ✅ keep authed in sync in the SAME tab + other tabs
   React.useEffect(() => {
-    setAuthed(hasToken());
+    const sync = () => setAuthed(hasToken());
 
-    const onStorage = () => setAuthed(hasToken());
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    // initial
+    sync();
+
+    // other tabs/windows (storage fires only across tabs)
+    window.addEventListener("storage", sync);
+
+    // same tab (we dispatch this manually after login/logout)
+    window.addEventListener(AUTH_EVENT, sync as EventListener);
+
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(AUTH_EVENT, sync as EventListener);
+    };
   }, []);
 
   // close menu on route change
@@ -83,12 +101,16 @@ export function Navbar() {
     setAuthed(false);
     setOpen(false);
 
+    // ✅ notify navbar (and any other listeners) immediately
+    emitAuthChanged();
+
     if (
       pathname?.startsWith("/dashboard") ||
       pathname?.startsWith("/profile")
     ) {
       router.push("/");
     } else {
+      // optional: if you depend on server components that read cookies/session
       router.refresh();
     }
   }
@@ -106,7 +128,6 @@ export function Navbar() {
           icon: <Home className="h-4 w-4" />,
           auth: "any",
         },
-        // add more public links here later
       ],
     },
     {
@@ -160,6 +181,7 @@ export function Navbar() {
               alt="Logo"
               fill
               className="object-contain p-1"
+              priority
             />
           </div>
 
@@ -273,3 +295,13 @@ export function Navbar() {
     </header>
   );
 }
+
+/**
+ * ✅ Use this helper in your login/register code AFTER setting tokens:
+ *
+ *   localStorage.setItem("access", access);
+ *   localStorage.setItem("refresh", refresh);
+ *   localStorage.setItem("role", role);
+ *   window.dispatchEvent(new Event("auth-changed"));
+ *
+ */

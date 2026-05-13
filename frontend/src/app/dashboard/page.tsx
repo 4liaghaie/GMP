@@ -41,30 +41,13 @@ export default function DashboardPage() {
               <span className="font-medium text-foreground">{role}</span>
             </p>
           </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => router.push("/profile")}>
-              پروفایل
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                localStorage.removeItem("access");
-                localStorage.removeItem("refresh");
-                localStorage.removeItem("role");
-                router.push("/");
-              }}
-            >
-              خروج
-            </Button>
-          </div>
         </div>
 
         {/* Quick Actions */}
         <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Add Order */}
           <Card
-            className="cursor-pointer transition hover:shadow-md"
+            className="transition hover:shadow-md"
             onClick={() => router.push("/add-order")}
           >
             <CardHeader>
@@ -75,15 +58,20 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground">
                 فرم ثبت‌سفارش با جزئیات کامل
               </p>
-              <Button size="sm" onClick={() => router.push("/add-order")}>
-                ورود
+              <Button
+                variant="link"
+                className="cursor-pointer"
+                size="sm"
+                onClick={() => router.push("/add-order")}
+              >
+                شروع
               </Button>
             </CardContent>
           </Card>
 
           {/* My Orders */}
           <Card
-            className="cursor-pointer transition hover:shadow-md"
+            className=" transition hover:shadow-md"
             onClick={() => router.push("/my-orders")}
           >
             <CardHeader>
@@ -95,8 +83,9 @@ export default function DashboardPage() {
                 ویرایش، حذف و پیگیری وضعیت
               </p>
               <Button
+                className="cursor-pointer"
                 size="sm"
-                variant="outline"
+                variant="link"
                 onClick={() => router.push("/my-orders")}
               >
                 مشاهده
@@ -106,7 +95,7 @@ export default function DashboardPage() {
 
           {/* Marketplace */}
           <Card
-            className="cursor-pointer transition hover:shadow-md"
+            className=" transition hover:shadow-md"
             onClick={() => router.push("/marketplace")}
           >
             <CardHeader>
@@ -118,11 +107,12 @@ export default function DashboardPage() {
                 لیست ثبت‌سفارش‌ها و کالاها
               </p>
               <Button
+                className="cursor-pointer"
                 size="sm"
-                variant="secondary"
+                variant="link"
                 onClick={() => router.push("/marketplace")}
               >
-                ورود
+                مارکت‌پلیس{" "}
               </Button>
             </CardContent>
           </Card>

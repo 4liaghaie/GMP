@@ -175,6 +175,79 @@ function GoodMobileCard({ g }: { g: OrderGood }) {
   );
 }
 
+function GoodsTableDesktop({ order }: { order: MarketplaceOrder }) {
+  return (
+    <div className="rounded-2xl border bg-card shadow-sm">
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="text-sm font-semibold">اقلام کالا</div>
+        <div className="text-xs text-muted-foreground">
+          {order.goods?.length ? `${order.goods.length} ردیف` : "بدون کالا"}
+        </div>
+      </div>
+
+      <ScrollArea className="h-[calc(90dvh-160px)]">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-right">جمع</TableHead>
+              <TableHead className="text-right">قیمت واحد</TableHead>
+              <TableHead className="text-right">تعداد</TableHead>
+              <TableHead className="text-right">HS</TableHead>
+              <TableHead className="text-right w-[40%]">شرح</TableHead>
+              <TableHead className="text-right w-[60px]">ردیف</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {order.goods?.length ? (
+              order.goods.map((g, index) => (
+                <TableRow key={g.uuid} className="hover:bg-muted/30">
+                  {/* ✅ Index */}
+
+                  <TableCell className="text-right font-semibold">
+                    {formatNumLike(g.line_total)}
+                  </TableCell>
+
+                  <TableCell className="text-right">
+                    {formatNumLike(g.unit_price)}
+                  </TableCell>
+
+                  <TableCell className="text-right">
+                    {formatNumLike(g.quantity)}
+                  </TableCell>
+
+                  <TableCell className="text-right">
+                    <Badge variant="outline" className="rounded-xl">
+                      {safeText(g.hs_code)}
+                    </Badge>
+                  </TableCell>
+
+                  <TableCell className="text-right">
+                    <div className="font-medium">{safeText(g.description)}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      مبدا: {safeText(g.origin)} • واحد: {safeText(g.unit)} •
+                      NW: {safeText(g.nw_kg)} • GW: {safeText(g.gw_kg)}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-medium text-muted-foreground">
+                    {index + 1}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell className="text-right" colSpan={6}>
+                  کالایی ثبت نشده است.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </ScrollArea>
+    </div>
+  );
+}
+
 function GoodsTable({ order }: { order: MarketplaceOrder }) {
   return (
     <>
@@ -191,72 +264,14 @@ function GoodsTable({ order }: { order: MarketplaceOrder }) {
 
       {/* Desktop */}
       <div className="hidden md:block">
-        <div className="rounded-2xl border bg-card shadow-sm">
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <div className="text-sm font-semibold">اقلام کالا</div>
-            <div className="text-xs text-muted-foreground">
-              {order.goods?.length ? `${order.goods.length} ردیف` : "بدون کالا"}
-            </div>
-          </div>
-
-          <ScrollArea className="h-[520px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-right">شرح</TableHead>
-                  <TableHead className="text-right">HS</TableHead>
-                  <TableHead className="text-right">تعداد</TableHead>
-                  <TableHead className="text-right">قیمت واحد</TableHead>
-                  <TableHead className="text-right">جمع</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {order.goods?.length ? (
-                  order.goods.map((g) => (
-                    <TableRow key={g.uuid} className="hover:bg-muted/30">
-                      <TableCell className="text-right">
-                        <div className="font-medium">
-                          {safeText(g.description)}
-                        </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          مبدا: {safeText(g.origin)} • واحد: {safeText(g.unit)}{" "}
-                          • NW: {safeText(g.nw_kg)} • GW: {safeText(g.gw_kg)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="outline" className="rounded-xl">
-                          {safeText(g.hs_code)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumLike(g.quantity)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumLike(g.unit_price)}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatNumLike(g.line_total)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell className="text-right" colSpan={5}>
-                      کالایی ثبت نشده است.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </div>
+        <GoodsTableDesktop order={order} />
       </div>
     </>
   );
 }
 
 /* =========================
-   Right column cards
+   Left rail cards (desktop)
 ========================= */
 
 function SummaryCard({ order }: { order: MarketplaceOrder }) {
@@ -338,12 +353,10 @@ function DetailsMeta({ order }: { order: MarketplaceOrder }) {
 }
 
 /* =========================
-   ✅ New Contact UI + Position
-   - Desktop: inline “Contact Strip” right under header (NOT in right column)
-   - Mobile: action is already in sticky footer; tab stays but with better UI
+   Contact UI
 ========================= */
 
-function ContactStrip({ order }: { order: MarketplaceOrder }) {
+function ContactStripCompact({ order }: { order: MarketplaceOrder }) {
   const waLink = React.useMemo(() => {
     const msg = `${WHATSAPP_MESSAGE}\nشماره ثبت سفارش: ${safeText(
       order.order_number,
@@ -354,12 +367,12 @@ function ContactStrip({ order }: { order: MarketplaceOrder }) {
   const displayPhone = `+${String(WHATSAPP_NUMBER).replace(/[^\d]/g, "")}`;
 
   return (
-    <div className="rounded-2xl border bg-muted/30 p-3">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-2xl border bg-background">
-            <MessageCircle className="h-5 w-5" />
-          </div>
+    <Card className="rounded-2xl shadow-sm">
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-2">
+          <span className="grid h-9 w-9 place-items-center rounded-2xl border bg-muted">
+            <MessageCircle className="h-4 w-4" />
+          </span>
           <div className="space-y-0.5">
             <div className="text-sm font-semibold">ارتباط سریع</div>
             <div className="text-xs text-muted-foreground">
@@ -367,13 +380,15 @@ function ContactStrip({ order }: { order: MarketplaceOrder }) {
               <span className="font-medium text-foreground">
                 {displayPhone}
               </span>
-              <span className="mx-2 text-muted-foreground">•</span>
-              پیام با شماره ثبت سفارش ارسال می‌شود
             </div>
           </div>
         </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row">
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="rounded-2xl border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          پیام با شماره ثبت سفارش ارسال می‌شود.
+        </div>
+        <div className="grid gap-2">
           <Button asChild className="rounded-2xl">
             <a href={waLink} target="_blank" rel="noreferrer">
               <MessageCircle className="ms-2 h-4 w-4" />
@@ -381,7 +396,6 @@ function ContactStrip({ order }: { order: MarketplaceOrder }) {
               <ExternalLink className="ms-2 h-4 w-4 opacity-70" />
             </a>
           </Button>
-
           <Button asChild variant="outline" className="rounded-2xl">
             <a
               href={buildWhatsAppLink(WHATSAPP_NUMBER)}
@@ -392,8 +406,8 @@ function ContactStrip({ order }: { order: MarketplaceOrder }) {
             </a>
           </Button>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -458,47 +472,115 @@ function ContactPanelMobile({ order }: { order: MarketplaceOrder }) {
 }
 
 /* =========================
-   Details body
+   Desktop layout (effective)
+   Left sticky rail + right scrollable goods
 ========================= */
 
-function DetailsBody({
+function DesktopLayout({
   order,
-  isDesktop,
+  copied,
+  onCopy,
 }: {
   order: MarketplaceOrder;
-  isDesktop: boolean;
+  copied: boolean;
+  onCopy: () => void;
 }) {
-  if (isDesktop) {
-    return (
-      <div className="grid gap-4 md:grid-cols-[1fr_360px]">
-        <div className="space-y-4">
-          {/* ✅ better position: contact right under goods area */}
-          <GoodsTable order={order} />
-          <ContactStrip order={order} />
-        </div>
+  return (
+    <div className="grid gap-5 md:grid-cols-[380px_1fr]">
+      {/* Left rail */}
+      <div className="space-y-4 md:sticky md:top-4 md:self-start">
+        <Card className="rounded-2xl shadow-sm">
+          <CardHeader className="pb-2">
+            <div className="space-y-2 text-right">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-base font-semibold">
+                    ثبت سفارش {safeText(order.order_number)}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    مشاهده جزئیات، اقلام و خلاصه مالی
+                  </div>
+                </div>
 
-        <div className="space-y-4 md:sticky md:top-4 md:self-start">
-          <SummaryCard order={order} />
-          <DetailsMeta order={order} />
-        </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-xl"
+                  onClick={onCopy}
+                >
+                  {copied ? (
+                    <Check className="ms-2 h-4 w-4" />
+                  ) : (
+                    <Copy className="ms-2 h-4 w-4" />
+                  )}
+                  کپی
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary" className="rounded-xl">
+                  {safeText(order.currency_type)}
+                </Badge>
+                <Badge variant="outline" className="rounded-xl">
+                  {order.goods?.length
+                    ? `${order.goods.length} ردیف کالا`
+                    : "بدون کالا"}
+                </Badge>
+              </div>
+
+              <div className="grid gap-2">
+                <KeyValue
+                  label="فروشنده"
+                  value={safeText(order.user)}
+                  icon={<User2 className="h-4 w-4" />}
+                />
+                <KeyValue
+                  label="کشور فروشنده"
+                  value={safeText(order.seller_country)}
+                  icon={<MapPin className="h-4 w-4" />}
+                />
+                <KeyValue
+                  label="تاریخ"
+                  value={safeText(order.date)}
+                  icon={<Calendar className="h-4 w-4" />}
+                />
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <ContactStripCompact order={order} />
+        <SummaryCard order={order} />
+        <DetailsMeta order={order} />
       </div>
-    );
-  }
 
+      {/* Right main */}
+      <div className="min-w-0">
+        <GoodsTableDesktop order={order} />
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   Mobile body
+========================= */
+
+function MobileBody({ order }: { order: MarketplaceOrder }) {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="goods" className="w-full">
         <TabsList className="w-full rounded-2xl">
-          <TabsTrigger className="flex-1" value="goods">
+          <TabsTrigger className="flex-1 rounded-2xl" value="goods">
             اقلام
           </TabsTrigger>
-          <TabsTrigger className="flex-1" value="summary">
+          <TabsTrigger className="flex-1 rounded-2xl" value="summary">
             خلاصه
           </TabsTrigger>
-          <TabsTrigger className="flex-1" value="meta">
+          <TabsTrigger className="flex-1 rounded-2xl" value="meta">
             اطلاعات
           </TabsTrigger>
-          <TabsTrigger className="flex-1" value="contact">
+          <TabsTrigger className="flex-1 rounded-2xl" value="contact">
             ارتباط
           </TabsTrigger>
         </TabsList>
@@ -515,7 +597,6 @@ function DetailsBody({
           <DetailsMeta order={order} />
         </TabsContent>
 
-        {/* ✅ improved mobile contact tab UI */}
         <TabsContent value="contact" className="mt-4">
           <ContactPanelMobile order={order} />
         </TabsContent>
@@ -566,94 +647,48 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
     } catch {}
   }
 
-  const headerBadges = (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <Badge variant="secondary" className="rounded-xl">
-        {safeText(order.currency_type)}
-      </Badge>
-      <Badge variant="outline" className="rounded-xl">
-        {order.goods?.length ? `${order.goods.length} ردیف کالا` : "بدون کالا"}
-      </Badge>
-
-      <Button
-        variant="ghost"
-        size="sm"
-        className="rounded-xl"
-        onClick={copyOrderNumber}
-      >
-        {copied ? (
-          <Check className="ms-2 h-4 w-4" />
-        ) : (
-          <Copy className="ms-2 h-4 w-4" />
-        )}
-        کپی شماره
-      </Button>
-    </div>
-  );
-
-  const headerMeta = (
-    <div className="mt-3 grid gap-2 sm:grid-cols-3">
-      <KeyValue
-        label="فروشنده"
-        value={safeText(order.user)}
-        icon={<User2 className="h-4 w-4" />}
-      />
-      <KeyValue
-        label="کشور فروشنده"
-        value={safeText(order.seller_country)}
-        icon={<MapPin className="h-4 w-4" />}
-      />
-      <KeyValue
-        label="تاریخ"
-        value={safeText(order.date)}
-        icon={<Calendar className="h-4 w-4" />}
-      />
-    </div>
-  );
-
   // Desktop -> Dialog
   if (isDesktop) {
     return (
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="secondary" className="rounded-xl">
+          <Button variant="outline" className="rounded-xl cursor-pointer">
             جزئیات
           </Button>
         </DialogTrigger>
 
         <DialogContent
           className={cn(
-            "p-0 overflow-hidden md:max-w-6xl md:rounded-2xl",
+            "p-0 overflow-hidden md:max-w-[1100px] lg:max-w-[1200px] md:rounded-2xl h-[90dvh]",
             "[&>button]:left-4 [&>button]:right-auto [&>button]:top-4",
           )}
         >
+          {/* Top bar */}
           <div className="border-b bg-background">
             <DialogHeader className="p-5">
               <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2 text-right">
+                <div className="space-y-1 text-right">
                   <DialogTitle className="text-right text-lg">
-                    ثبت سفارش {safeText(order.order_number)}
+                    جزئیات ثبت سفارش
                   </DialogTitle>
                   <DialogDescription className="text-right">
-                    مشاهده جزئیات، اقلام و خلاصه مالی
+                    جدول اقلام ثبت سفارش و خلاصه اطلاعات
                   </DialogDescription>
-                  {headerBadges}
-                  {headerMeta}
-
-                  {/* ✅ best position on desktop: right under header */}
-                  <div className="pt-2">
-                    <ContactStrip order={order} />
-                  </div>
                 </div>
 
-                <DialogClose asChild></DialogClose>
+                <DialogClose asChild />
               </div>
             </DialogHeader>
           </div>
 
-          <ScrollArea className="max-h-[78vh]">
+          {/* Body: single scroll for dialog, but goods scroll stays inside its card */}
+          <ScrollArea className="h-[calc(90dvh-92px)]">
             <div className="p-5">
-              <DetailsBody order={order} isDesktop />
+              <DesktopLayout
+                order={order}
+                copied={copied}
+                onCopy={copyOrderNumber}
+              />
             </div>
           </ScrollArea>
         </DialogContent>
@@ -665,7 +700,7 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="secondary" className="rounded-xl">
+        <Button variant="outline" className="rounded-xl cursor-pointer">
           جزئیات
         </Button>
       </SheetTrigger>
@@ -686,7 +721,30 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
               مشاهده جزئیات، اقلام و خلاصه مالی
             </SheetDescription>
 
-            {headerBadges}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="rounded-xl">
+                {safeText(order.currency_type)}
+              </Badge>
+              <Badge variant="outline" className="rounded-xl">
+                {order.goods?.length
+                  ? `${order.goods.length} ردیف کالا`
+                  : "بدون کالا"}
+              </Badge>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-xl"
+                onClick={copyOrderNumber}
+              >
+                {copied ? (
+                  <Check className="ms-2 h-4 w-4" />
+                ) : (
+                  <Copy className="ms-2 h-4 w-4" />
+                )}
+                کپی شماره
+              </Button>
+            </div>
 
             <div className="mt-3 grid gap-2">
               <KeyValue
@@ -713,7 +771,7 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
         {/* Body (scroll) */}
         <ScrollArea className="h-[calc(92dvh-160px-276px)]">
           <div className="p-4">
-            <DetailsBody order={order} isDesktop={false} />
+            <MobileBody order={order} />
             <div className="h-4" />
           </div>
         </ScrollArea>
@@ -725,9 +783,7 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
               <a
                 href={buildWhatsAppLink(
                   WHATSAPP_NUMBER,
-                  `${WHATSAPP_MESSAGE}\nشماره ثبت سفارش: ${safeText(
-                    order.order_number,
-                  )}`,
+                  `${WHATSAPP_MESSAGE}\nشماره ثبت سفارش: ${safeText(order.order_number)}`,
                 )}
                 target="_blank"
                 rel="noreferrer"

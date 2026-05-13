@@ -936,7 +936,7 @@ export default function AddRegisteredOrderPage() {
 
       router.refresh();
       // optional: go to list
-       router.push("/my-orders");
+      router.push("/my-orders");
     } catch (e: any) {
       setError(e?.message || "خطا در ایجاد ثبت سفارش");
     } finally {
@@ -958,10 +958,7 @@ export default function AddRegisteredOrderPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => router.push("/my-orders")}
-            >
+            <Button variant="outline" onClick={() => router.push("/my-orders")}>
               لیست ثبت سفارش‌ها
             </Button>
             <Button variant="outline" onClick={() => router.back()}>
@@ -1241,7 +1238,7 @@ export default function AddRegisteredOrderPage() {
 
           {/* Summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-6 shadow-sm">
+            <Card className="sticky top-18 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-base">خلاصه</CardTitle>
                 <CardDescription>

@@ -1,6 +1,13 @@
 // src/lib/auth-api.ts
 const API = process.env.NEXT_PUBLIC_API_BASE!;
 
+const AUTH_EVENT = "auth-changed";
+
+function emitAuthChanged() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(AUTH_EVENT));
+}
+
 // ---- storage helpers ----
 function getAccess() {
   return typeof window !== "undefined" ? localStorage.getItem("access") : null;
@@ -8,21 +15,44 @@ function getAccess() {
 function getRefresh() {
   return typeof window !== "undefined" ? localStorage.getItem("refresh") : null;
 }
+
+/**
+ * Persist tokens AND notify the app immediately (same-tab).
+ */
 function setTokens(access: string, refresh?: string) {
+  if (typeof window === "undefined") return;
+
   localStorage.setItem("access", access);
   if (refresh) localStorage.setItem("refresh", refresh);
+
+  // ✅ important: update Navbar in the same tab without reload
+  emitAuthChanged();
 }
+
+/**
+ * Clear tokens AND notify the app immediately (same-tab).
+ */
 export function clearTokens() {
+  if (typeof window === "undefined") return;
+
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
   localStorage.removeItem("role");
+
+  // also clear your otp leftovers if you want (optional)
+  localStorage.removeItem("otp_step");
+  localStorage.removeItem("otp_phone");
+  localStorage.removeItem("reg_otp_step");
+  localStorage.removeItem("reg_otp_phone");
+
+  // ✅ important
+  emitAuthChanged();
 }
 
 function firstErrorMessage(data: any, fallback: string) {
   if (!data) return fallback;
   if (typeof data.detail === "string") return data.detail;
 
-  // Field errors: {username: ["..."], password: ["..."]}
   const keys = Object.keys(data);
   if (keys.length) {
     const v = data[keys[0]];
@@ -32,7 +62,7 @@ function firstErrorMessage(data: any, fallback: string) {
   return fallback;
 }
 
-// ---- Auth endpoints (NEW: username/password) ----
+// ---- Auth endpoints ----
 
 export async function login(payload: { username: string; password: string }) {
   if (!payload || typeof payload !== "object") {
@@ -49,9 +79,22 @@ export async function login(payload: { username: string; password: string }) {
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail ?? "خطا در ورود");
-  // persist tokens...
-  return data;
+  if (!res.ok) throw new Error(firstErrorMessage(data, "خطا در ورود"));
+
+  // ✅ FIX: Persist tokens on login too
+  // adjust field names if your backend uses different keys
+  if (typeof window !== "undefined") {
+    if (data?.access) setTokens(data.access, data.refresh);
+    if (data?.role) localStorage.setItem("role", data.role);
+    // If role is not returned here, that's fine—Navbar only needs access token.
+  }
+
+  return data as {
+    access: string;
+    refresh?: string;
+    role?: string;
+    detail?: string;
+  };
 }
 
 export async function register(payload: {
@@ -72,10 +115,9 @@ export async function register(payload: {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(firstErrorMessage(data, "خطا در ثبت‌نام"));
 
-  // Persist tokens here (recommended)
   if (typeof window !== "undefined") {
-    setTokens(data.access, data.refresh);
-    localStorage.setItem("role", data.role);
+    if (data?.access) setTokens(data.access, data.refresh);
+    if (data?.role) localStorage.setItem("role", data.role);
   }
 
   return data as {
@@ -88,13 +130,8 @@ export async function register(payload: {
 
 // ---- Refresh token support ----
 
-// Prevent multiple refresh calls racing at the same time
 let refreshPromise: Promise<string> | null = null;
 
-/**
- * Refresh access token using refresh token.
- * Returns the new access token, also stored in localStorage.
- */
 export async function refreshAccessToken(): Promise<string> {
   const refresh = getRefresh();
   if (!refresh) {
@@ -113,7 +150,7 @@ export async function refreshAccessToken(): Promise<string> {
   if (!res.ok) {
     clearTokens();
     throw new Error(
-      firstErrorMessage(data, "نشست شما منقضی شده است. دوباره وارد شوید.")
+      firstErrorMessage(data, "نشست شما منقضی شده است. دوباره وارد شوید."),
     );
   }
 
@@ -122,16 +159,11 @@ export async function refreshAccessToken(): Promise<string> {
     throw new Error("پاسخ refresh نامعتبر است.");
   }
 
-  // If ROTATE enabled, backend may also return refresh
+  // ✅ this will also dispatch auth-changed
   setTokens(data.access, data.refresh);
   return data.access as string;
 }
 
-/**
- * Fetch wrapper that:
- * - attaches Authorization header
- * - on 401, refreshes access once and retries
- */
 export async function authFetch(input: string, init: RequestInit = {}) {
   const access = getAccess();
   const headers: Record<string, string> = {
@@ -154,7 +186,6 @@ export async function authFetch(input: string, init: RequestInit = {}) {
     });
 
   let res = await doFetch();
-
   if (res.status !== 401) return res;
 
   try {
@@ -171,7 +202,7 @@ export async function authFetch(input: string, init: RequestInit = {}) {
   }
 }
 
-// ---- Me endpoints (NEW: replaces complete-profile) ----
+// ---- Me endpoints ----
 
 export async function getMe() {
   const res = await authFetch(`${API}/me/`, { method: "GET" });
@@ -217,6 +248,5 @@ export async function updateProfile(payload: {
     throw new Error(firstErrorMessage(data, "خطا در ذخیره اطلاعات"));
   }
 
-  // your MeView returns updated user object in PATCH (per backend)
   return data;
 }

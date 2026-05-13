@@ -6,8 +6,14 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronRight, Loader2, LockKeyhole, UserRound } from "lucide-react";
-
+import {
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Loader2,
+  LockKeyhole,
+  UserRound,
+} from "lucide-react";
 import { register as registerApi } from "@/lib/auth-api";
 
 import { Button } from "@/components/ui/button";
@@ -46,7 +52,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState<string | null>(null);
-
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showPassword2, setShowPassword2] = React.useState(false);
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -198,20 +205,36 @@ export default function RegisterPage() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="password">رمز عبور</Label>
-                      <Input
-                        id="password"
-                        className="h-12 rounded-2xl"
-                        type="password"
-                        autoComplete="new-password"
-                        {...form.register("password")}
-                        onChange={(e) => {
-                          resetMessages();
-                          form.setValue("password", e.target.value, {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          });
-                        }}
-                      />
+
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          className="h-12 rounded-2xl pl-12"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="new-password"
+                          {...form.register("password")}
+                          onChange={(e) => {
+                            resetMessages();
+                            form.setValue("password", e.target.value, {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            });
+                          }}
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
+
                       {form.formState.errors.password?.message && (
                         <p className="text-sm text-destructive">
                           {form.formState.errors.password.message}
@@ -221,20 +244,36 @@ export default function RegisterPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="password2">تکرار رمز عبور</Label>
-                      <Input
-                        id="password2"
-                        className="h-12 rounded-2xl"
-                        type="password"
-                        autoComplete="new-password"
-                        {...form.register("password2")}
-                        onChange={(e) => {
-                          resetMessages();
-                          form.setValue("password2", e.target.value, {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          });
-                        }}
-                      />
+
+                      <div className="relative">
+                        <Input
+                          id="password2"
+                          className="h-12 rounded-2xl pl-12"
+                          type={showPassword2 ? "text" : "password"}
+                          autoComplete="new-password"
+                          {...form.register("password2")}
+                          onChange={(e) => {
+                            resetMessages();
+                            form.setValue("password2", e.target.value, {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            });
+                          }}
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword2((prev) => !prev)}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                        >
+                          {showPassword2 ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
+
                       {form.formState.errors.password2?.message && (
                         <p className="text-sm text-destructive">
                           {form.formState.errors.password2.message}

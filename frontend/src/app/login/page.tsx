@@ -12,6 +12,8 @@ import {
   LockKeyhole,
   Shield,
   UserRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import { login } from "@/lib/auth-api";
@@ -42,7 +44,7 @@ export default function LoginPage() {
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-
+  const [showPassword, setShowPassword] = React.useState(false);
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { username: "", password: "" },
@@ -63,10 +65,6 @@ export default function LoginPage() {
         username: values.username.trim(),
         password: values.password,
       });
-
-      localStorage.setItem("access", res.access);
-      localStorage.setItem("refresh", res.refresh);
-      localStorage.setItem("role", res.role);
 
       setMessage("ورود با موفقیت انجام شد.");
       router.push("/dashboard");
@@ -186,23 +184,38 @@ export default function LoginPage() {
                       </p>
                     )}
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="password">رمز عبور</Label>
-                    <Input
-                      id="password"
-                      className="h-12 rounded-2xl"
-                      type="password"
-                      autoComplete="current-password"
-                      {...form.register("password")}
-                      onChange={(e) => {
-                        resetMessages();
-                        form.setValue("password", e.target.value, {
-                          shouldValidate: true,
-                          shouldDirty: true,
-                        });
-                      }}
-                    />
+
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        className="h-12 rounded-2xl pl-12"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        {...form.register("password")}
+                        onChange={(e) => {
+                          resetMessages();
+                          form.setValue("password", e.target.value, {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          });
+                        }}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+
                     {form.formState.errors.password?.message && (
                       <p className="text-sm text-destructive">
                         {form.formState.errors.password.message}
