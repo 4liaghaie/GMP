@@ -1,14 +1,14 @@
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import (
-    RegisterSerializer,
     LoginSerializer,
     MeSerializer,
+    RegisterSerializer,
     UpdateProfileSerializer,
 )
 
@@ -27,7 +27,7 @@ class RegisterView(APIView):
 
         return Response(
             {
-                "detail": "ثبت‌نام با موفقیت انجام شد.",
+                "detail": "Registration completed successfully.",
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
                 "role": getattr(user, "role", "user"),
@@ -43,13 +43,16 @@ class LoginView(APIView):
         s = LoginSerializer(data=request.data)
         s.is_valid(raise_exception=True)
 
-        username = s.validated_data["username"]
+        email = s.validated_data["email"].strip().lower()
         password = s.validated_data["password"]
 
-        user = authenticate(request, username=username, password=password)
+        user_obj = User.objects.filter(email__iexact=email).first()
+        auth_username = user_obj.username if user_obj else email
+
+        user = authenticate(request, username=auth_username, password=password)
         if not user:
             return Response(
-                {"detail": "نام کاربری یا رمز عبور اشتباه است."},
+                {"detail": "Invalid email or password."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -69,10 +72,16 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(MeSerializer(request.user).data, status=status.HTTP_200_OK)
+        return Response(
+            MeSerializer(request.user, context={"request": request}).data,
+            status=status.HTTP_200_OK,
+        )
 
     def patch(self, request):
         serializer = UpdateProfileSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(MeSerializer(request.user).data, status=status.HTTP_200_OK)
+        return Response(
+            MeSerializer(request.user, context={"request": request}).data,
+            status=status.HTTP_200_OK,
+        )
