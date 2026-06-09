@@ -6,13 +6,17 @@ services:
     container_name: reged-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-cust\oms_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-customs_dev}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-customs_dev}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-customs_dev}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
