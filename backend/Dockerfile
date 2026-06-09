@@ -5,17 +5,22 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN sed -i 's|http://deb.debian.org/debian|https://repo.abrha.net/debian|g' /etc/apt/sources.list.d/debian.sources && \
+    sed -i 's|http://deb.debian.org/debian-security|https://repo.abrha.net/debian-security|g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc \
+        libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY requirements.txt .
 
-COPY . /app
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN chmod +x /app/entrypoint.sh
-RUN sed -i 's/\r$//' /app/entrypoint.sh
+COPY . .
+
+RUN chmod +x /app/entrypoint.sh && \
+    sed -i 's/\r$//' /app/entrypoint.sh
 
 EXPOSE 8000
 
