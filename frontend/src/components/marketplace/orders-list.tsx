@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { SlidersHorizontal, Check, ChevronsUpDown, X } from "lucide-react";
+import {
+  SlidersHorizontal,
+  Check,
+  ChevronsUpDown,
+  Store,
+  X,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { authFetch } from "@/lib/auth-api";
@@ -55,6 +61,7 @@ import {
 } from "@/components/ui/command";
 
 import OrderDetails from "@/components/marketplace/order-details";
+import { PageHeader } from "@/components/page-header";
 
 /* ---------------- Types ---------------- */
 
@@ -62,6 +69,7 @@ export type OrderGood = {
   uuid: string;
   description: string;
   hs_code: string;
+  goods_status: string;
   quantity: string;
   origin: string;
   unit_price: string;
@@ -81,8 +89,16 @@ export type MarketplaceOrder = {
   sub_total: string;
 
   currency_type: string;
-  seller_country: string;
-  date: string;
+  fee_type: string;
+  fee_amount: string;
+  applicant_name?: string | null;
+  national_code?: string | null;
+  entry_border: string;
+  customs?: string;
+  currency_supply: string;
+  bank_name: string;
+  bank_branch: string;
+  payment_instrument: string;
   expire_date: string;
 
   terms_of_delivery: string;
@@ -111,6 +127,12 @@ const deliveryTerms = [
   { value: "CFR", label: "CFR (هزینه و کرایه)" },
   { value: "CIF", label: "CIF (هزینه، بیمه و کرایه)" },
   { value: "DAP", label: "DAP (تحویل در محل)" },
+  { value: "CPT", label: "CPT (تحویل در محل)" },
+  { value: "CIP", label: "CIP (تحویل در محل)" },
+  { value: "FCA", label: "FCA (تحویل در محل)" },
+  { value: "FAS", label: "FAS (تحویل در محل)" },
+  { value: "DDP", label: "DDP (تحویل در محل)" },
+  { value: "DPU", label: "DPU (تحویل در محل)" },
 ] as const;
 
 const paymentTerms = [
@@ -593,7 +615,7 @@ async function fetchMarketplaceOrders(args: {
   hs_code: string;
   total_value_range: string;
 
-  seller_country: string;
+  applicant_name: string;
   currency_type: string;
 
   terms_of_delivery: string;
@@ -615,7 +637,7 @@ async function fetchMarketplaceOrders(args: {
     q,
     hs_code,
     total_value_range,
-    seller_country,
+    applicant_name,
     currency_type,
     terms_of_delivery,
     terms_of_payment,
@@ -642,7 +664,7 @@ async function fetchMarketplaceOrders(args: {
     total_value_min: r.min ?? undefined,
     total_value_max: r.max ?? undefined,
 
-    seller_country: seller_country || undefined,
+    applicant_name: applicant_name || undefined,
     currency_type: currency_type || undefined,
 
     terms_of_delivery: terms_of_delivery || undefined,
@@ -654,7 +676,7 @@ async function fetchMarketplaceOrders(args: {
     standard: standard || undefined,
     country_of_origin: country_of_origin || undefined,
 
-    ordering: ordering === "newest" ? "-date" : "date",
+    ordering: ordering === "newest" ? "-created_at" : "created_at",
     page,
     page_size,
   });
@@ -738,7 +760,10 @@ function OrderCard({ order }: { order: MarketplaceOrder }) {
               <span className="font-bold">{safeText(order.order_number)}</span>
             </CardTitle>
             <CardDescription className="leading-6">
-              فروشنده: {safeText(order.user)} • تاریخ: {safeText(order.date)}
+              فروشنده: {safeText(order.user)}
+              {order.applicant_name
+                ? ` • درخواست‌دهنده: ${safeText(order.applicant_name)}`
+                : ""}
             </CardDescription>
           </div>
 
@@ -750,10 +775,8 @@ function OrderCard({ order }: { order: MarketplaceOrder }) {
 
       <CardContent className="space-y-3">
         <div className="grid grid-cols-3 gap-2">
-          <StatPill
-            label="کشور فروشنده"
-            value={safeText(order.seller_country)}
-          />
+          <StatPill label="مرز ورودی" value={safeText(order.entry_border)} />
+          <StatPill label="گمرک" value={safeText(order.customs)} />
           <StatPill
             label="ارزش کالا"
             value={formatNumLike(order.total_value)}
@@ -809,7 +832,7 @@ export default function OrdersList() {
   const [hsCode, setHsCode] = React.useState<string>(""); // code string
   const [totalValueRange, setTotalValueRange] = React.useState<string>("any");
 
-  const [sellerCountry, setSellerCountry] = React.useState<string>("");
+  const [applicantName, setApplicantName] = React.useState<string>("");
   const [currencyType, setCurrencyType] = React.useState<string>("");
 
   const [termsDelivery, setTermsDelivery] = React.useState<string>("");
@@ -849,7 +872,7 @@ export default function OrdersList() {
     qDebounced,
     hsCode,
     totalValueRange,
-    sellerCountry,
+    applicantName,
     currencyType,
     termsDelivery,
     termsPayment,
@@ -873,7 +896,7 @@ export default function OrdersList() {
       hs_code: hsCode.trim(),
       total_value_range: totalValueRange,
 
-      seller_country: sellerCountry.trim(),
+      applicant_name: applicantName.trim(),
       currency_type: currencyType.trim(),
 
       terms_of_delivery: termsDelivery.trim(),
@@ -908,7 +931,7 @@ export default function OrdersList() {
     qDebounced,
     hsCode,
     totalValueRange,
-    sellerCountry,
+    applicantName,
     currencyType,
     termsDelivery,
     termsPayment,
@@ -935,7 +958,7 @@ export default function OrdersList() {
     return countActiveFilters({
       hsCode,
       totalValueRange,
-      sellerCountry,
+      applicantName,
       currencyType,
       termsDelivery,
       termsPayment,
@@ -950,7 +973,7 @@ export default function OrdersList() {
   }, [
     hsCode,
     totalValueRange,
-    sellerCountry,
+    applicantName,
     currencyType,
     termsDelivery,
     termsPayment,
@@ -971,7 +994,7 @@ export default function OrdersList() {
     setHsCode("");
     setTotalValueRange("any");
 
-    setSellerCountry("");
+    setApplicantName("");
     setCurrencyType("");
 
     setTermsDelivery("");
@@ -994,21 +1017,23 @@ export default function OrdersList() {
   return (
     <div>
       <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-xl font-semibold">مارکت‌پلیس ثبت سفارش‌ها</h1>
-            <p className="text-sm text-muted-foreground">
-              همه ثبت سفارش‌ها (عمومی) — مشاهده برای همه کاربران
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" className="rounded-xl">
-              <Link href="/my-orders">ثبت سفارش‌های من</Link>
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="عمومی"
+          title="مارکت‌پلیس ثبت سفارش‌ها"
+          description="همه ثبت سفارش‌های تاییدشده برای مشاهده عمومی و جستجوی فرصت‌های مشابه."
+          icon={<Store className="h-6 w-6" />}
+          accentClassName="bg-slate-900"
+          actions={
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" className="rounded-xl">
+                <Link href="/marketplace/needs">نیازهای کالا</Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-xl">
+                <Link href="/my-orders">ثبت سفارش‌های من</Link>
+              </Button>
+            </div>
+          }
+        />
 
         {/* Search + Filters Drawer Trigger */}
         <Card className="mt-5 rounded-2xl">
@@ -1164,23 +1189,31 @@ export default function OrdersList() {
                               طرفین و ارز
                             </AccordionTrigger>
                             <AccordionContent className="space-y-4">
-                              <CountryCombobox
-                                label="کشور فروشنده"
-                                value={sellerCountry}
-                                onChange={setSellerCountry}
-                                rightAction={
-                                  sellerCountry ? (
+                              <div className="space-y-2">
+                                <Label className="text-sm">
+                                  نام درخواست دهنده
+                                </Label>
+                                <div className="relative">
+                                  <Input
+                                    value={applicantName}
+                                    onChange={(e) =>
+                                      setApplicantName(e.target.value)
+                                    }
+                                    placeholder="جستجو بر اساس نام درخواست دهنده..."
+                                    className="rounded-xl"
+                                  />
+                                  {applicantName ? (
                                     <button
                                       type="button"
-                                      className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                                      onClick={() => setSellerCountry("")}
-                                      aria-label="پاک کردن کشور فروشنده"
+                                      className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                                      onClick={() => setApplicantName("")}
+                                      aria-label="پاک کردن نام درخواست دهنده"
                                     >
                                       <X className="h-4 w-4" />
                                     </button>
-                                  ) : null
-                                }
-                              />
+                                  ) : null}
+                                </div>
+                              </div>
 
                               <SearchableCombobox
                                 label="نوع ارز"
@@ -1272,7 +1305,7 @@ export default function OrdersList() {
                               />
 
                               <SearchableCombobox
-                                label="ارسال جزئی"
+                                label="حمل به دفعات"
                                 value={partialShipment}
                                 onChange={setPartialShipment}
                                 items={partialShipmentOptions}

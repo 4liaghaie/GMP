@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
+import { ArrowRight, FilePenLine, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { PageHeader } from "@/components/page-header";
 
 import { authFetch } from "@/lib/auth-api";
 import {
@@ -44,18 +46,39 @@ async function fetchOrder(uuid: string, signal?: AbortSignal) {
   return data as any;
 }
 
+function resolveOrderPdfUrl(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  if (!API_BASE) return raw;
+  try {
+    return new URL(raw, API_BASE).toString();
+  } catch {
+    return raw;
+  }
+}
+
 function toFormDefaults(apiData: any): RegisteredOrderFormInput {
   return {
     uuid: String(apiData?.uuid ?? ""),
     order_number: String(apiData?.order_number ?? ""),
+    order_pdf: undefined,
+    order_pdf_url: resolveOrderPdfUrl(apiData?.order_pdf),
 
     // human-readable id (if you still keep it)
-    id: String(apiData?.id ?? apiData?.order_number ?? ""),
+    id: String(apiData?.order_number ?? apiData?.id ?? ""),
 
     freight_price: Number(apiData?.freight_price ?? 0),
     currency_type: String(apiData?.currency_type ?? "USD"),
-    seller_country: String(apiData?.seller_country ?? "CN"),
-    date: String(apiData?.date ?? "2026/02/01"),
+    fee_type: String(apiData?.fee_type ?? "فی دریافتی"),
+    fee_amount: Number(apiData?.fee_amount ?? 0),
+    applicant_name: String(apiData?.applicant_name ?? ""),
+    national_code: String(apiData?.national_code ?? ""),
+    entry_border: String(apiData?.entry_border ?? ""),
+    customs: String(apiData?.customs ?? ""),
+    currency_supply: String(apiData?.currency_supply ?? ""),
+    bank_name: String(apiData?.bank_name ?? ""),
+    bank_branch: String(apiData?.bank_branch ?? ""),
+    payment_instrument: String(apiData?.payment_instrument ?? ""),
     expire_date: String(apiData?.expire_date ?? "2028/01/01"),
     terms_of_delivery: String(apiData?.terms_of_delivery ?? "FOB"),
     terms_of_payment: String(apiData?.terms_of_payment ?? "TT"),
@@ -68,10 +91,15 @@ function toFormDefaults(apiData: any): RegisteredOrderFormInput {
       Array.isArray(apiData?.goods) && apiData.goods.length
         ? apiData.goods.map((g: any) => ({
             description: String(g?.description ?? ""),
+            hs_code: String(g?.hs_code ?? ""),
             hs_code_id: Number(g?.hs_code_id ?? g?.hs_code?.id ?? 0),
+            goods_status: String(g?.goods_status ?? "نو"),
             quantity: Number(g?.quantity ?? 1),
             origin: String(g?.origin ?? "CN"),
             unit_price: Number(g?.unit_price ?? 0),
+            line_subtotal:
+              Number(g?.line_total ?? 0) ||
+              Number(g?.quantity ?? 0) * Number(g?.unit_price ?? 0),
             unit: String(g?.unit ?? "KG"),
             nw_kg: Number(g?.nw_kg ?? 0),
             gw_kg: Number(g?.gw_kg ?? 0),
@@ -79,10 +107,13 @@ function toFormDefaults(apiData: any): RegisteredOrderFormInput {
         : [
             {
               description: "",
+              hs_code: "",
               hs_code_id: 0,
+              goods_status: "نو",
               quantity: 1,
               origin: "CN",
               unit_price: 0,
+              line_subtotal: 0,
               unit: "KG",
               nw_kg: 0,
               gw_kg: 0,
@@ -158,19 +189,16 @@ export default function EditMyOrderPage() {
   return (
     <div dir="rtl" className="">
       <main className="mx-auto max-w-6xl px-4 py-10 space-y-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold">ویرایش ثبت سفارش</h1>
-            <p className="mt-1 text-sm text-muted-foreground leading-6">
-              UUID: {uuid}
-              {defaults?.order_number
-                ? ` — شماره سفارش: ${defaults.order_number}`
-                : ""}
-            </p>
-          </div>
-
-          <div className="flex gap-2">
+        <PageHeader
+          eyebrow="ویرایش"
+          title="ویرایش ثبت سفارش"
+          description={`UUID: ${uuid}${defaults?.order_number ? ` — شماره سفارش: ${defaults.order_number}` : ""}`}
+          icon={<FilePenLine className="h-6 w-6" />}
+          accentClassName="bg-sky-600"
+          actions={
+            <>
             <Button variant="outline" onClick={() => router.push("/my-orders")}>
+              <ArrowRight className="h-4 w-4" />
               بازگشت به لیست
             </Button>
             <Button
@@ -178,10 +206,12 @@ export default function EditMyOrderPage() {
               onClick={() => setRefetchTick((x) => x + 1)}
               disabled={loading}
             >
+              <RefreshCw className="h-4 w-4" />
               دریافت مجدد
             </Button>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {err && (
           <Alert variant="destructive">

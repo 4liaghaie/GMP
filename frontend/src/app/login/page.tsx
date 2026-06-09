@@ -1,4 +1,3 @@
-// src/app/login/page.tsx
 "use client";
 
 import * as React from "react";
@@ -11,7 +10,6 @@ import {
   Loader2,
   LockKeyhole,
   Shield,
-  UserRound,
   Eye,
   EyeOff,
 } from "lucide-react";
@@ -27,8 +25,15 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 const schema = z.object({
-  username: z.string().min(3, "نام کاربری حداقل ۳ کاراکتر است").max(150),
-  password: z.string().min(8, "رمز عبور حداقل ۸ کاراکتر است").max(128),
+  email: z
+    .string()
+    .trim()
+    .min(1, "ایمیل الزامی است.")
+    .email("ایمیل معتبر نیست."),
+  password: z
+    .string()
+    .min(8, "رمز عبور باید حداقل ۸ کاراکتر باشد.")
+    .max(128),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -47,7 +52,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = React.useState(false);
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { username: "", password: "" },
+    defaultValues: { email: "", password: "" },
     mode: "onTouched",
   });
 
@@ -61,8 +66,8 @@ export default function LoginPage() {
     resetMessages();
 
     try {
-      const res = await login({
-        username: values.username.trim(),
+      await login({
+        email: values.email.trim(),
         password: values.password,
       });
 
@@ -76,7 +81,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className=" overflow-x-hidden">
+    <div className="overflow-x-hidden">
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute left-1/2 top-[-140px] h-[360px] w-[360px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
@@ -85,24 +90,23 @@ export default function LoginPage() {
         </div>
 
         <main className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-10 lg:grid-cols-2 lg:items-start">
-          {/* Left panel */}
           <section className="order-2 space-y-4 lg:order-1">
             <div className="rounded-3xl border bg-background/70 p-6 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/50">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">ورود به پنل</p>
+                  <p className="text-sm text-muted-foreground">ورود</p>
                   <h1 className="mt-1 text-2xl font-bold tracking-tight">
-                    ورود با نام کاربری و رمز عبور
+                    ورود با ایمیل و رمز عبور
                   </h1>
                 </div>
                 <Badge variant="secondary" className="hidden sm:inline-flex">
-                  حساب کاربری
+                  دسترسی حساب
                 </Badge>
               </div>
 
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                برای ورود، نام کاربری و رمز عبور خود را وارد کنید. پس از ورود
-                می‌توانید اطلاعات پروفایل را در بخش حساب کاربری ویرایش کنید.
+                برای ورود از ایمیل خود استفاده کنید. سایر کاربران فقط نام کاربری
+                تصادفی شما را می‌بینند.
               </p>
 
               <div className="mt-5 grid gap-3">
@@ -111,9 +115,10 @@ export default function LoginPage() {
                     <Shield className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">امنیت</p>
+                    <p className="text-sm font-semibold">حریم خصوصی</p>
                     <p className="text-xs leading-5 text-muted-foreground">
-                      از رمزهای قوی و منحصربه‌فرد استفاده کنید.
+                      ایمیل و موبایل شما فقط برای ادمین‌ها قابل مشاهده است و
+                      کاربران عادی فقط نام کاربری شما را می‌بینند.
                     </p>
                   </div>
                 </div>
@@ -123,9 +128,9 @@ export default function LoginPage() {
                     <LockKeyhole className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">حریم خصوصی</p>
+                    <p className="text-sm font-semibold">امنیت</p>
                     <p className="text-xs leading-5 text-muted-foreground">
-                      اطلاعات شما فقط برای احراز هویت استفاده می‌شود.
+                      از یک رمز عبور قوی و منحصربه‌فرد استفاده کنید.
                     </p>
                   </div>
                 </div>
@@ -133,13 +138,12 @@ export default function LoginPage() {
             </div>
           </section>
 
-          {/* Right card */}
           <section className="order-1 lg:order-2">
             <Card className="rounded-3xl border bg-background/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <CardHeader className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-xl">ورود</CardTitle>
-                  <Badge variant="outline">نام کاربری / رمز عبور</Badge>
+                  <Badge variant="outline">ایمیل / رمز عبور</Badge>
                 </div>
               </CardHeader>
 
@@ -163,27 +167,29 @@ export default function LoginPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="username">نام کاربری</Label>
+                    <Label htmlFor="email">ایمیل</Label>
                     <Input
-                      id="username"
+                      id="email"
                       className="h-12 rounded-2xl"
-                      placeholder="مثال: milad"
-                      autoComplete="username"
-                      {...form.register("username")}
+                      placeholder="name@example.com"
+                      autoComplete="email"
+                      inputMode="email"
+                      {...form.register("email")}
                       onChange={(e) => {
                         resetMessages();
-                        form.setValue("username", e.target.value, {
+                        form.setValue("email", e.target.value, {
                           shouldValidate: true,
                           shouldDirty: true,
                         });
                       }}
                     />
-                    {form.formState.errors.username?.message && (
+                    {form.formState.errors.email?.message && (
                       <p className="text-sm text-destructive">
-                        {form.formState.errors.username.message}
+                        {form.formState.errors.email.message}
                       </p>
                     )}
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="password">رمز عبور</Label>
 
@@ -250,15 +256,11 @@ export default function LoginPage() {
                     disabled={loading}
                     onClick={() => router.push("/register")}
                   >
-                    حساب ندارم (ثبت‌نام)
+                    ساخت حساب جدید
                   </Button>
                 </form>
               </CardContent>
             </Card>
-
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              با ادامه، قوانین و شرایط استفاده را می‌پذیرید.
-            </p>
           </section>
         </main>
       </div>

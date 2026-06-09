@@ -23,20 +23,14 @@ import { clearTokens, getMe, updateProfile } from "@/lib/auth-api";
 
 const schema = z.object({
   username: z.string().optional().or(z.literal("")),
-  phone: z.string().optional().or(z.literal("")),
-  first_name: z
+  phone: z.string().trim().min(1, "شماره موبایل الزامی است.").max(20),
+  first_name: z.string().max(50).optional().or(z.literal("")),
+  last_name: z.string().max(50).optional().or(z.literal("")),
+  email: z
     .string()
-    .min(2, "نام باید حداقل ۲ کاراکتر باشد")
-    .max(50)
-    .optional()
-    .or(z.literal("")),
-  last_name: z
-    .string()
-    .min(2, "نام خانوادگی باید حداقل ۲ کاراکتر باشد")
-    .max(50)
-    .optional()
-    .or(z.literal("")),
-  email: z.string().email("ایمیل معتبر نیست").optional().or(z.literal("")),
+    .trim()
+    .min(1, "ایمیل الزامی است.")
+    .email("ایمیل معتبر نیست."),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -86,10 +80,7 @@ export default function ProfilePage() {
       } catch (e: any) {
         const msg = e?.message ?? "خطا";
         setError(msg);
-
-        // اگر توکن‌ها خراب/منقضی شده باشند، auth-api خودش clearTokens می‌کند
-        // ولی اینجا هم برای اطمینان می‌توانیم ریدایرکت کنیم:
-        if (msg.includes("دوباره وارد") || msg.includes("وارد شوید")) {
+        if (msg.includes("وارد") || msg.includes("login")) {
           router.replace("/login");
         }
       } finally {
@@ -104,14 +95,12 @@ export default function ProfilePage() {
     setOk(null);
 
     try {
-      const payload = {
+      const updated = await updateProfile({
         first_name: values.first_name?.trim() || "",
         last_name: values.last_name?.trim() || "",
-        email: values.email?.trim() || "",
-        phone: values.phone?.trim() || "",
-      };
-
-      const updated = await updateProfile(payload);
+        email: values.email.trim(),
+        phone: values.phone.trim(),
+      });
 
       form.reset({
         username: updated.username ?? form.getValues("username") ?? "",
@@ -136,14 +125,15 @@ export default function ProfilePage() {
 
   return (
     <div className="">
-
       <main className="mx-auto max-w-6xl px-4 py-10">
         <section className="mx-auto w-full max-w-xl">
           <div className="mb-6 flex items-start justify-between gap-3">
             <div className="space-y-2">
               <h1 className="text-2xl font-bold">پروفایل</h1>
-              <p className="text-sm text-muted-foreground leading-6">
-                اطلاعات حساب شما. 
+              <p className="text-sm leading-6 text-muted-foreground">
+                اطلاعات حساب شما. نام کاربری به‌صورت خودکار ساخته می‌شود و برای
+                کاربران دیگر عمومی است، اما اطلاعات تماس فقط برای ادمین‌ها قابل
+                مشاهده است.
               </p>
             </div>
 
@@ -162,8 +152,10 @@ export default function ProfilePage() {
 
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-xl">اطلاعات کاربری</CardTitle>
+              <CardTitle className="text-xl">اطلاعات حساب</CardTitle>
               <CardDescription>
+                ایمیل و شماره موبایل برای حساب شما الزامی است و فقط ادمین‌ها به
+                آن‌ها دسترسی دارند.
               </CardDescription>
             </CardHeader>
 
@@ -208,9 +200,14 @@ export default function ProfilePage() {
                     <Input
                       id="phone"
                       className="opacity-90"
-                      placeholder="—"
+                      placeholder="09..."
                       {...form.register("phone")}
                     />
+                    {form.formState.errors.phone?.message && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.phone.message}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -218,33 +215,21 @@ export default function ProfilePage() {
                       <Label htmlFor="first_name">نام</Label>
                       <Input
                         id="first_name"
-                        placeholder="مثال: میلاد"
                         {...form.register("first_name")}
                       />
-                      {form.formState.errors.first_name?.message && (
-                        <p className="text-sm text-destructive">
-                          {form.formState.errors.first_name.message}
-                        </p>
-                      )}
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="last_name">نام خانوادگی</Label>
                       <Input
                         id="last_name"
-                        placeholder="مثال: محمدزاده"
                         {...form.register("last_name")}
                       />
-                      {form.formState.errors.last_name?.message && (
-                        <p className="text-sm text-destructive">
-                          {form.formState.errors.last_name.message}
-                        </p>
-                      )}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">ایمیل (اختیاری)</Label>
+                    <Label htmlFor="email">ایمیل</Label>
                     <Input
                       id="email"
                       inputMode="email"

@@ -8,7 +8,6 @@ import {
   ExternalLink,
   User2,
   MapPin,
-  Calendar,
   BadgeCheck,
 } from "lucide-react";
 
@@ -144,6 +143,9 @@ function GoodMobileCard({ g }: { g: OrderGood }) {
             HS: {safeText(g.hs_code)}
           </Badge>
           <Badge variant="outline" className="rounded-xl">
+            وضعیت: {safeText(g.goods_status)}
+          </Badge>
+          <Badge variant="outline" className="rounded-xl">
             مبدا: {safeText(g.origin)}
           </Badge>
           <Badge variant="outline" className="rounded-xl">
@@ -185,7 +187,7 @@ function GoodsTableDesktop({ order }: { order: MarketplaceOrder }) {
         </div>
       </div>
 
-      <ScrollArea className="h-[calc(90dvh-160px)]">
+      <ScrollArea className="h-[48dvh]">
         <Table>
           <TableHeader>
             <TableRow>
@@ -225,8 +227,9 @@ function GoodsTableDesktop({ order }: { order: MarketplaceOrder }) {
                   <TableCell className="text-right">
                     <div className="font-medium">{safeText(g.description)}</div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      مبدا: {safeText(g.origin)} • واحد: {safeText(g.unit)} •
-                      NW: {safeText(g.nw_kg)} • GW: {safeText(g.gw_kg)}
+                      وضعیت: {safeText(g.goods_status)} • مبدا:{" "}
+                      {safeText(g.origin)} • واحد: {safeText(g.unit)} • NW:{" "}
+                      {safeText(g.nw_kg)} • GW: {safeText(g.gw_kg)}
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-medium text-muted-foreground">
@@ -296,6 +299,11 @@ function SummaryCard({ order }: { order: MarketplaceOrder }) {
           label="کرایه حمل"
           value={formatNumLike(order.freight_price)}
         />
+        <KeyValue label="نوع فی" value={safeText(order.fee_type)} />
+        <KeyValue
+          label="مبلغ فی"
+          value={`${formatNumLike(order.fee_amount)} تومان برای هر واحد ارز ثبت سفارش`}
+        />
 
         <Separator />
 
@@ -337,13 +345,24 @@ function DetailsMeta({ order }: { order: MarketplaceOrder }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
+        {order.national_code ? (
+          <KeyValue label="شناسه ملی" value={safeText(order.national_code)} />
+        ) : null}
+        <KeyValue label="تامین ارز" value={safeText(order.currency_supply)} />
+        <KeyValue label="نام بانک" value={safeText(order.bank_name)} />
+        <KeyValue label="شعبه بانک" value={safeText(order.bank_branch)} />
+        <KeyValue
+          label="ابزار پرداخت"
+          value={safeText(order.payment_instrument)}
+        />
         <KeyValue label="تحویل" value={safeText(order.terms_of_delivery)} />
         <KeyValue label="پرداخت" value={safeText(order.terms_of_payment)} />
         <KeyValue label="حمل" value={safeText(order.means_of_transport)} />
+        <KeyValue label="گمرک" value={safeText(order.customs)} />
         <KeyValue label="مبدا" value={safeText(order.country_of_origin)} />
         <KeyValue label="استاندارد" value={safeText(order.standard)} />
         <KeyValue
-          label="ارسال جزئی"
+          label="حمل به دفعات"
           value={order.partial_shipment ? "بله" : "خیر"}
         />
         <KeyValue label="انقضا" value={safeText(order.expire_date)} />
@@ -486,78 +505,128 @@ function DesktopLayout({
   onCopy: () => void;
 }) {
   return (
-    <div className="grid gap-5 md:grid-cols-[380px_1fr]">
-      {/* Left rail */}
-      <div className="space-y-4 md:sticky md:top-4 md:self-start">
-        <Card className="rounded-2xl shadow-sm">
-          <CardHeader className="pb-2">
-            <div className="space-y-2 text-right">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-base font-semibold">
-                    ثبت سفارش {safeText(order.order_number)}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    مشاهده جزئیات، اقلام و خلاصه مالی
-                  </div>
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-xl"
-                  onClick={onCopy}
-                >
-                  {copied ? (
-                    <Check className="ms-2 h-4 w-4" />
-                  ) : (
-                    <Copy className="ms-2 h-4 w-4" />
-                  )}
-                  کپی
-                </Button>
-              </div>
-
+    <div className="space-y-4">
+      <Card className="overflow-hidden rounded-2xl shadow-sm before:h-1 before:bg-slate-900 before:content-['']">
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="rounded-xl">
-                  {safeText(order.currency_type)}
-                </Badge>
-                <Badge variant="outline" className="rounded-xl">
+                <Badge variant="secondary">ثبت سفارش</Badge>
+                <Badge variant="outline">{safeText(order.currency_type)}</Badge>
+                <Badge variant="outline">
                   {order.goods?.length
                     ? `${order.goods.length} ردیف کالا`
                     : "بدون کالا"}
                 </Badge>
               </div>
+              <div>
+                <div className="text-xl font-black">
+                  {safeText(order.order_number)}
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  فروشنده: {safeText(order.user)} • مرز ورودی:{" "}
+                  {safeText(order.entry_border)}
+                </div>
+              </div>
+            </div>
 
-              <div className="grid gap-2">
+            <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
+              <KeyValue
+                label="ارزش کالا"
+                value={formatNumLike(order.total_value)}
+              />
+              <KeyValue
+                label="کرایه حمل"
+                value={formatNumLike(order.freight_price)}
+              />
+              <KeyValue label="جمع کل" value={formatNumLike(order.sub_total)} />
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-fit rounded-xl"
+              onClick={onCopy}
+            >
+              {copied ? (
+                <Check className="ms-2 h-4 w-4" />
+              ) : (
+                <Copy className="ms-2 h-4 w-4" />
+              )}
+              کپی شماره
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="goods" className="w-full">
+        <TabsList className="w-full rounded-2xl md:w-auto">
+          <TabsTrigger className="rounded-2xl px-5" value="goods">
+            اقلام کالا
+          </TabsTrigger>
+          <TabsTrigger className="rounded-2xl px-5" value="summary">
+            خلاصه مالی
+          </TabsTrigger>
+          <TabsTrigger className="rounded-2xl px-5" value="meta">
+            اطلاعات تکمیلی
+          </TabsTrigger>
+          <TabsTrigger className="rounded-2xl px-5" value="contact">
+            ارتباط
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="goods" className="mt-4">
+          <GoodsTableDesktop order={order} />
+        </TabsContent>
+
+        <TabsContent value="summary" className="mt-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <SummaryCard order={order} />
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader className="pb-2">
+                <div className="text-sm font-semibold">شناسه‌ها</div>
+                <div className="text-xs text-muted-foreground">
+                  اطلاعات اصلی ثبت سفارش
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
                 <KeyValue
                   label="فروشنده"
                   value={safeText(order.user)}
                   icon={<User2 className="h-4 w-4" />}
                 />
+                {order.applicant_name ? (
+                  <KeyValue
+                    label="درخواست دهنده"
+                    value={safeText(order.applicant_name)}
+                    icon={<User2 className="h-4 w-4" />}
+                  />
+                ) : null}
                 <KeyValue
-                  label="کشور فروشنده"
-                  value={safeText(order.seller_country)}
+                  label="مرز ورودی"
+                  value={safeText(order.entry_border)}
                   icon={<MapPin className="h-4 w-4" />}
                 />
                 <KeyValue
-                  label="تاریخ"
-                  value={safeText(order.date)}
-                  icon={<Calendar className="h-4 w-4" />}
+                  label="ارز"
+                  value={safeText(order.currency_type)}
+                  icon={<BadgeCheck className="h-4 w-4" />}
                 />
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-        <ContactStripCompact order={order} />
-        <SummaryCard order={order} />
-        <DetailsMeta order={order} />
-      </div>
+        <TabsContent value="meta" className="mt-4">
+          <DetailsMeta order={order} />
+        </TabsContent>
 
-      {/* Right main */}
-      <div className="min-w-0">
-        <GoodsTableDesktop order={order} />
-      </div>
+        <TabsContent value="contact" className="mt-4">
+          <div className="max-w-md">
+            <ContactStripCompact order={order} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -605,15 +674,17 @@ function MobileBody({ order }: { order: MarketplaceOrder }) {
       <Card className="rounded-2xl shadow-sm">
         <CardContent className="p-4 text-sm">
           <div className="grid gap-2">
+            {order.applicant_name ? (
+              <KeyValue
+                label="درخواست دهنده"
+                value={safeText(order.applicant_name)}
+                icon={<User2 className="h-4 w-4" />}
+              />
+            ) : null}
             <KeyValue
-              label="کشور فروشنده"
-              value={safeText(order.seller_country)}
+              label="مرز ورودی"
+              value={safeText(order.entry_border)}
               icon={<MapPin className="h-4 w-4" />}
-            />
-            <KeyValue
-              label="تاریخ"
-              value={safeText(order.date)}
-              icon={<Calendar className="h-4 w-4" />}
             />
           </div>
 
@@ -753,15 +824,17 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
                 icon={<User2 className="h-4 w-4" />}
               />
               <div className="grid gap-2 sm:grid-cols-2">
+                {order.applicant_name ? (
+                  <KeyValue
+                    label="درخواست دهنده"
+                    value={safeText(order.applicant_name)}
+                    icon={<User2 className="h-4 w-4" />}
+                  />
+                ) : null}
                 <KeyValue
-                  label="کشور فروشنده"
-                  value={safeText(order.seller_country)}
+                  label="مرز ورودی"
+                  value={safeText(order.entry_border)}
                   icon={<MapPin className="h-4 w-4" />}
-                />
-                <KeyValue
-                  label="تاریخ"
-                  value={safeText(order.date)}
-                  icon={<Calendar className="h-4 w-4" />}
                 />
               </div>
             </div>

@@ -3,8 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ClipboardList, PlusCircle, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
 import {
   Card,
   CardContent,
@@ -24,19 +26,19 @@ type RegisteredOrderListItem = {
   uuid: string;
   verified?: boolean;
   user?: string | null;
+  user_email?: string | null;
+  user_phone?: string | null;
   order_number?: string | null;
-
-  // optional legacy fields
   id?: string | null;
-
-  date?: string | null;
   expire_date?: string | null;
   currency_type?: string | null;
-  seller_country?: string | null;
-  country_of_origin?: string | null;
-
+  applicant_name?: string | null;
+  national_code?: string | null;
+  entry_border?: string | null;
   freight_price?: string | number | null;
-
+  sub_total?: string | number | null;
+  fee_type?: string | null;
+  fee_amount?: string | number | null;
   goods?: Array<{
     quantity?: string | number | null;
     unit_price?: string | number | null;
@@ -53,7 +55,7 @@ function fmt(n: number) {
 }
 
 async function fetchMyOrders(signal?: AbortSignal) {
-  if (!API_BASE) throw new Error("متغیر NEXT_PUBLIC_API_BASE تنظیم نشده است");
+  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
 
   const res = await authFetch(`${API_BASE}/registered-orders/`, {
     method: "GET",
@@ -62,14 +64,8 @@ async function fetchMyOrders(signal?: AbortSignal) {
   });
 
   const data = (await res.json().catch(() => ({}))) as any;
-
   if (!res.ok) {
-    const msg =
-      data?.detail ||
-      (typeof data === "object"
-        ? JSON.stringify(data)
-        : "خطا در دریافت ثبت سفارش‌ها");
-    throw new Error(msg);
+    throw new Error(data?.detail || "Failed to fetch orders.");
   }
 
   const items = Array.isArray(data)
@@ -82,7 +78,7 @@ async function fetchMyOrders(signal?: AbortSignal) {
 }
 
 async function deleteOrder(uuid: string) {
-  if (!API_BASE) throw new Error("متغیر NEXT_PUBLIC_API_BASE تنظیم نشده است");
+  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
 
   const res = await authFetch(
     `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/`,
@@ -93,15 +89,12 @@ async function deleteOrder(uuid: string) {
 
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) {
-    const msg =
-      data?.detail ||
-      (typeof data === "object" ? JSON.stringify(data) : "خطا در حذف");
-    throw new Error(msg);
+    throw new Error(data?.detail || "Failed to delete order.");
   }
 }
 
 async function setOrderVerified(uuid: string, verified: boolean) {
-  if (!API_BASE) throw new Error("متغیر NEXT_PUBLIC_API_BASE تنظیم نشده است");
+  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
 
   const res = await authFetch(
     `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/verify/`,
@@ -113,12 +106,7 @@ async function setOrderVerified(uuid: string, verified: boolean) {
 
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) {
-    const msg =
-      data?.detail ||
-      (typeof data === "object"
-        ? JSON.stringify(data)
-        : "خطا در تغییر وضعیت تایید");
-    throw new Error(msg);
+    throw new Error(data?.detail || "Failed to update verification state.");
   }
 
   return data as RegisteredOrderListItem;
@@ -133,7 +121,6 @@ export default function MyOrdersPage() {
   const [items, setItems] = React.useState<RegisteredOrderListItem[]>([]);
   const [q, setQ] = React.useState("");
   const [role, setRole] = React.useState<string>("user");
-
   const [deletingUuid, setDeletingUuid] = React.useState<string | null>(null);
   const [verifyingUuid, setVerifyingUuid] = React.useState<string | null>(null);
 
@@ -156,7 +143,7 @@ export default function MyOrdersPage() {
 
     fetchMyOrders(ac.signal)
       .then(setItems)
-      .catch((e: any) => setErr(e?.message || "خطا"))
+      .catch((e: any) => setErr(e?.message || "Error"))
       .finally(() => setLoading(false));
 
     return () => ac.abort();
@@ -173,15 +160,13 @@ export default function MyOrdersPage() {
     if (!s) return items;
 
     return items.filter((o) => {
-      const hay =
-        `${o.order_number ?? ""} ${o.id ?? ""} ${o.uuid ?? ""}`.toLowerCase();
+      const hay = `${o.order_number ?? ""} ${o.id ?? ""} ${o.uuid ?? ""}`.toLowerCase();
       return hay.includes(s);
     });
   }, [items, q]);
 
   async function onDelete(uuid: string) {
-    const ok = window.confirm("آیا از حذف این ثبت سفارش مطمئن هستید؟");
-    if (!ok) return;
+    if (!window.confirm("Delete this order?")) return;
 
     setDeletingUuid(uuid);
     setErr("");
@@ -189,7 +174,7 @@ export default function MyOrdersPage() {
       await deleteOrder(uuid);
       setItems((prev) => prev.filter((x) => x.uuid !== uuid));
     } catch (e: any) {
-      setErr(e?.message || "خطا در حذف");
+      setErr(e?.message || "Delete failed.");
     } finally {
       setDeletingUuid(null);
     }
@@ -197,11 +182,7 @@ export default function MyOrdersPage() {
 
   async function onToggleVerify(item: RegisteredOrderListItem) {
     const next = !Boolean(item.verified);
-    const question = next
-      ? "این سفارش تایید شود؟"
-      : "تایید این سفارش لغو شود؟";
-
-    if (!window.confirm(question)) return;
+    if (!window.confirm(next ? "Verify this order?" : "Remove verification?")) return;
 
     setVerifyingUuid(item.uuid);
     setErr("");
@@ -213,7 +194,7 @@ export default function MyOrdersPage() {
         ),
       );
     } catch (e: any) {
-      setErr(e?.message || "خطا در تغییر وضعیت تایید");
+      setErr(e?.message || "Verification update failed.");
     } finally {
       setVerifyingUuid(null);
     }
@@ -224,30 +205,30 @@ export default function MyOrdersPage() {
   return (
     <div dir="rtl" className="">
       <main className="mx-auto max-w-6xl px-4 py-10">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">ثبت سفارش‌های من</h1>
-            <p className="mt-1 text-sm text-muted-foreground leading-6">
-              لیست ثبت سفارش‌هایی که با اکانت شما ساخته شده‌اند.
-            </p>
-          </div>
-
-          <div className="flex gap-2">
+        <PageHeader
+          eyebrow="مدیریت"
+          title="ثبت سفارش‌های من"
+          description="لیست ثبت سفارش‌هایی که با حساب شما ایجاد شده‌اند."
+          icon={<ClipboardList className="h-6 w-6" />}
+          accentClassName="bg-emerald-600"
+          actions={
+            <>
             <Button variant="outline" onClick={() => router.push("/add-order")}>
-              + ایجاد ثبت سفارش
+              <PlusCircle className="h-4 w-4" />
+              + ایجاد سفارش
             </Button>
             <Button variant="outline" onClick={() => load()}>
+              <RefreshCw className="h-4 w-4" />
               بروزرسانی
             </Button>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-base">لیست</CardTitle>
-            <CardDescription>
-              برای ویرایش روی دکمه ویرایش بزنید.
-            </CardDescription>
+            <CardDescription>برای ویرایش روی دکمه ویرایش بزنید.</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -278,11 +259,16 @@ export default function MyOrdersPage() {
                   <tr className="[&>th]:px-3 [&>th]:py-2 text-right">
                     <th>Order#</th>
                     <th>ID</th>
-                    <th>تاریخ</th>
                     <th>انقضا</th>
                     <th>ارز</th>
-                    <th>کشور فروشنده</th>
+                    {isAdmin && <th>درخواست دهنده</th>}
+                    {isAdmin && <th>شناسه ملی</th>}
+                    <th>مرز ورودی</th>
+                    <th>نوع فی</th>
+                    <th>مبلغ فی</th>
                     {isAdmin && <th>کاربر</th>}
+                    {isAdmin && <th>Email</th>}
+                    {isAdmin && <th>Phone</th>}
                     {isAdmin && <th>وضعیت تایید</th>}
                     <th>تعداد کالا</th>
                     <th>جمع تقریبی</th>
@@ -295,40 +281,30 @@ export default function MyOrdersPage() {
                     <tr>
                       <td
                         className="px-3 py-6 text-center text-muted-foreground"
-                        colSpan={isAdmin ? 11 : 9}
+                        colSpan={isAdmin ? 17 : 10}
                       >
                         موردی یافت نشد.
                       </td>
                     </tr>
                   ) : (
                     filtered.map((o) => {
-                      const goodsCount = Array.isArray(o.goods)
-                        ? o.goods.length
-                        : 0;
-                      const goodsTotal = Array.isArray(o.goods)
-                        ? o.goods.reduce(
-                            (s, g) =>
-                              s + safeNum(g?.quantity) * safeNum(g?.unit_price),
-                            0,
-                          )
-                        : 0;
-
-                      const total = goodsTotal + safeNum(o.freight_price);
+                      const goodsCount = Array.isArray(o.goods) ? o.goods.length : 0;
+                      const total = safeNum(o.sub_total);
 
                       return (
-                        <tr
-                          key={o.uuid}
-                          className="border-t [&>td]:px-3 [&>td]:py-2"
-                        >
-                          <td className="font-medium">
-                            {o.order_number || "-"}
-                          </td>
+                        <tr key={o.uuid} className="border-t [&>td]:px-3 [&>td]:py-2">
+                          <td className="font-medium">{o.order_number || "-"}</td>
                           <td>{o.id || "-"}</td>
-                          <td>{o.date || "-"}</td>
                           <td>{o.expire_date || "-"}</td>
                           <td>{o.currency_type || "-"}</td>
-                          <td>{o.seller_country || "-"}</td>
+                          {isAdmin && <td>{o.applicant_name || "-"}</td>}
+                          {isAdmin && <td>{o.national_code || "-"}</td>}
+                          <td>{o.entry_border || "-"}</td>
+                          <td>{o.fee_type || "-"}</td>
+                          <td>{safeNum(o.fee_amount) ? fmt(safeNum(o.fee_amount)) : "-"}</td>
                           {isAdmin && <td>{o.user || "-"}</td>}
+                          {isAdmin && <td>{o.user_email || "-"}</td>}
+                          {isAdmin && <td>{o.user_phone || "-"}</td>}
                           {isAdmin && (
                             <td>
                               {o.verified ? (
@@ -343,9 +319,7 @@ export default function MyOrdersPage() {
                           <td>
                             <div className="flex gap-2">
                               <Button asChild size="sm" variant="outline">
-                                <Link
-                                  href={`/my-orders/${encodeURIComponent(o.uuid)}`}
-                                >
+                                <Link href={`/my-orders/${encodeURIComponent(o.uuid)}`}>
                                   ویرایش
                                 </Link>
                               </Button>

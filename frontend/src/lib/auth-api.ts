@@ -64,7 +64,7 @@ function firstErrorMessage(data: any, fallback: string) {
 
 // ---- Auth endpoints ----
 
-export async function login(payload: { username: string; password: string }) {
+export async function login(payload: { email: string; password: string }) {
   if (!payload || typeof payload !== "object") {
     throw new Error("خطای داخلی: payload ورود باید یک آبجکت باشد.");
   }
@@ -73,7 +73,7 @@ export async function login(payload: { username: string; password: string }) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      username: payload.username,
+      email: payload.email,
       password: payload.password,
     }),
   });
@@ -98,13 +98,12 @@ export async function login(payload: { username: string; password: string }) {
 }
 
 export async function register(payload: {
-  username: string;
   password: string;
   password2: string;
-  email?: string;
+  email: string;
   first_name?: string;
   last_name?: string;
-  phone?: string;
+  phone: string;
 }) {
   const res = await fetch(`${API}/auth/register`, {
     method: "POST",

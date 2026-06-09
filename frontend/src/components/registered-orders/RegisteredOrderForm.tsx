@@ -10,6 +10,7 @@ import {
   useWatch,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, ChevronsUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,11 +36,12 @@ import {
   CommandInput,
   CommandItem,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { authFetch } from "@/lib/auth-api";
+import { borders } from "@/lib/borderList";
 import { countries } from "@/lib/countryList";
+import { iranCustoms } from "@/lib/customsList";
+import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -68,12 +70,24 @@ const unitOptions = [
   { value: "M", label: "متر (M)" },
 ] as const;
 
+const goodsStatusOptions = [
+  { value: "نو", label: "نو" },
+  { value: "مستعمل", label: "مستعمل" },
+  { value: "بازسازی شده", label: "بازسازی شده" },
+] as const;
+
 const deliveryTerms = [
-  { value: "EXW", label: "EXW (تحویل درب کارخانه)" },
-  { value: "FOB", label: "FOB (تحویل روی عرشه)" },
-  { value: "CFR", label: "CFR (هزینه و کرایه)" },
-  { value: "CIF", label: "CIF (هزینه، بیمه و کرایه)" },
-  { value: "DAP", label: "DAP (تحویل در محل)" },
+  { value: "EXW", label: "EXW (تحویل در محل کارخانه)" },
+  { value: "FOB", label: "FOB (تحویل روی عرشه کشتی)" },
+  { value: "CFR", label: "CFR (هزینه و کرایه حمل)" },
+  { value: "CIF", label: "CIF (هزینه، بیمه و کرایه حمل)" },
+  { value: "DAP", label: "DAP (تحویل در محل مقصد)" },
+  { value: "CPT", label: "CPT (کرایه حمل پرداخت‌شده تا مقصد)" },
+  { value: "CIP", label: "CIP (کرایه و بیمه پرداخت‌شده تا مقصد)" },
+  { value: "FCA", label: "FCA (تحویل به حمل‌کننده)" },
+  { value: "FAS", label: "FAS (تحویل کنار کشتی)" },
+  { value: "DDP", label: "DDP (تحویل در مقصد با پرداخت حقوق و عوارض گمرکی)" },
+  { value: "DPU", label: "DPU (تحویل در محل تخلیه‌شده)" },
 ] as const;
 
 const paymentTerms = [
@@ -82,6 +96,21 @@ const paymentTerms = [
   { value: "CAD", label: "CAD (اسناد در مقابل پرداخت)" },
   { value: "DP", label: "D/P (اسناد در مقابل پرداخت)" },
   { value: "DA", label: "D/A (اسناد در مقابل قبول)" },
+] as const;
+
+const currencySupplyOptions = [
+  { value: "خرید ارز از سیستم بانکی", label: "خرید ارز از سیستم بانکی" },
+  { value: "از محل ارز خود", label: "از محل ارز خود" },
+  { value: "از محل صادرات خود", label: "از محل صادرات خود" },
+  { value: "تهاتر", label: "تهاتر" },
+  { value: "از محل صادرات دیگران", label: "از محل صادرات دیگران" },
+  { value: "از محل ارز دیگران", label: "از محل ارز دیگران" },
+  { value: "از محل صادرات", label: "از محل صادرات" },
+] as const;
+
+const feeTypeOptions = [
+  { value: "فی دریافتی", label: "فی دریافتی" },
+  { value: "فی پرداختی", label: "فی پرداختی" },
 ] as const;
 
 const transportMeans = [
@@ -99,12 +128,25 @@ const standards = [
   { value: "OTHER", label: "سایر" },
 ] as const;
 
+const borderOptions = borders.map((border) => ({
+  value: border,
+  label: border,
+}));
+
+const customsOptions = iranCustoms.map((customs) => ({
+  value: String(customs.ctmVCodeInt),
+  label: `${customs.ctmNameStr} (${customs.ctmVCodeInt})`,
+}));
+
 const goodSchema = z.object({
   description: z.string().min(1, "شرح کالا الزامی است"),
+  hs_code: z.string().optional(),
   hs_code_id: z.coerce.number().int().positive("کد HS الزامی است"),
+  goods_status: z.string().min(1, "وضعیت کالا الزامی است"),
   quantity: z.coerce.number().positive("مقدار باید بیشتر از ۰ باشد"),
   origin: z.string().min(1, "مبدا الزامی است"),
   unit_price: z.coerce.number().nonnegative("قیمت واحد باید >= ۰ باشد"),
+  line_subtotal: z.coerce.number().nonnegative("جمع جزء باید >= ۰ باشد"),
   unit: z.string().min(1, "واحد الزامی است"),
   nw_kg: z.coerce.number().nonnegative("وزن خالص باید >= ۰ باشد"),
   gw_kg: z.coerce.number().nonnegative("وزن ناخالص باید >= ۰ باشد"),
@@ -112,17 +154,22 @@ const goodSchema = z.object({
 
 const orderSchema = z.object({
   uuid: z.string().optional(),
-
-  // ✅ server order number shown in edit page
   order_number: z.string().optional(),
-
-  // legacy human id you were using in UI
+  order_pdf: z.any().optional(),
+  order_pdf_url: z.string().optional(),
   id: z.string().min(1, "شناسه ثبت سفارش الزامی است"),
-
   freight_price: z.coerce.number().nonnegative("کرایه حمل باید >= ۰ باشد"),
   currency_type: z.string().min(1, "نوع ارز الزامی است"),
-  seller_country: z.string().min(1, "کشور فروشنده الزامی است"),
-  date: z.string().min(1, "تاریخ الزامی است"),
+  fee_type: z.string().min(1, "نوع فی الزامی است"),
+  fee_amount: z.coerce.number().nonnegative("مبلغ فی باید >= ۰ باشد"),
+  applicant_name: z.string().min(1, "نام درخواست‌دهنده الزامی است"),
+  national_code: z.string().min(1, "کد/شناسه ملی الزامی است"),
+  entry_border: z.string().min(1, "مرز ورودی الزامی است"),
+  customs: z.string().min(1, "گمرک الزامی است"),
+  currency_supply: z.string().min(1, "تامین ارز الزامی است"),
+  bank_name: z.string().min(1, "نام بانک الزامی است"),
+  bank_branch: z.string().min(1, "شعبه بانک الزامی است"),
+  payment_instrument: z.string().min(1, "ابزار پرداخت الزامی است"),
   expire_date: z.string().min(1, "تاریخ انقضا الزامی است"),
   terms_of_delivery: z.string().min(1, "شرایط تحویل الزامی است"),
   terms_of_payment: z.string().min(1, "شرایط پرداخت الزامی است"),
@@ -139,6 +186,14 @@ type RegisteredOrderForm = z.output<typeof orderSchema>;
 function fmt(n: number) {
   const x = Number.isFinite(n) ? n : 0;
   return x.toLocaleString("fa-IR", { maximumFractionDigits: 2 });
+}
+
+function calcUnitPrice(quantity: unknown, lineSubtotal: unknown) {
+  const qty = Number(quantity ?? 0);
+  const subtotal = Number(lineSubtotal ?? 0);
+  if (!Number.isFinite(qty) || qty <= 0) return 0;
+  if (!Number.isFinite(subtotal) || subtotal <= 0) return 0;
+  return subtotal / qty;
 }
 
 function safeTrim(v: unknown) {
@@ -186,14 +241,8 @@ async function fetchHSCodes(
   });
 
   const data = (await res.json().catch(() => ({}))) as any;
-
   if (!res.ok) {
-    const msg =
-      data?.detail ||
-      (typeof data === "object"
-        ? JSON.stringify(data)
-        : "خطا در دریافت HS Code ها");
-    throw new Error(msg);
+    throw new Error(data?.detail || "خطا در دریافت HS Code ها");
   }
 
   const items = Array.isArray(data)
@@ -201,7 +250,6 @@ async function fetchHSCodes(
     : Array.isArray(data?.results)
       ? data.results
       : [];
-
   return items.map((x: any) => ({
     id: Number(x.id),
     code: String(x.code ?? ""),
@@ -237,12 +285,10 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
 }) {
   const [open, setOpen] = React.useState(false);
   const [q, setQ] = React.useState("");
-
   const selected = React.useMemo(
     () => props.items.find((x) => x.value === props.value),
     [props.items, props.value],
   );
-
   const filtered = React.useMemo(() => {
     const qq = normalizeFa(q);
     if (!qq) return props.items;
@@ -254,7 +300,6 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
   return (
     <div className="space-y-2">
       <Label className="text-sm">{props.label}</Label>
-
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -272,7 +317,6 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
             <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-
         <PopoverContent
           className="w-[--radix-popover-trigger-width] p-0"
           align="start"
@@ -284,7 +328,6 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
               onValueChange={setQ}
             />
             <CommandEmpty>موردی پیدا نشد.</CommandEmpty>
-
             <CommandGroup className="max-h-[320px] overflow-auto">
               {filtered.map((it) => {
                 const isSelected = it.value === props.value;
@@ -313,7 +356,6 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
           </Command>
         </PopoverContent>
       </Popover>
-
       {props.error ? (
         <p className="text-sm text-destructive">{props.error}</p>
       ) : null}
@@ -359,7 +401,6 @@ function HSCodeCombobox(props: {
   const [open, setOpen] = React.useState(false);
   const [q, setQ] = React.useState("");
   const debouncedQ = useDebouncedValue(q, 250);
-
   const [items, setItems] = React.useState<HSCodeOption[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [loadError, setLoadError] = React.useState("");
@@ -367,7 +408,6 @@ function HSCodeCombobox(props: {
   const selected =
     items.find((x) => x.id === props.value) ||
     props.selectedCache.get(props.value);
-
   const selectedLabel = React.useMemo(() => {
     if (!selected) return "";
     const fa = safeTrim(selected.goods_name_fa);
@@ -379,11 +419,9 @@ function HSCodeCombobox(props: {
 
   React.useEffect(() => {
     if (!open) return;
-
     const ac = new AbortController();
     setLoading(true);
     setLoadError("");
-
     fetchHSCodes(debouncedQ, ac.signal)
       .then((res) => {
         setItems(res);
@@ -395,7 +433,6 @@ function HSCodeCombobox(props: {
         setItems([]);
       })
       .finally(() => setLoading(false));
-
     return () => ac.abort();
   }, [open, debouncedQ, props.selectedCache]);
 
@@ -409,7 +446,6 @@ function HSCodeCombobox(props: {
   return (
     <div className="space-y-2">
       <Label className="text-sm">کد HS</Label>
-
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -431,7 +467,6 @@ function HSCodeCombobox(props: {
             <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-
         <PopoverContent
           className="w-[--radix-popover-trigger-width] p-0"
           align="start"
@@ -442,7 +477,6 @@ function HSCodeCombobox(props: {
               value={q}
               onValueChange={setQ}
             />
-
             {loading ? (
               <div className="p-3 text-sm text-muted-foreground">
                 در حال جستجو...
@@ -450,9 +484,7 @@ function HSCodeCombobox(props: {
             ) : loadError ? (
               <div className="p-3 text-sm text-destructive">{loadError}</div>
             ) : null}
-
             <CommandEmpty>موردی پیدا نشد.</CommandEmpty>
-
             <CommandGroup className="max-h-[320px] overflow-auto">
               {mergedItems.map((h) => {
                 const fa = safeTrim(h.goods_name_fa);
@@ -460,9 +492,7 @@ function HSCodeCombobox(props: {
                 const name = fa || en;
                 const shortName = truncateText(name, 30);
                 const label = shortName ? `${h.code} — ${shortName}` : h.code;
-
                 const isSelected = h.id === props.value;
-
                 return (
                   <CommandItem
                     key={h.id}
@@ -490,7 +520,6 @@ function HSCodeCombobox(props: {
           </Command>
         </PopoverContent>
       </Popover>
-
       {props.error ? (
         <p className="text-sm text-destructive">{props.error}</p>
       ) : null}
@@ -498,17 +527,12 @@ function HSCodeCombobox(props: {
   );
 }
 
-// -------------------------
-// API calls
-// -------------------------
 async function createOrder(payload: any) {
   if (!API_BASE) throw new Error("متغیر NEXT_PUBLIC_API_BASE تنظیم نشده است");
-
   const res = await authFetch(`${API_BASE}/registered-orders/`, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: payload,
   });
-
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) throw new Error(data?.detail || JSON.stringify(data) || "خطا");
   return data;
@@ -516,18 +540,67 @@ async function createOrder(payload: any) {
 
 async function updateOrderByUuid(uuid: string, payload: any) {
   if (!API_BASE) throw new Error("متغیر NEXT_PUBLIC_API_BASE تنظیم نشده است");
-
   const res = await authFetch(
     `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/`,
     {
       method: "PATCH",
-      body: JSON.stringify(payload),
+      body: payload,
     },
   );
-
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) throw new Error(data?.detail || JSON.stringify(data) || "خطا");
   return data;
+}
+
+function buildOrderFormData(values: RegisteredOrderForm) {
+  const formData = new FormData();
+  formData.append("order_number", values.id);
+  formData.append("freight_price", String(values.freight_price ?? 0));
+  formData.append("currency_type", values.currency_type);
+  formData.append("fee_type", values.fee_type);
+  formData.append("fee_amount", String(values.fee_amount ?? 0));
+  formData.append("applicant_name", values.applicant_name);
+  formData.append("national_code", values.national_code);
+  formData.append("entry_border", values.entry_border);
+  formData.append("customs", values.customs);
+  formData.append("currency_supply", values.currency_supply);
+  formData.append("bank_name", values.bank_name);
+  formData.append("bank_branch", values.bank_branch);
+  formData.append("payment_instrument", values.payment_instrument);
+  formData.append("expire_date", values.expire_date);
+  formData.append("terms_of_delivery", values.terms_of_delivery);
+  formData.append("terms_of_payment", values.terms_of_payment);
+  formData.append(
+    "partial_shipment",
+    values.partial_shipment ? "true" : "false",
+  );
+  formData.append("means_of_transport", values.means_of_transport);
+  formData.append("country_of_origin", values.country_of_origin);
+  formData.append("standard", values.standard);
+  formData.append(
+    "goods",
+    JSON.stringify(
+      values.goods.map((g) => ({
+        description: g.description,
+        hs_code_id: Number(g.hs_code_id),
+        goods_status: g.goods_status,
+        quantity: String(g.quantity ?? 0),
+        origin: g.origin,
+        unit_price: String(calcUnitPrice(g.quantity, g.line_subtotal)),
+        unit: g.unit,
+        nw_kg: String(g.nw_kg ?? 0),
+        gw_kg: String(g.gw_kg ?? 0),
+      })),
+    ),
+  );
+  const file =
+    values.order_pdf instanceof FileList
+      ? values.order_pdf.item(0)
+      : values.order_pdf;
+  if (file instanceof File) {
+    formData.append("order_pdf", file);
+  }
+  return formData;
 }
 
 export function RegisteredOrderForm(props: {
@@ -536,7 +609,6 @@ export function RegisteredOrderForm(props: {
   onDone?: (idOrUuid: string) => void;
 }) {
   const hsSelectedCacheRef = React.useRef<Map<number, HSCodeOption>>(new Map());
-
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState("");
   const [success, setSuccess] = React.useState("");
@@ -548,30 +620,40 @@ export function RegisteredOrderForm(props: {
   });
 
   React.useEffect(() => {
+    props.initialValues.goods?.forEach((g: any) => {
+      const id = Number(g?.hs_code_id ?? 0);
+      const code = safeTrim(g?.hs_code);
+      if (id > 0 && code) {
+        hsSelectedCacheRef.current.set(id, {
+          id,
+          code,
+          goods_name_fa: null,
+          goods_name_en: null,
+        });
+      }
+    });
     form.reset(props.initialValues);
   }, [props.initialValues]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { control, register, handleSubmit, formState } = form;
   const { errors } = formState;
-
   const goodsFA = useFieldArray({ control, name: "goods" });
-
   const goods = useWatch({ control, name: "goods" }) || [];
   const freight = useWatch({ control, name: "freight_price" }) ?? 0;
 
-  const goodsTotal = React.useMemo(() => {
-    return (goods || []).reduce((sum, g) => {
-      const qty = Number(g?.quantity ?? 0);
-      const price = Number(g?.unit_price ?? 0);
-      return sum + qty * price;
-    }, 0);
-  }, [goods]);
+  const goodsTotal = React.useMemo(
+    () =>
+      (goods || []).reduce((sum, g) => {
+        const lineSubtotal = Number(g?.line_subtotal ?? 0);
+        return sum + (Number.isFinite(lineSubtotal) ? lineSubtotal : 0);
+      }, 0),
+    [goods],
+  );
 
   const subTotal = React.useMemo(
     () => goodsTotal + Number(freight ?? 0),
     [goodsTotal, freight],
   );
-
   const uuidForEdit = String(form.getValues("uuid") || "");
 
   const onSubmit: SubmitHandler<RegisteredOrderFormInput> = async (raw) => {
@@ -581,32 +663,20 @@ export function RegisteredOrderForm(props: {
 
     try {
       const values: RegisteredOrderForm = orderSchema.parse(raw);
+      const file =
+        values.order_pdf instanceof FileList
+          ? values.order_pdf.item(0)
+          : values.order_pdf;
 
-      // ✅ do not send order_number (server-generated)
-      const payload = {
-        id: values.id,
-        freight_price: String(values.freight_price ?? 0),
-        currency_type: values.currency_type,
-        seller_country: values.seller_country,
-        date: values.date,
-        expire_date: values.expire_date,
-        terms_of_delivery: values.terms_of_delivery,
-        terms_of_payment: values.terms_of_payment,
-        partial_shipment: values.partial_shipment ?? false,
-        means_of_transport: values.means_of_transport,
-        country_of_origin: values.country_of_origin,
-        standard: values.standard,
-        goods: values.goods.map((g) => ({
-          description: g.description,
-          hs_code_id: Number(g.hs_code_id),
-          quantity: String(g.quantity ?? 0),
-          origin: g.origin,
-          unit_price: String(g.unit_price ?? 0),
-          unit: g.unit,
-          nw_kg: String(g.nw_kg ?? 0),
-          gw_kg: String(g.gw_kg ?? 0),
-        })),
-      };
+      if (props.mode === "create" && !(file instanceof File)) {
+        throw new Error("فایل PDF سفارش الزامی است.");
+      }
+
+      if (file instanceof File && !file.name.toLowerCase().endsWith(".pdf")) {
+        throw new Error("فقط فایل PDF قابل آپلود است.");
+      }
+
+      const payload = buildOrderFormData(values);
 
       const res =
         props.mode === "create"
@@ -614,8 +684,7 @@ export function RegisteredOrderForm(props: {
           : await updateOrderByUuid(uuidForEdit, payload);
 
       const outUuid = String(res?.uuid ?? uuidForEdit ?? "");
-      const outId = String(res?.id ?? values.id ?? "");
-
+      const outId = String(res?.order_number ?? values.id ?? "");
       setSuccess(
         props.mode === "create" ? `ایجاد شد: ${outId}` : `ویرایش شد: ${outId}`,
       );
@@ -643,14 +712,13 @@ export function RegisteredOrderForm(props: {
         </Alert>
       ) : null}
 
-      <Card className="shadow-sm">
+      <Card className="overflow-hidden shadow-sm before:h-1 before:bg-sky-600 before:content-['']">
         <CardHeader>
           <CardTitle className="text-base">
             {props.mode === "create" ? "ایجاد ثبت سفارش" : "ویرایش ثبت سفارش"}
           </CardTitle>
           <CardDescription>اطلاعات اصلی</CardDescription>
         </CardHeader>
-
         <CardContent className="space-y-5">
           <div className="grid gap-4 md:grid-cols-2">
             {props.mode === "edit" ? (
@@ -663,12 +731,37 @@ export function RegisteredOrderForm(props: {
               </Field>
             ) : null}
 
-            <Field label="شناسه ثبت سفارش" error={errors.id?.message}>
+            <Field label="شماره ثبت سفارش" error={errors.id?.message}>
               <Input
-                placeholder="RO-2026-0001"
+                placeholder="12345678"
                 {...register("id")}
-                disabled={props.mode === "edit"} // usually keep stable
+                disabled={props.mode === "edit"}
               />
+            </Field>
+
+            <Field label="فایل PDF سفارش">
+              <div className="space-y-2">
+                <Input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  {...register("order_pdf")}
+                />
+                {props.mode === "edit" && form.getValues("order_pdf_url") ? (
+                  <a
+                    href={String(form.getValues("order_pdf_url"))}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-primary underline underline-offset-4"
+                  >
+                    مشاهده فایل فعلی
+                  </a>
+                ) : null}
+                <p className="text-xs text-muted-foreground">
+                  {props.mode === "create"
+                    ? "آپلود فایل PDF الزامی است."
+                    : "برای نگه‌داشتن فایل فعلی، این فیلد را خالی بگذارید."}
+                </p>
+              </div>
             </Field>
 
             <Field label="کرایه حمل" error={errors.freight_price?.message}>
@@ -693,16 +786,100 @@ export function RegisteredOrderForm(props: {
 
             <Controller
               control={control}
-              name="seller_country"
+              name="fee_type"
               render={({ field }) => (
-                <CountryCombobox
-                  label="کشور فروشنده"
+                <SearchableCombobox
+                  label="نوع فی"
                   value={field.value}
                   onChange={field.onChange}
-                  error={errors.seller_country?.message}
+                  items={feeTypeOptions}
+                  placeholder="انتخاب نوع فی"
+                  searchPlaceholder="جستجو..."
+                  error={errors.fee_type?.message}
                 />
               )}
             />
+
+            <Field
+              label="مبلغ(تومان) فی برای هر واحد ارز ثبت سفارش"
+              error={errors.fee_amount?.message}
+            >
+              <Input type="number" step="0.01" {...register("fee_amount")} />
+            </Field>
+
+            <Field
+              label="نام درخواست دهنده"
+              error={errors.applicant_name?.message}
+            >
+              <Input {...register("applicant_name")} />
+            </Field>
+
+            <Field label="کد/شناسه ملی" error={errors.national_code?.message}>
+              <Input {...register("national_code")} />
+            </Field>
+
+            <Controller
+              control={control}
+              name="entry_border"
+              render={({ field }) => (
+                <SearchableCombobox
+                  label="مرز ورودی"
+                  value={field.value}
+                  onChange={field.onChange}
+                  items={borderOptions}
+                  placeholder="انتخاب مرز ورودی"
+                  searchPlaceholder="جستجو در مرزها..."
+                  error={errors.entry_border?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="customs"
+              render={({ field }) => (
+                <SearchableCombobox
+                  label="گمرک"
+                  value={field.value}
+                  onChange={field.onChange}
+                  items={customsOptions}
+                  placeholder="انتخاب گمرک"
+                  searchPlaceholder="جستجو در گمرک‌ها..."
+                  error={errors.customs?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="currency_supply"
+              render={({ field }) => (
+                <SearchableCombobox
+                  label="تامین ارز"
+                  value={field.value}
+                  onChange={field.onChange}
+                  items={currencySupplyOptions}
+                  placeholder="انتخاب تامین ارز"
+                  searchPlaceholder="جستجو..."
+                  error={errors.currency_supply?.message}
+                />
+              )}
+            />
+
+            <Field label="نام بانک" error={errors.bank_name?.message}>
+              <Input {...register("bank_name")} />
+            </Field>
+
+            <Field label="شعبه بانک" error={errors.bank_branch?.message}>
+              <Input {...register("bank_branch")} />
+            </Field>
+
+            <Field
+              label="ابزار پرداخت"
+              error={errors.payment_instrument?.message}
+            >
+              <Input {...register("payment_instrument")} />
+            </Field>
 
             <Controller
               control={control}
@@ -716,10 +893,6 @@ export function RegisteredOrderForm(props: {
                 />
               )}
             />
-
-            <Field label="تاریخ (YYYY/MM/DD)" error={errors.date?.message}>
-              <Input placeholder="2026/02/01" {...register("date")} />
-            </Field>
 
             <Field
               label="تاریخ انقضا (YYYY/MM/DD)"
@@ -795,13 +968,12 @@ export function RegisteredOrderForm(props: {
         </CardContent>
       </Card>
 
-      <Card className="shadow-sm">
+      <Card className="overflow-hidden shadow-sm before:h-1 before:bg-emerald-600 before:content-['']">
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle className="text-base">کالاها</CardTitle>
             <CardDescription>لیست کالاهای این ثبت سفارش</CardDescription>
           </div>
-
           <Button
             type="button"
             variant="outline"
@@ -809,9 +981,11 @@ export function RegisteredOrderForm(props: {
               goodsFA.append({
                 description: "",
                 hs_code_id: 0,
+                goods_status: "نو",
                 quantity: 1,
                 origin: "CN",
                 unit_price: 0,
+                line_subtotal: 0,
                 unit: "KG",
                 nw_kg: 0,
                 gw_kg: 0,
@@ -825,9 +999,13 @@ export function RegisteredOrderForm(props: {
         <CardContent className="space-y-6">
           {goodsFA.fields.map((f, idx) => {
             const rowErr: any = (errors as any)?.goods?.[idx];
-
+            const row = goods?.[idx];
+            const calculatedUnitPrice = calcUnitPrice(
+              row?.quantity,
+              row?.line_subtotal,
+            );
             return (
-              <div key={f.id} className="rounded-xl border p-4 space-y-4">
+              <div key={f.id} className="space-y-4 rounded-xl border p-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium">کالا #{idx + 1}</div>
                   <Button
@@ -858,6 +1036,22 @@ export function RegisteredOrderForm(props: {
                     )}
                   />
 
+                  <Controller
+                    control={control}
+                    name={`goods.${idx}.goods_status` as const}
+                    render={({ field }) => (
+                      <SearchableCombobox
+                        label="وضعیت کالا"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        items={goodsStatusOptions}
+                        placeholder="انتخاب وضعیت کالا"
+                        searchPlaceholder="جستجو..."
+                        error={rowErr?.goods_status?.message}
+                      />
+                    )}
+                  />
+
                   <Field label="مقدار" error={rowErr?.quantity?.message}>
                     <Input
                       type="number"
@@ -882,11 +1076,25 @@ export function RegisteredOrderForm(props: {
                     )}
                   />
 
-                  <Field label="قیمت واحد" error={rowErr?.unit_price?.message}>
+                  <Field label="جمع جزء" error={rowErr?.line_subtotal?.message}>
                     <Input
                       type="number"
                       step="0.0001"
-                      {...register(`goods.${idx}.unit_price` as const)}
+                      {...register(`goods.${idx}.line_subtotal` as const)}
+                    />
+                  </Field>
+
+                  <Field label="قیمت واحد (محاسبه‌ای)">
+                    <Input
+                      type="number"
+                      step="0.0001"
+                      value={
+                        Number.isFinite(calculatedUnitPrice)
+                          ? calculatedUnitPrice
+                          : 0
+                      }
+                      readOnly
+                      disabled
                     />
                   </Field>
 
@@ -925,7 +1133,7 @@ export function RegisteredOrderForm(props: {
         </CardContent>
       </Card>
 
-      <Card className="shadow-sm">
+      <Card className="overflow-hidden shadow-sm before:h-1 before:bg-slate-900 before:content-['']">
         <CardHeader>
           <CardTitle className="text-base">خلاصه</CardTitle>
           <CardDescription>جمع‌های سمت کلاینت</CardDescription>
