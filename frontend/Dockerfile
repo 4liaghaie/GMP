@@ -6,14 +6,17 @@ RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://repo.abrha.net/alpin
 
 COPY package*.json ./
 
-RUN npm config set registry https://registry.npmmirror.com && \
+RUN npm config set registry https://mirror-npm.runflare.com && \
+    npm config set strict-ssl false && \
     npm ci
 
 FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://repo.abrha.net/alpine|g' /etc/apk/repositories
+RUN sed -i 's|https://dl-cdn.alpinelinux.org/alpine|https://repo.abrha.net/alpine|g' /etc/apk/repositories && \
+    npm config set registry https://mirror-npm.runflare.com && \
+    npm config set strict-ssl false
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
