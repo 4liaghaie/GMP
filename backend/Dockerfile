@@ -16,8 +16,8 @@ RUN sed -i 's|http://deb.debian.org/debian|https://repo.abrha.net/debian|g' /etc
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir \
-    -i https://pypi.tuna.tsinghua.edu.cn/simple \
-    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    -i https://mirror-pypi.runflare.com/simple/ \
+    --trusted-host mirror-pypi.runflare.com \
     -r requirements.txt
     
 COPY . .
