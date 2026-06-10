@@ -66,32 +66,46 @@ import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
+type ProformaGood = {
+  description: string;
+  hs_code: string;
+  hs_code_id: number;
+  goods_status: string;
+  quantity: string | number;
+  unit: string;
+  manufacturer_country: string;
+  price: string | number;
+  nw_kg: string | number;
+  gw_kg: string | number;
+};
+
 type GoodsNeed = {
   uuid: string;
   id: number;
   user: string;
   created_at: string;
-  description: string;
-  hs_code: string;
-  hs_code_id: number;
   status: string;
-  goods_status: string;
-  quantity: string | number;
-  unit: string;
-  manufacturer_country: string;
   country_of_origin: string;
-  price: string | number;
   currency_type: string;
   fee_type: string;
   fee_amount: string | number;
   entry_border: string;
   customs: string;
-  terms_of_delivery: string;
-  terms_of_payment: string;
-  partial_shipment: boolean;
+  terms_of_delivery?: string;
+  terms_of_payment?: string;
+  partial_shipment?: boolean;
   means_of_transport: string;
-  nw_kg: string | number;
-  gw_kg: string | number;
+  goods: ProformaGood[];
+  description?: string;
+  hs_code?: string;
+  hs_code_id?: number;
+  goods_status?: string;
+  quantity?: string | number;
+  unit?: string;
+  manufacturer_country?: string;
+  price?: string | number;
+  nw_kg?: string | number;
+  gw_kg?: string | number;
 };
 
 type FilterOption = {
@@ -546,10 +560,7 @@ async function fetchNeeds(args: {
   if (args.customs?.trim()) url.searchParams.set("customs", args.customs.trim());
   if (args.manufacturerCountry?.trim()) url.searchParams.set("manufacturer_country", args.manufacturerCountry.trim());
   if (args.countryOfOrigin?.trim()) url.searchParams.set("country_of_origin", args.countryOfOrigin.trim());
-  if (args.termsOfDelivery?.trim()) url.searchParams.set("terms_of_delivery", args.termsOfDelivery.trim());
-  if (args.termsOfPayment?.trim()) url.searchParams.set("terms_of_payment", args.termsOfPayment.trim());
   if (args.meansOfTransport?.trim()) url.searchParams.set("means_of_transport", args.meansOfTransport.trim());
-  if (args.partialShipment?.trim()) url.searchParams.set("partial_shipment", args.partialShipment.trim());
 
   const res = await fetch(url.toString(), {
     method: "GET",
@@ -626,18 +637,97 @@ function NeedCard({ need }: { need: GoodsNeed }) {
           <div className="rounded-xl border bg-card p-2">
             گمرک: {safeText(need.customs)}
           </div>
-          <div className="rounded-xl border bg-card p-2">
-            تحویل: {safeText(need.terms_of_delivery)}
-          </div>
-          <div className="rounded-xl border bg-card p-2">
-            پرداخت: {safeText(need.terms_of_payment)}
-          </div>
         </div>
 
         <Separator />
 
         <Button asChild variant="outline" className="w-full">
           <Link href={`/marketplace?hs_code=${encodeURIComponent(safeText(need.hs_code))}`}>
+            جستجوی ثبت سفارش مشابه
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProformaCard({ need }: { need: GoodsNeed }) {
+  const firstGood = need.goods?.[0];
+  const firstHsCode = safeText(firstGood?.hs_code);
+
+  return (
+    <Card className="group overflow-hidden shadow-sm before:h-1 before:bg-amber-600 before:content-['']">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3">
+          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-600 text-white shadow-sm">
+            <PackageSearch className="h-6 w-6" />
+          </span>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Badge variant="outline">{safeText(need.status)}</Badge>
+            <Badge variant="secondary">
+              {need.goods?.length ? `${fmt(need.goods.length)} کالا` : "بدون کالا"}
+            </Badge>
+            <Badge variant="outline">{safeText(need.currency_type)}</Badge>
+          </div>
+        </div>
+        <div>
+          <CardTitle className="text-lg">{safeText(firstGood?.description)}</CardTitle>
+          <CardDescription className="mt-2">
+            پروفرما #{safeText(need.id)} توسط {safeText(need.user)}
+          </CardDescription>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4 text-sm">
+        <div className="grid gap-2 rounded-2xl bg-muted/40 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <Boxes className="h-4 w-4" />
+              HS
+            </span>
+            <span className="font-semibold">{firstHsCode}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">مقدار</span>
+            <span className="font-medium">
+              {fmt(firstGood?.quantity)} {safeText(firstGood?.unit)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <BadgeDollarSign className="h-4 w-4" />
+              قیمت
+            </span>
+            <span className="font-semibold">
+              {fmt(firstGood?.price)} {safeText(need.currency_type)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              مرز ورودی
+            </span>
+            <span className="font-medium">{safeText(need.entry_border)}</span>
+          </div>
+        </div>
+
+        <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+          <div className="rounded-xl border bg-card p-2">
+            کشور سازنده: {safeText(firstGood?.manufacturer_country)}
+          </div>
+          <div className="rounded-xl border bg-card p-2">
+            کشور مبدا: {safeText(need.country_of_origin)}
+          </div>
+          <div className="rounded-xl border bg-card p-2">
+            گمرک: {safeText(need.customs)}
+          </div>
+        </div>
+
+        <Separator />
+
+        <Button asChild variant="outline" className="w-full">
+          <Link href={`/marketplace?hs_code=${encodeURIComponent(firstHsCode)}`}>
             جستجوی ثبت سفارش مشابه
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -785,10 +875,10 @@ export default function NeedsMarketplaceList() {
     setCustoms(draftCustoms);
     setManufacturerCountry(draftManufacturerCountry);
     setCountryOfOrigin(draftCountryOfOrigin);
-    setTermsOfDelivery(draftTermsOfDelivery);
-    setTermsOfPayment(draftTermsOfPayment);
     setMeansOfTransport(draftMeansOfTransport);
-    setPartialShipment(draftPartialShipment);
+    setTermsOfDelivery("");
+    setTermsOfPayment("");
+    setPartialShipment("");
     setFilterOpen(false);
   }
 
@@ -1109,7 +1199,7 @@ export default function NeedsMarketplaceList() {
                             </AccordionContent>
                           </AccordionItem>
 
-                          <AccordionItem value="terms">
+                          <AccordionItem value="terms" className="hidden">
                             <AccordionTrigger className="text-right">
                               شرایط معامله
                             </AccordionTrigger>
@@ -1182,6 +1272,7 @@ export default function NeedsMarketplaceList() {
                                   ) : null
                                 }
                               />
+                              <div className="hidden">
                               <SearchableCombobox
                                 label="حمل به دفعات"
                                 value={draftPartialShipment}
@@ -1202,6 +1293,7 @@ export default function NeedsMarketplaceList() {
                                   ) : null
                                 }
                               />
+                              </div>
                             </AccordionContent>
                           </AccordionItem>
                         </Accordion>
@@ -1323,7 +1415,7 @@ export default function NeedsMarketplaceList() {
 
         <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {items.length ? (
-            items.map((need) => <NeedCard key={need.uuid} need={need} />)
+            items.map((need) => <ProformaCard key={need.uuid} need={need} />)
           ) : !loading ? (
             <Card className="md:col-span-2 xl:col-span-3">
               <CardContent className="py-10 text-center text-sm text-muted-foreground">

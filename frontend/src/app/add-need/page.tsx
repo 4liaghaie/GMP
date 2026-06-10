@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ListChecks, PackageSearch } from "lucide-react";
+import { ArrowRight, FilePlus2, ListChecks } from "lucide-react";
 
 import {
   GoodsNeedForm,
@@ -13,26 +13,27 @@ import { Button } from "@/components/ui/button";
 
 function defaultValues(): GoodsNeedFormInput {
   return {
-    description: "",
-    hs_code_id: 0,
     status: "در کشور مبدا",
-    goods_status: "نو",
-    quantity: 1,
-    unit: "KG",
-    manufacturer_country: "CN",
-    country_of_origin: "CN",
-    price: 0,
+    country_of_origin: "",
     currency_type: "USD",
     fee_type: "فی دریافتی",
     fee_amount: 0,
     entry_border: "",
     customs: "",
-    terms_of_delivery: "FOB",
-    terms_of_payment: "TT",
-    partial_shipment: false,
     means_of_transport: "SEA",
-    nw_kg: 0,
-    gw_kg: 0,
+    goods: [
+      {
+        description: "",
+        hs_code_id: 0,
+        goods_status: "نو",
+        quantity: 1,
+        unit: "KG",
+        manufacturer_country: "CN",
+        price: 0,
+        nw_kg: 0,
+        gw_kg: 0,
+      },
+    ],
   };
 }
 
@@ -55,21 +56,21 @@ export default function AddNeedPage() {
     <div dir="rtl">
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-10">
         <PageHeader
-          eyebrow="نیاز کالا"
-          title="ایجاد نیاز کالا"
-          description="یک نیاز برای یک کالا ثبت کنید تا دارندگان ثبت سفارش مشابه بتوانند آن را پیدا کنند."
-          icon={<PackageSearch className="h-6 w-6" />}
+          eyebrow="پروفرما"
+          title="ایجاد پروفرما"
+          description="پروفرمای جدید را با چند کالا ثبت کنید تا دارندگان ثبت سفارش مشابه بتوانند آن را پیدا کنند."
+          icon={<FilePlus2 className="h-6 w-6" />}
           accentClassName="bg-amber-600"
           actions={
             <>
-            <Button variant="outline" onClick={() => router.push("/my-needs")}>
-              <ListChecks className="h-4 w-4" />
-              لیست نیازهای من
-            </Button>
-            <Button variant="outline" onClick={() => router.back()}>
-              <ArrowRight className="h-4 w-4" />
-              بازگشت
-            </Button>
+              <Button variant="outline" onClick={() => router.push("/my-needs")}>
+                <ListChecks className="h-4 w-4" />
+                لیست پروفرماهای من
+              </Button>
+              <Button variant="outline" onClick={() => router.back()}>
+                <ArrowRight className="h-4 w-4" />
+                بازگشت
+              </Button>
             </>
           }
         />

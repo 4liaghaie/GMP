@@ -39,7 +39,7 @@ class RegisteredOrder(models.Model):
     terms_of_payment = models.CharField(max_length=50)
     partial_shipment = models.BooleanField(default=False)
     means_of_transport = models.CharField(max_length=50)
-    country_of_origin = models.CharField(max_length=555)
+    country_of_origin = models.CharField(max_length=555, blank=True, default="")
     standard = models.CharField(max_length=50)
     total_gw = models.DecimalField(default=0, max_digits=20, decimal_places=2)
     total_nw = models.DecimalField(default=0, max_digits=20, decimal_places=2)
@@ -108,9 +108,31 @@ class GoodsNeed(models.Model):
     fee_amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     entry_border = models.CharField(max_length=255, default="")
     customs = models.CharField(max_length=255, default="")
-    terms_of_delivery = models.CharField(max_length=50)
-    terms_of_payment = models.CharField(max_length=50)
+    terms_of_delivery = models.CharField(max_length=50, blank=True, default="")
+    terms_of_payment = models.CharField(max_length=50, blank=True, default="")
     partial_shipment = models.BooleanField(default=False)
     means_of_transport = models.CharField(max_length=50)
     nw_kg = models.DecimalField(default=0, max_digits=12, decimal_places=2)
     gw_kg = models.DecimalField(default=0, max_digits=12, decimal_places=2)
+
+
+class GoodsNeedGood(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    proforma = models.ForeignKey(GoodsNeed, related_name="goods", on_delete=models.CASCADE)
+    description = models.CharField(max_length=255)
+    hs_code = models.ForeignKey(HSCode, on_delete=models.CASCADE)
+    goods_status = models.CharField(
+        max_length=20,
+        choices=OrderGood.STATUS_CHOICES,
+        default=OrderGood.STATUS_NEW,
+    )
+    quantity = models.DecimalField(default=1, max_digits=18, decimal_places=2)
+    unit = models.CharField(max_length=55, default="U")
+    manufacturer_country = models.CharField(max_length=55)
+    price = models.DecimalField(max_digits=40, decimal_places=20, default=0)
+    nw_kg = models.DecimalField(default=0, max_digits=12, decimal_places=2)
+    gw_kg = models.DecimalField(default=0, max_digits=12, decimal_places=2)
+
+    @property
+    def line_total(self):
+        return self.quantity * self.price

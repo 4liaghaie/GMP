@@ -43,15 +43,25 @@ type LatestNeed = {
   uuid: string;
   id: number;
   user: string;
-  description: string;
-  hs_code: string;
-  goods_status: string;
-  quantity: string | number;
-  unit: string;
-  price: string | number;
+  status: string;
   currency_type: string;
   entry_border: string;
-  manufacturer_country: string;
+  description?: string;
+  hs_code?: string;
+  goods_status?: string;
+  quantity?: string | number;
+  unit?: string;
+  price?: string | number;
+  manufacturer_country?: string;
+  goods?: Array<{
+    description?: string;
+    hs_code?: string;
+    goods_status?: string;
+    quantity?: string | number;
+    unit?: string;
+    price?: string | number;
+    manufacturer_country?: string;
+  }>;
 };
 
 async function fetchList<T>(endpoint: string): Promise<T[]> {
@@ -131,6 +141,7 @@ function OrderCard({ order }: { order: LatestOrder }) {
 }
 
 function NeedCard({ need }: { need: LatestNeed }) {
+  const firstGood = need.goods?.[0];
   return (
     <Card className="group overflow-hidden border-0 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
       <div className="h-1 bg-amber-600" />
@@ -140,15 +151,15 @@ function NeedCard({ need }: { need: LatestNeed }) {
             <PackageSearch className="h-5 w-5" />
           </span>
           <Badge variant="secondary" className="rounded-xl">
-            {safeText(need.goods_status)}
+            {need.goods?.length ? `${fmt(need.goods.length)} کالا` : safeText(need.status)}
           </Badge>
         </div>
         <div>
           <CardTitle className="text-base">
-            {safeText(need.description)}
+            {safeText(firstGood?.description)}
           </CardTitle>
           <CardDescription className="mt-2 leading-7">
-            نیاز کالا #{safeText(need.id)} توسط {safeText(need.user)}
+            پروفرما #{safeText(need.id)} توسط {safeText(need.user)}
           </CardDescription>
         </div>
       </CardHeader>
@@ -156,18 +167,18 @@ function NeedCard({ need }: { need: LatestNeed }) {
         <div className="grid gap-2 rounded-2xl bg-muted/40 p-3">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">HS</span>
-            <span className="font-medium">{safeText(need.hs_code)}</span>
+            <span className="font-medium">{safeText(firstGood?.hs_code)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">مقدار</span>
             <span className="font-medium">
-              {fmt(need.quantity)} {safeText(need.unit)}
+              {fmt(firstGood?.quantity)} {safeText(firstGood?.unit)}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">قیمت</span>
             <span className="font-semibold">
-              {fmt(need.price)} {safeText(need.currency_type)}
+              {fmt(firstGood?.price)} {safeText(need.currency_type)}
             </span>
           </div>
         </div>
@@ -198,15 +209,15 @@ export default async function HomePage() {
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm">
               <Sparkles className="h-4 w-4 text-amber-600" />
-              بازار اتصال ثبت سفارش و نیاز کالا
+              بازار اتصال ثبت سفارش و پروفرما
             </div>
 
             <div className="space-y-4">
               <h1 className="text-4xl font-black leading-tight tracking-tight md:text-6xl">
-                ثبت سفارش و نیاز کالا را سریع‌تر به هم وصل کنید
+                ثبت سفارش و پروفرما را سریع‌تر به هم وصل کنید
               </h1>
               <p className="max-w-2xl text-base leading-8 text-muted-foreground md:text-lg">
-                کاربران ثبت سفارش‌های معتبر و نیازهای کالایی خود را ثبت می‌کنند
+                کاربران ثبت سفارش‌های معتبر و پروفرماهای خود را ثبت می‌کنند
                 تا طرف‌های مشابه بر اساس کالا، HS Code، مرز ورودی و شرایط تجاری
                 سریع‌تر همدیگر را پیدا کنند.
               </p>
@@ -243,9 +254,9 @@ export default async function HomePage() {
               </div>
               <div className="rounded-2xl border bg-card p-4 shadow-sm">
                 <Boxes className="mb-3 h-5 w-5 text-amber-600" />
-                <p className="font-semibold">نیاز کالا</p>
+                <p className="font-semibold">پروفرما</p>
                 <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                  نیازها با یک کالا و HS Code مشخص ثبت می‌شوند.
+                  پروفرماها با چند کالا و HS Code مشخص ثبت می‌شوند.
                 </p>
               </div>
             </div>
@@ -258,7 +269,7 @@ export default async function HomePage() {
                 آخرین فعالیت‌ها
               </div>
               <CardTitle className="text-2xl">
-                جدیدترین سفارش‌ها و نیازها
+                جدیدترین سفارش‌ها و پروفرماها
               </CardTitle>
               <CardDescription className="leading-7 text-white/65">
                 چند نمونه از آخرین داده‌های ثبت‌شده در سیستم.
@@ -351,9 +362,9 @@ export default async function HomePage() {
         <section className="mt-14 space-y-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-2xl font-black">آخرین نیازهای کالا</h2>
+              <h2 className="text-2xl font-black">آخرین پروفرماها</h2>
               <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                نیازهای جدیدی که می‌توانند با ثبت سفارش‌های مشابه match شوند.
+                پروفرماهای جدیدی که می‌توانند با ثبت سفارش‌های مشابه match شوند.
               </p>
             </div>
             <Button
@@ -361,7 +372,7 @@ export default async function HomePage() {
               variant="outline"
               className="rounded-xl bg-background"
             >
-              <Link href="/marketplace/needs">مشاهده همه نیازها</Link>
+              <Link href="/marketplace/needs">مشاهده همه پروفرماها</Link>
             </Button>
           </div>
 
@@ -373,7 +384,7 @@ export default async function HomePage() {
             ) : (
               <Card className="md:col-span-3">
                 <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                  هنوز نیاز کالایی برای نمایش ثبت نشده است.
+                  هنوز پروفرمایی برای نمایش ثبت نشده است.
                 </CardContent>
               </Card>
             )}

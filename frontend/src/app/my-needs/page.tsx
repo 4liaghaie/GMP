@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ListChecks, PlusCircle, RefreshCw } from "lucide-react";
+import { FilePlus2, ListChecks, RefreshCw } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -19,25 +19,30 @@ import { iranCustoms } from "@/lib/customsList";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
+type ProformaGood = {
+  uuid: string;
+  description: string;
+  hs_code: string;
+  goods_status: string;
+  quantity: string | number;
+  unit: string;
+  manufacturer_country: string;
+  price: string | number;
+};
+
 type GoodsNeed = {
   uuid: string;
   id: number;
   created_at: string;
   user: string;
-  description: string;
-  hs_code: string;
   status: string;
-  goods_status: string;
-  quantity: string | number;
-  unit: string;
-  manufacturer_country: string;
   country_of_origin: string;
-  price: string | number;
   currency_type: string;
   fee_type: string;
   fee_amount: string | number;
   entry_border: string;
   customs: string;
+  goods: ProformaGood[];
 };
 
 const customsOptions = [
@@ -66,7 +71,7 @@ async function fetchNeeds(signal?: AbortSignal) {
     signal,
   });
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت نیازها");
+  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت پروفرماها");
   return (Array.isArray(data) ? data : data?.results || []) as GoodsNeed[];
 }
 
@@ -77,7 +82,7 @@ async function deleteNeed(uuid: string) {
   });
   if (res.status === 204) return;
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "خطا در حذف نیاز کالا");
+  if (!res.ok) throw new Error(data?.detail || "خطا در حذف پروفرما");
 }
 
 export default function MyNeedsPage() {
@@ -115,7 +120,7 @@ export default function MyNeedsPage() {
   }, [ready, load]);
 
   async function onDelete(uuid: string) {
-    if (!window.confirm("این نیاز کالا حذف شود؟")) return;
+    if (!window.confirm("این پروفرما حذف شود؟")) return;
     setDeletingUuid(uuid);
     setError("");
     try {
@@ -135,28 +140,28 @@ export default function MyNeedsPage() {
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-10">
         <PageHeader
           eyebrow="مدیریت"
-          title="نیازهای کالای من"
-          description="نیازهایی که با حساب شما ثبت شده‌اند."
+          title="پروفرماهای من"
+          description="پروفرماهایی که با حساب شما ثبت شده‌اند."
           icon={<ListChecks className="h-6 w-6" />}
           accentClassName="bg-rose-600"
           actions={
             <>
-            <Button variant="outline" onClick={() => router.push("/add-need")}>
-              <PlusCircle className="h-4 w-4" />
-              + ایجاد نیاز کالا
-            </Button>
-            <Button variant="outline" onClick={() => load()}>
-              <RefreshCw className="h-4 w-4" />
-              بروزرسانی
-            </Button>
+              <Button variant="outline" onClick={() => router.push("/add-need")}>
+                <FilePlus2 className="h-4 w-4" />
+                ایجاد پروفرما
+              </Button>
+              <Button variant="outline" onClick={() => load()}>
+                <RefreshCw className="h-4 w-4" />
+                بروزرسانی
+              </Button>
             </>
           }
         />
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">لیست</CardTitle>
-            <CardDescription>برای هر نیاز فقط یک کالا ثبت می‌شود.</CardDescription>
+            <CardTitle className="text-base">لیست پروفرماها</CardTitle>
+            <CardDescription>هر پروفرما می‌تواند چند کالا داشته باشد.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {error ? (
@@ -171,15 +176,12 @@ export default function MyNeedsPage() {
                 <thead className="bg-muted/40">
                   <tr className="[&>th]:px-3 [&>th]:py-2 text-right">
                     <th>ID</th>
-                    <th>شرح کالا</th>
-                    <th>HS</th>
-                    <th>وضعیت نیاز</th>
+                    <th>کالای اول</th>
+                    <th>تعداد کالا</th>
                     <th>وضعیت</th>
-                    <th>مقدار</th>
-                    <th>قیمت</th>
-                    <th>نوع ارز</th>
-                    <th>نوع فی</th>
-                    <th>مبلغ فی</th>
+                    <th>کشور مبدا</th>
+                    <th>ارز</th>
+                    <th>فی</th>
                     <th>مرز ورودی</th>
                     <th>گمرک</th>
                     <th className="w-[160px]">عملیات</th>
@@ -188,46 +190,51 @@ export default function MyNeedsPage() {
                 <tbody>
                   {!loading && items.length === 0 ? (
                     <tr>
-                      <td colSpan={13} className="px-3 py-6 text-center text-muted-foreground">
+                      <td colSpan={10} className="px-3 py-6 text-center text-muted-foreground">
                         موردی یافت نشد.
                       </td>
                     </tr>
                   ) : (
-                    items.map((item) => (
-                      <tr key={item.uuid} className="border-t [&>td]:px-3 [&>td]:py-2">
-                        <td>{item.id}</td>
-                        <td className="font-medium">{item.description || "-"}</td>
-                        <td>{item.hs_code || "-"}</td>
-                        <td>{item.status || "-"}</td>
-                        <td>{item.goods_status || "-"}</td>
-                        <td>{fmt(item.quantity)} {item.unit}</td>
-                        <td>{fmt(item.price)}</td>
-                        <td>{item.currency_type || "-"}</td>
-                        <td>{item.fee_type || "-"}</td>
-                        <td>{fmt(item.fee_amount)}</td>
-                        <td>{item.entry_border || "-"}</td>
-                        <td>{customsLabel(item.customs)}</td>
-                        <td>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => router.push(`/my-needs/${encodeURIComponent(item.uuid)}`)}
-                            >
-                              ویرایش
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => onDelete(item.uuid)}
-                              disabled={deletingUuid === item.uuid}
-                            >
-                              {deletingUuid === item.uuid ? "..." : "حذف"}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                    items.map((item) => {
+                      const first = item.goods?.[0];
+                      return (
+                        <tr key={item.uuid} className="border-t [&>td]:px-3 [&>td]:py-2">
+                          <td>{item.id}</td>
+                          <td className="font-medium">
+                            {first?.description || "-"}
+                            <div className="text-xs text-muted-foreground">
+                              HS {first?.hs_code || "-"}، {fmt(first?.quantity)} {first?.unit || ""}
+                            </div>
+                          </td>
+                          <td>{fmt(item.goods?.length || 0)}</td>
+                          <td>{item.status || "-"}</td>
+                          <td>{item.country_of_origin || "-"}</td>
+                          <td>{item.currency_type || "-"}</td>
+                          <td>{item.fee_type || "-"} / {fmt(item.fee_amount)}</td>
+                          <td>{item.entry_border || "-"}</td>
+                          <td>{customsLabel(item.customs)}</td>
+                          <td>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => router.push(`/my-needs/${encodeURIComponent(item.uuid)}`)}
+                              >
+                                ویرایش
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => onDelete(item.uuid)}
+                                disabled={deletingUuid === item.uuid}
+                              >
+                                {deletingUuid === item.uuid ? "..." : "حذف"}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

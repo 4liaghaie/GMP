@@ -2,9 +2,14 @@
 
 import * as React from "react";
 import { z } from "zod";
-import { useForm, type SubmitHandler } from "react-hook-form";
+import {
+  Controller,
+  useFieldArray,
+  useForm,
+  type SubmitHandler,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, PlusCircle, Trash2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -36,6 +41,8 @@ import { iranCustoms } from "@/lib/customsList";
 import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+const NEED_STATUS_AT_ORIGIN = "در کشور مبدا";
+const ALL_CUSTOMS_VALUE = "ALL_CUSTOMS";
 
 type HSCodeOption = {
   id: number;
@@ -57,9 +64,8 @@ const goodsStatusOptions = [
   { value: "مستعمل", label: "مستعمل" },
   { value: "بازسازی شده", label: "بازسازی شده" },
 ];
-const NEED_STATUS_AT_ORIGIN = "در کشور مبدا";
-const ALL_CUSTOMS_VALUE = "ALL_CUSTOMS";
-const needStatusOptions = [
+
+const proformaStatusOptions = [
   { value: NEED_STATUS_AT_ORIGIN, label: NEED_STATUS_AT_ORIGIN },
   { value: "قبض انبار دارد", label: "قبض انبار دارد" },
   { value: "بارنامه شده", label: "بارنامه شده" },
@@ -72,40 +78,20 @@ const unitOptions = [
   { value: "L", label: "لیتر (L)" },
   { value: "M", label: "متر (M)" },
 ];
-const deliveryTerms = [
-  { value: "EXW", label: "EXW (تحویل در محل کارخانه)" },
-  { value: "FOB", label: "FOB (تحویل روی عرشه کشتی)" },
-  { value: "CFR", label: "CFR (هزینه و کرایه حمل)" },
-  { value: "CIF", label: "CIF (هزینه، بیمه و کرایه حمل)" },
-  { value: "DAP", label: "DAP (تحویل در محل مقصد)" },
-  { value: "CPT", label: "CPT (کرایه حمل پرداخت‌شده تا مقصد)" },
-  { value: "CIP", label: "CIP (کرایه و بیمه پرداخت‌شده تا مقصد)" },
-  { value: "FCA", label: "FCA (تحویل به حمل‌کننده)" },
-  { value: "FAS", label: "FAS (تحویل کنار کشتی)" },
-  { value: "DDP", label: "DDP (تحویل در مقصد با پرداخت حقوق و عوارض گمرکی)" },
-  { value: "DPU", label: "DPU (تحویل در محل تخلیه‌شده)" },
-];
-const paymentTerms = [
-  { value: "TT", label: "TT (حواله بانکی)" },
-  { value: "LC", label: "LC (اعتبار اسنادی)" },
-  { value: "CAD", label: "CAD (اسناد در مقابل پرداخت)" },
-  { value: "DP", label: "D/P (اسناد در مقابل پرداخت)" },
-  { value: "DA", label: "D/A (اسناد در مقابل قبول)" },
-];
+
 const transportMeans = [
   { value: "SEA", label: "دریایی" },
   { value: "AIR", label: "هوایی" },
   { value: "ROAD", label: "زمینی" },
   { value: "RAIL", label: "ریلی" },
 ];
+
 const feeTypeOptions = [
   { value: "فی دریافتی", label: "فی دریافتی" },
   { value: "فی پرداختی", label: "فی پرداختی" },
 ];
-const borderOptions = borders.map((border) => ({
-  value: border,
-  label: border,
-}));
+
+const borderOptions = borders.map((border) => ({ value: border, label: border }));
 const customsOptions = iranCustoms.map((customs) => ({
   value: String(customs.ctmVCodeInt),
   label: `${customs.ctmNameStr} (${customs.ctmVCodeInt})`,
@@ -116,38 +102,42 @@ const countryOptions = countries.map((country) => ({
   label: `${country.persianName} (${country.code})`,
 }));
 
-const schema = z.object({
+const goodSchema = z.object({
   uuid: z.string().optional(),
   hs_code: z.string().optional(),
-  description: z.string().min(1, "توضیحات کالا الزامی است"),
+  description: z.string().min(1, "شرح کالا الزامی است"),
   hs_code_id: z.coerce.number().int().positive("کد HS الزامی است"),
-  status: z.string().min(1, "وضعیت نیاز کالا الزامی است"),
   goods_status: z.string().min(1, "وضعیت کالا الزامی است"),
   quantity: z.coerce.number().positive("مقدار باید بیشتر از صفر باشد"),
   unit: z.string().min(1, "واحد الزامی است"),
   manufacturer_country: z.string().min(1, "کشور سازنده الزامی است"),
-  country_of_origin: z.string().min(1, "کشور مبدا الزامی است"),
   price: z.coerce.number().nonnegative("قیمت باید صفر یا بیشتر باشد"),
-  currency_type: z.string().min(1, "نوع ارز الزامی است"),
-  fee_type: z.string().min(1, "نوع فی الزامی است"),
-  fee_amount: z.coerce.number().nonnegative("مبلغ فی باید صفر یا بیشتر باشد"),
-  entry_border: z.string().min(1, "مرز ورودی الزامی است"),
-  customs: z.string().min(1, "گمرک الزامی است"),
-  terms_of_delivery: z.string().min(1, "شرایط تحویل الزامی است"),
-  terms_of_payment: z.string().min(1, "شرایط پرداخت الزامی است"),
-  partial_shipment: z.boolean().default(false),
-  means_of_transport: z.string().min(1, "روش حمل الزامی است"),
   nw_kg: z.coerce.number().nonnegative("وزن خالص باید صفر یا بیشتر باشد"),
   gw_kg: z.coerce.number().nonnegative("وزن ناخالص باید صفر یا بیشتر باشد"),
-}).superRefine((value, ctx) => {
-  if (value.customs === ALL_CUSTOMS_VALUE && value.status !== NEED_STATUS_AT_ORIGIN) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["customs"],
-      message: "تمام گمرکات فقط برای وضعیت در کشور مبدا قابل انتخاب است",
-    });
-  }
 });
+
+const schema = z
+  .object({
+    uuid: z.string().optional(),
+    status: z.string().min(1, "وضعیت پروفرما الزامی است"),
+    country_of_origin: z.string().optional().default(""),
+    currency_type: z.string().min(1, "نوع ارز الزامی است"),
+    fee_type: z.string().min(1, "نوع فی الزامی است"),
+    fee_amount: z.coerce.number().nonnegative("مبلغ فی باید صفر یا بیشتر باشد"),
+    entry_border: z.string().min(1, "مرز ورودی الزامی است"),
+    customs: z.string().min(1, "گمرک الزامی است"),
+    means_of_transport: z.string().min(1, "روش حمل الزامی است"),
+    goods: z.array(goodSchema).min(1, "حداقل یک کالا الزامی است"),
+  })
+  .superRefine((value, ctx) => {
+    if (value.customs === ALL_CUSTOMS_VALUE && value.status !== NEED_STATUS_AT_ORIGIN) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["customs"],
+        message: "تمام گمرکات فقط برای وضعیت در کشور مبدا قابل انتخاب است",
+      });
+    }
+  });
 
 export type GoodsNeedFormInput = z.input<typeof schema>;
 type GoodsNeedFormValue = z.output<typeof schema>;
@@ -161,9 +151,7 @@ function Field(props: {
     <div className="space-y-2">
       <Label className="text-sm">{props.label}</Label>
       {props.children}
-      {props.error ? (
-        <p className="text-sm text-destructive">{props.error}</p>
-      ) : null}
+      {props.error ? <p className="text-sm text-destructive">{props.error}</p> : null}
     </div>
   );
 }
@@ -177,7 +165,7 @@ function normalizeFa(s: string) {
     .trim();
 }
 
-function truncateText(s: string, max = 30) {
+function truncateText(s: string, max = 34) {
   const t = (s ?? "").trim();
   if (!t) return "";
   return t.length > max ? `${t.slice(0, max)}...` : t;
@@ -218,18 +206,13 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
             aria-expanded={open}
             className="w-full justify-between"
           >
-            <span
-              className={cn("truncate", !selected && "text-muted-foreground")}
-            >
+            <span className={cn("truncate", !selected && "text-muted-foreground")}>
               {selected?.label || props.placeholder || "انتخاب..."}
             </span>
             <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0"
-          align="start"
-        >
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
               placeholder={props.searchPlaceholder || "جستجو..."}
@@ -252,12 +235,7 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
                     className="flex items-center justify-between gap-3"
                   >
                     <span className="truncate">{it.label}</span>
-                    <Check
-                      className={cn(
-                        "h-4 w-4",
-                        isSelected ? "opacity-100" : "opacity-0",
-                      )}
-                    />
+                    <Check className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
                   </CommandItem>
                 );
               })}
@@ -265,9 +243,7 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
           </Command>
         </PopoverContent>
       </Popover>
-      {props.error ? (
-        <p className="text-sm text-destructive">{props.error}</p>
-      ) : null}
+      {props.error ? <p className="text-sm text-destructive">{props.error}</p> : null}
     </div>
   );
 }
@@ -318,12 +294,10 @@ function HSCodePicker(props: {
   const selectedLabel = React.useMemo(() => {
     if (!selected) return "";
     const name = selected.goods_name_fa || selected.goods_name_en || "";
-    const shortName = truncateText(name, 30);
-    return shortName ? `${selected.code} — ${shortName}` : selected.code;
+    const shortName = truncateText(name);
+    return shortName ? `${selected.code} - ${shortName}` : selected.code;
   }, [selected]);
-  const displayLabel =
-    selectedLabel ||
-    (props.value && props.selectedCode ? props.selectedCode : "");
+  const displayLabel = selectedLabel || (props.value && props.selectedCode ? props.selectedCode : "");
 
   return (
     <div className="space-y-2">
@@ -337,40 +311,26 @@ function HSCodePicker(props: {
             aria-expanded={open}
             className="w-full justify-between"
           >
-            <span
-              className={cn(
-                "truncate",
-                !displayLabel && "text-muted-foreground",
-              )}
-            >
+            <span className={cn("truncate", !displayLabel && "text-muted-foreground")}>
               {displayLabel || "جستجو و انتخاب HS Code..."}
             </span>
             <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0"
-          align="start"
-        >
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="جستجو در سرور (کد یا نام)..."
+              placeholder="جستجو در سرور..."
               value={query}
               onValueChange={setQuery}
             />
-            {loading ? (
-              <div className="p-3 text-sm text-muted-foreground">
-                در حال جستجو...
-              </div>
-            ) : null}
+            {loading ? <div className="p-3 text-sm text-muted-foreground">در حال جستجو...</div> : null}
             <CommandEmpty>موردی پیدا نشد.</CommandEmpty>
             <CommandGroup className="max-h-[320px] overflow-auto">
               {items.map((item) => {
                 const name = item.goods_name_fa || item.goods_name_en || "";
-                const shortName = truncateText(name, 30);
-                const label = shortName
-                  ? `${item.code} — ${shortName}`
-                  : item.code;
+                const shortName = truncateText(name);
+                const label = shortName ? `${item.code} - ${shortName}` : item.code;
                 const isSelected = item.id === props.value;
                 return (
                   <CommandItem
@@ -385,12 +345,7 @@ function HSCodePicker(props: {
                     className="flex items-center justify-between gap-3"
                   >
                     <span className="truncate">{label}</span>
-                    <Check
-                      className={cn(
-                        "h-4 w-4",
-                        isSelected ? "opacity-100" : "opacity-0",
-                      )}
-                    />
+                    <Check className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
                   </CommandItem>
                 );
               })}
@@ -398,9 +353,7 @@ function HSCodePicker(props: {
           </Command>
         </PopoverContent>
       </Popover>
-      {props.error ? (
-        <p className="text-sm text-destructive">{props.error}</p>
-      ) : null}
+      {props.error ? <p className="text-sm text-destructive">{props.error}</p> : null}
     </div>
   );
 }
@@ -412,31 +365,32 @@ async function createGoodsNeed(values: GoodsNeedFormValue) {
     body: JSON.stringify(values),
   });
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) {
-    throw new Error(
-      data?.detail || JSON.stringify(data) || "خطا در ایجاد نیاز کالا",
-    );
-  }
+  if (!res.ok) throw new Error(data?.detail || JSON.stringify(data) || "خطا در ایجاد پروفرما");
   return data;
 }
 
 async function updateGoodsNeed(uuid: string, values: GoodsNeedFormValue) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
-  const res = await authFetch(
-    `${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`,
-    {
-      method: "PUT",
-      body: JSON.stringify(values),
-    },
-  );
+  const res = await authFetch(`${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`, {
+    method: "PUT",
+    body: JSON.stringify(values),
+  });
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) {
-    throw new Error(
-      data?.detail || JSON.stringify(data) || "خطا در ویرایش نیاز کالا",
-    );
-  }
+  if (!res.ok) throw new Error(data?.detail || JSON.stringify(data) || "خطا در ویرایش پروفرما");
   return data;
 }
+
+const emptyGood = {
+  description: "",
+  hs_code_id: 0,
+  goods_status: "نو",
+  quantity: 1,
+  unit: "KG",
+  manufacturer_country: "CN",
+  price: 0,
+  nw_kg: 0,
+  gw_kg: 0,
+};
 
 export function GoodsNeedForm(props: {
   mode?: "create" | "edit";
@@ -452,8 +406,9 @@ export function GoodsNeedForm(props: {
     defaultValues: props.initialValues,
     mode: "onChange",
   });
-  const { register, handleSubmit, setValue, watch, formState } = form;
+  const { control, register, handleSubmit, setValue, watch, formState } = form;
   const { errors } = formState;
+  const goodsFA = useFieldArray({ control, name: "goods" });
   const mode = props.mode || "create";
   const selectedStatus = String(watch("status") || "");
   const selectedCustoms = String(watch("customs") || "");
@@ -470,10 +425,7 @@ export function GoodsNeedForm(props: {
   }, [form, props.initialValues]);
 
   React.useEffect(() => {
-    if (
-      selectedStatus !== NEED_STATUS_AT_ORIGIN &&
-      selectedCustoms === ALL_CUSTOMS_VALUE
-    ) {
+    if (selectedStatus !== NEED_STATUS_AT_ORIGIN && selectedCustoms === ALL_CUSTOMS_VALUE) {
       setValue("customs", "", { shouldValidate: true });
     }
   }, [selectedCustoms, selectedStatus, setValue]);
@@ -485,13 +437,8 @@ export function GoodsNeedForm(props: {
     try {
       const values = schema.parse(raw);
       const uuid = String(values.uuid || "");
-      const saved =
-        mode === "edit"
-          ? await updateGoodsNeed(uuid, values)
-          : await createGoodsNeed(values);
-      setSuccess(
-        mode === "edit" ? "نیاز کالا ویرایش شد." : "نیاز کالا ایجاد شد.",
-      );
+      const saved = mode === "edit" ? await updateGoodsNeed(uuid, values) : await createGoodsNeed(values);
+      setSuccess(mode === "edit" ? "پروفرما ویرایش شد." : "پروفرما ایجاد شد.");
       props.onDone?.(String(saved?.uuid ?? uuid));
     } catch (err: any) {
       setError(err?.message || "خطا");
@@ -512,209 +459,230 @@ export function GoodsNeedForm(props: {
       <Card className="overflow-hidden before:h-1 before:bg-amber-600 before:content-['']">
         <CardHeader>
           <CardTitle className="text-base">
-            {mode === "edit" ? "ویرایش نیاز کالا" : "ایجاد نیاز کالا"}
+            {mode === "edit" ? "ویرایش پروفرما" : "ایجاد پروفرما"}
           </CardTitle>
           <CardDescription>
-            نیاز فقط برای یک کالا ثبت می‌شود تا صاحبان ثبت سفارش مشابه بتوانند
-            آن را پیدا کنند.
+            اطلاعات مشترک پروفرما را وارد کنید؛ کالاها در بخش بعدی به صورت چند ردیفی ثبت می‌شوند.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <Field label="توضیحات کالا" error={errors.description?.message}>
-            <Input {...register("description")} />
-          </Field>
-
-          <HSCodePicker
-            value={Number(watch("hs_code_id") || 0)}
-            onChange={(value) =>
-              setValue("hs_code_id", value, { shouldValidate: true })
-            }
-            selectedCode={String(watch("hs_code") || "")}
-            error={errors.hs_code_id?.message}
+          <Controller
+            control={control}
+            name="status"
+            render={({ field }) => (
+              <SearchableCombobox
+                label="وضعیت پروفرما"
+                value={field.value || ""}
+                onChange={field.onChange}
+                items={proformaStatusOptions}
+                placeholder="انتخاب وضعیت پروفرما"
+                error={errors.status?.message}
+              />
+            )}
           />
-
-          <SearchableCombobox
-            label="وضعیت نیاز کالا"
-            value={String(watch("status") || "")}
-            onChange={(value) =>
-              setValue("status", value, { shouldValidate: true })
-            }
-            items={needStatusOptions}
-            placeholder="انتخاب وضعیت نیاز کالا"
-            error={errors.status?.message}
+          <Controller
+            control={control}
+            name="country_of_origin"
+            render={({ field }) => (
+              <SearchableCombobox
+                label="کشور مبدا"
+                value={field.value || ""}
+                onChange={field.onChange}
+                items={countryOptions}
+                placeholder="اختیاری - انتخاب کشور"
+                error={errors.country_of_origin?.message}
+              />
+            )}
           />
-
-          <SearchableCombobox
-            label="وضعیت کالا"
-            value={String(watch("goods_status") || "")}
-            onChange={(value) =>
-              setValue("goods_status", value, { shouldValidate: true })
-            }
-            items={goodsStatusOptions}
-            placeholder="انتخاب وضعیت کالا"
-            error={errors.goods_status?.message}
+          <Controller
+            control={control}
+            name="currency_type"
+            render={({ field }) => (
+              <SearchableCombobox
+                label="نوع ارز"
+                value={field.value || ""}
+                onChange={field.onChange}
+                items={currencyOptions}
+                placeholder="انتخاب ارز"
+                error={errors.currency_type?.message}
+              />
+            )}
           />
-
-          <Field label="مقدار" error={errors.quantity?.message}>
-            <Input type="number" step="0.01" {...register("quantity")} />
-          </Field>
-
-          <SearchableCombobox
-            label="واحد"
-            value={String(watch("unit") || "")}
-            onChange={(value) =>
-              setValue("unit", value, { shouldValidate: true })
-            }
-            items={unitOptions}
-            placeholder="انتخاب واحد"
-            error={errors.unit?.message}
+          <Controller
+            control={control}
+            name="fee_type"
+            render={({ field }) => (
+              <SearchableCombobox
+                label="نوع فی"
+                value={field.value || ""}
+                onChange={field.onChange}
+                items={feeTypeOptions}
+                placeholder="انتخاب نوع فی"
+                error={errors.fee_type?.message}
+              />
+            )}
           />
-
-          <SearchableCombobox
-            label="کشور سازنده"
-            value={String(watch("manufacturer_country") || "")}
-            onChange={(value) =>
-              setValue("manufacturer_country", value, { shouldValidate: true })
-            }
-            items={countryOptions}
-            placeholder="انتخاب کشور..."
-            searchPlaceholder="جستجو: نام فارسی / انگلیسی / کد..."
-            error={errors.manufacturer_country?.message}
-          />
-
-          <SearchableCombobox
-            label="کشور مبدا"
-            value={String(watch("country_of_origin") || "")}
-            onChange={(value) =>
-              setValue("country_of_origin", value, { shouldValidate: true })
-            }
-            items={countryOptions}
-            placeholder="انتخاب کشور..."
-            searchPlaceholder="جستجو: نام فارسی / انگلیسی / کد..."
-            error={errors.country_of_origin?.message}
-          />
-
-          <Field label="قیمت" error={errors.price?.message}>
-            <Input type="number" step="0.0001" {...register("price")} />
-          </Field>
-
-          <SearchableCombobox
-            label="نوع ارز"
-            value={String(watch("currency_type") || "")}
-            onChange={(value) =>
-              setValue("currency_type", value, { shouldValidate: true })
-            }
-            items={currencyOptions}
-            placeholder="انتخاب نوع ارز"
-            searchPlaceholder="جستجو در ارزها..."
-            error={errors.currency_type?.message}
-          />
-
-          <SearchableCombobox
-            label="نوع فی"
-            value={String(watch("fee_type") || "")}
-            onChange={(value) =>
-              setValue("fee_type", value, { shouldValidate: true })
-            }
-            items={feeTypeOptions}
-            placeholder="انتخاب نوع فی"
-            error={errors.fee_type?.message}
-          />
-
-          <Field
-            label="مبلغ فی برای هر واحد ارز ثبت سفارش"
-            error={errors.fee_amount?.message}
-          >
+          <Field label="مبلغ فی برای هر واحد ارز" error={errors.fee_amount?.message}>
             <Input type="number" step="0.01" {...register("fee_amount")} />
           </Field>
-
-          <SearchableCombobox
-            label="مرز ورودی"
-            value={String(watch("entry_border") || "")}
-            onChange={(value) =>
-              setValue("entry_border", value, { shouldValidate: true })
-            }
-            items={borderOptions}
-            placeholder="انتخاب مرز ورودی"
-            searchPlaceholder="جستجو در مرزها..."
-            error={errors.entry_border?.message}
+          <Controller
+            control={control}
+            name="entry_border"
+            render={({ field }) => (
+              <SearchableCombobox
+                label="مرز ورودی"
+                value={field.value || ""}
+                onChange={field.onChange}
+                items={borderOptions}
+                placeholder="انتخاب مرز"
+                error={errors.entry_border?.message}
+              />
+            )}
           />
-
-          <SearchableCombobox
-            label="گمرک"
-            value={String(watch("customs") || "")}
-            onChange={(value) =>
-              setValue("customs", value, { shouldValidate: true })
-            }
-            items={availableCustomsOptions}
-            placeholder="انتخاب گمرک"
-            searchPlaceholder="جستجو در گمرک‌ها..."
-            error={errors.customs?.message}
+          <Controller
+            control={control}
+            name="customs"
+            render={({ field }) => (
+              <SearchableCombobox
+                label="گمرک"
+                value={field.value || ""}
+                onChange={field.onChange}
+                items={availableCustomsOptions}
+                placeholder="انتخاب گمرک"
+                error={errors.customs?.message}
+              />
+            )}
           />
-
-          <SearchableCombobox
-            label="شرایط تحویل"
-            value={String(watch("terms_of_delivery") || "")}
-            onChange={(value) =>
-              setValue("terms_of_delivery", value, { shouldValidate: true })
-            }
-            items={deliveryTerms}
-            placeholder="انتخاب..."
-            error={errors.terms_of_delivery?.message}
+          <Controller
+            control={control}
+            name="means_of_transport"
+            render={({ field }) => (
+              <SearchableCombobox
+                label="روش حمل"
+                value={field.value || ""}
+                onChange={field.onChange}
+                items={transportMeans}
+                placeholder="انتخاب"
+                error={errors.means_of_transport?.message}
+              />
+            )}
           />
+        </CardContent>
+      </Card>
 
-          <SearchableCombobox
-            label="شرایط پرداخت"
-            value={String(watch("terms_of_payment") || "")}
-            onChange={(value) =>
-              setValue("terms_of_payment", value, { shouldValidate: true })
-            }
-            items={paymentTerms}
-            placeholder="انتخاب..."
-            error={errors.terms_of_payment?.message}
-          />
-
-          <SearchableCombobox
-            label="روش حمل"
-            value={String(watch("means_of_transport") || "")}
-            onChange={(value) =>
-              setValue("means_of_transport", value, { shouldValidate: true })
-            }
-            items={transportMeans}
-            placeholder="انتخاب..."
-            error={errors.means_of_transport?.message}
-          />
-
-          <Field label="وزن خالص (kg)" error={errors.nw_kg?.message}>
-            <Input type="number" step="0.01" {...register("nw_kg")} />
-          </Field>
-
-          <Field label="وزن ناخالص (kg)" error={errors.gw_kg?.message}>
-            <Input type="number" step="0.01" {...register("gw_kg")} />
-          </Field>
-
-          <label className="flex items-center gap-2 text-sm md:col-span-2">
-            <input
-              type="checkbox"
-              checked={Boolean(watch("partial_shipment"))}
-              onChange={(event) =>
-                setValue("partial_shipment", event.target.checked, {
-                  shouldValidate: true,
-                })
-              }
-            />
-            حمل به دفعات مجاز است
-          </label>
+      <Card className="overflow-hidden before:h-1 before:bg-slate-900 before:content-['']">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-base">کالاهای پروفرما</CardTitle>
+            <CardDescription>برای هر پروفرما می‌توانید چند کالا ثبت کنید.</CardDescription>
+          </div>
+          <Button type="button" variant="outline" onClick={() => goodsFA.append(emptyGood)}>
+            <PlusCircle className="h-4 w-4" />
+            افزودن کالا
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {goodsFA.fields.map((field, idx) => {
+            const rowErr: any = (errors as any)?.goods?.[idx];
+            return (
+              <div key={field.id} className="rounded-2xl border bg-card p-4">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="font-semibold">کالا {idx + 1}</div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => goodsFA.remove(idx)}
+                    disabled={goodsFA.fields.length <= 1}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    حذف
+                  </Button>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="شرح کالا" error={rowErr?.description?.message}>
+                    <Input {...register(`goods.${idx}.description` as const)} />
+                  </Field>
+                  <Controller
+                    control={control}
+                    name={`goods.${idx}.hs_code_id` as const}
+                    render={({ field }) => (
+                      <HSCodePicker
+                        value={Number(field.value || 0)}
+                        onChange={field.onChange}
+                        selectedCode={String(watch(`goods.${idx}.hs_code` as const) || "")}
+                        error={rowErr?.hs_code_id?.message}
+                      />
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name={`goods.${idx}.goods_status` as const}
+                    render={({ field }) => (
+                      <SearchableCombobox
+                        label="وضعیت کالا"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        items={goodsStatusOptions}
+                        placeholder="انتخاب وضعیت"
+                        error={rowErr?.goods_status?.message}
+                      />
+                    )}
+                  />
+                  <Field label="مقدار" error={rowErr?.quantity?.message}>
+                    <Input type="number" step="0.01" {...register(`goods.${idx}.quantity` as const)} />
+                  </Field>
+                  <Controller
+                    control={control}
+                    name={`goods.${idx}.unit` as const}
+                    render={({ field }) => (
+                      <SearchableCombobox
+                        label="واحد"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        items={unitOptions}
+                        placeholder="انتخاب واحد"
+                        error={rowErr?.unit?.message}
+                      />
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name={`goods.${idx}.manufacturer_country` as const}
+                    render={({ field }) => (
+                      <SearchableCombobox
+                        label="کشور سازنده"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        items={countryOptions}
+                        placeholder="انتخاب کشور"
+                        error={rowErr?.manufacturer_country?.message}
+                      />
+                    )}
+                  />
+                  <Field label="قیمت" error={rowErr?.price?.message}>
+                    <Input type="number" step="0.0001" {...register(`goods.${idx}.price` as const)} />
+                  </Field>
+                  <Field label="وزن خالص (kg)" error={rowErr?.nw_kg?.message}>
+                    <Input type="number" step="0.01" {...register(`goods.${idx}.nw_kg` as const)} />
+                  </Field>
+                  <Field label="وزن ناخالص (kg)" error={rowErr?.gw_kg?.message}>
+                    <Input type="number" step="0.01" {...register(`goods.${idx}.gw_kg` as const)} />
+                  </Field>
+                </div>
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={submitting}>~
+        <Button type="submit" disabled={submitting}>
           {submitting
             ? "در حال ذخیره..."
             : mode === "edit"
               ? "ذخیره تغییرات"
-              : "ایجاد نیاز کالا"}
+              : "ایجاد پروفرما"}
         </Button>
       </div>
     </form>

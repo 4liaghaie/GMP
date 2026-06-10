@@ -8,13 +8,13 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .filters import RegisteredOrderMarketplaceFilter
 
-from .models import GoodsNeed, RegisteredOrder, OrderGood
+from .models import GoodsNeed, GoodsNeedGood, RegisteredOrder, OrderGood
 from .serializers import (
-    GoodsNeedSerializer,
     RegisteredOrderCreateUpdateSerializer,
     RegisteredOrderReadSerializer,
     PublicRegisteredOrderSerializer,
 )
+from .proforma_serializers import GoodsNeedSerializer
 
 
 def is_admin_user(user):
@@ -154,12 +154,13 @@ class GoodsNeedListCreateAPIView(APIView):
 
     def get(self, request):
         if is_admin_user(request.user):
-            qs = GoodsNeed.objects.select_related("user", "hs_code").order_by("-created_at")
+            qs = GoodsNeed.objects.select_related("user", "hs_code").prefetch_related("goods__hs_code").order_by("-created_at")
         else:
             qs = (
                 GoodsNeed.objects
                 .filter(user=request.user)
                 .select_related("user", "hs_code")
+                .prefetch_related("goods__hs_code")
                 .order_by("-created_at")
             )
         return Response(GoodsNeedSerializer(qs, many=True, context={"request": request}).data)
@@ -210,7 +211,7 @@ class MarketplaceGoodsNeedListAPIView(generics.ListAPIView):
     serializer_class = GoodsNeedSerializer
 
     def get_queryset(self):
-        qs = GoodsNeed.objects.select_related("user", "hs_code").order_by("-created_at")
+        qs = GoodsNeed.objects.select_related("user", "hs_code").prefetch_related("goods__hs_code").order_by("-created_at")
         hs_code = (self.request.query_params.get("hs_code") or "").strip()
         q = (self.request.query_params.get("q") or "").strip()
         status_value = (self.request.query_params.get("status") or "").strip()
@@ -225,11 +226,11 @@ class MarketplaceGoodsNeedListAPIView(generics.ListAPIView):
         means_of_transport = (self.request.query_params.get("means_of_transport") or "").strip()
         partial_shipment = (self.request.query_params.get("partial_shipment") or "").strip().lower()
         if hs_code:
-            qs = qs.filter(hs_code__code__in=[x.strip() for x in hs_code.split(",") if x.strip()])
+            qs = qs.filter(goods__hs_code__code__in=[x.strip() for x in hs_code.split(",") if x.strip()])
         if status_value:
             qs = qs.filter(status=status_value)
         if goods_status:
-            qs = qs.filter(goods_status=goods_status)
+            qs = qs.filter(goods__goods_status=goods_status)
         if currency_type:
             qs = qs.filter(currency_type=currency_type)
         if entry_border:
@@ -237,7 +238,7 @@ class MarketplaceGoodsNeedListAPIView(generics.ListAPIView):
         if customs:
             qs = qs.filter(customs=customs)
         if manufacturer_country:
-            qs = qs.filter(manufacturer_country=manufacturer_country)
+            qs = qs.filter(goods__manufacturer_country=manufacturer_country)
         if country_of_origin:
             qs = qs.filter(country_of_origin=country_of_origin)
         if terms_of_delivery:
@@ -250,8 +251,8 @@ class MarketplaceGoodsNeedListAPIView(generics.ListAPIView):
             qs = qs.filter(partial_shipment=partial_shipment == "true")
         if q:
             qs = qs.filter(
-                Q(description__icontains=q)
-                | Q(hs_code__code__icontains=q)
+                Q(goods__description__icontains=q)
+                | Q(goods__hs_code__code__icontains=q)
                 | Q(entry_border__icontains=q)
             )
-        return qs
+        return qs.distinct()

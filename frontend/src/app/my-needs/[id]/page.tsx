@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowRight, PackageSearch, RefreshCw } from "lucide-react";
+import { ArrowRight, FilePenLine, RefreshCw } from "lucide-react";
 
 import {
   GoodsNeedForm,
@@ -23,36 +23,50 @@ async function fetchNeed(uuid: string, signal?: AbortSignal) {
     signal,
   });
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) {
-    throw new Error(data?.detail || "خطا در دریافت نیاز کالا");
-  }
+  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت پروفرما");
   return data;
 }
 
 function toFormDefaults(data: any): GoodsNeedFormInput {
+  const goods = Array.isArray(data?.goods) ? data.goods : [];
   return {
     uuid: String(data?.uuid ?? ""),
-    hs_code: String(data?.hs_code ?? ""),
-    description: String(data?.description ?? ""),
-    hs_code_id: Number(data?.hs_code_id ?? 0),
     status: String(data?.status ?? "در کشور مبدا"),
-    goods_status: String(data?.goods_status ?? "نو"),
-    quantity: Number(data?.quantity ?? 1),
-    unit: String(data?.unit ?? "KG"),
-    manufacturer_country: String(data?.manufacturer_country ?? "CN"),
-    country_of_origin: String(data?.country_of_origin ?? "CN"),
-    price: Number(data?.price ?? 0),
+    country_of_origin: String(data?.country_of_origin ?? ""),
     currency_type: String(data?.currency_type ?? "USD"),
     fee_type: String(data?.fee_type ?? "فی دریافتی"),
     fee_amount: Number(data?.fee_amount ?? 0),
     entry_border: String(data?.entry_border ?? ""),
     customs: String(data?.customs ?? ""),
-    terms_of_delivery: String(data?.terms_of_delivery ?? "FOB"),
-    terms_of_payment: String(data?.terms_of_payment ?? "TT"),
-    partial_shipment: Boolean(data?.partial_shipment ?? false),
     means_of_transport: String(data?.means_of_transport ?? "SEA"),
-    nw_kg: Number(data?.nw_kg ?? 0),
-    gw_kg: Number(data?.gw_kg ?? 0),
+    goods: goods.length
+      ? goods.map((item: any) => ({
+          uuid: String(item?.uuid ?? ""),
+          hs_code: String(item?.hs_code ?? ""),
+          description: String(item?.description ?? ""),
+          hs_code_id: Number(item?.hs_code_id ?? 0),
+          goods_status: String(item?.goods_status ?? "نو"),
+          quantity: Number(item?.quantity ?? 1),
+          unit: String(item?.unit ?? "KG"),
+          manufacturer_country: String(item?.manufacturer_country ?? "CN"),
+          price: Number(item?.price ?? 0),
+          nw_kg: Number(item?.nw_kg ?? 0),
+          gw_kg: Number(item?.gw_kg ?? 0),
+        }))
+      : [
+          {
+            description: String(data?.description ?? ""),
+            hs_code: String(data?.hs_code ?? ""),
+            hs_code_id: Number(data?.hs_code_id ?? 0),
+            goods_status: String(data?.goods_status ?? "نو"),
+            quantity: Number(data?.quantity ?? 1),
+            unit: String(data?.unit ?? "KG"),
+            manufacturer_country: String(data?.manufacturer_country ?? "CN"),
+            price: Number(data?.price ?? 0),
+            nw_kg: Number(data?.nw_kg ?? 0),
+            gw_kg: Number(data?.gw_kg ?? 0),
+          },
+        ],
   };
 }
 
@@ -98,20 +112,20 @@ export default function EditNeedPage() {
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-10">
         <PageHeader
           eyebrow="ویرایش"
-          title="ویرایش نیاز کالا"
+          title="ویرایش پروفرما"
           description={`UUID: ${uuid}`}
-          icon={<PackageSearch className="h-6 w-6" />}
+          icon={<FilePenLine className="h-6 w-6" />}
           accentClassName="bg-amber-600"
           actions={
             <>
-            <Button variant="outline" onClick={() => router.push("/my-needs")}>
-              <ArrowRight className="h-4 w-4" />
-              بازگشت به لیست
-            </Button>
-            <Button variant="outline" onClick={() => load()} disabled={loading}>
-              <RefreshCw className="h-4 w-4" />
-              دریافت مجدد
-            </Button>
+              <Button variant="outline" onClick={() => router.push("/my-needs")}>
+                <ArrowRight className="h-4 w-4" />
+                بازگشت به لیست
+              </Button>
+              <Button variant="outline" onClick={() => load()} disabled={loading}>
+                <RefreshCw className="h-4 w-4" />
+                دریافت مجدد
+              </Button>
             </>
           }
         />
@@ -124,15 +138,9 @@ export default function EditNeedPage() {
         ) : null}
 
         {loading || !defaults ? (
-          <div className="text-sm text-muted-foreground">
-            در حال دریافت اطلاعات...
-          </div>
+          <div className="text-sm text-muted-foreground">در حال دریافت اطلاعات...</div>
         ) : (
-          <GoodsNeedForm
-            mode="edit"
-            initialValues={defaults}
-            onDone={() => load()}
-          />
+          <GoodsNeedForm mode="edit" initialValues={defaults} onDone={() => load()} />
         )}
       </main>
     </div>

@@ -90,17 +90,20 @@ export default function AddRegisteredOrderPage() {
   return (
     <div dir="rtl">
       <Dialog open={noticeOpen} onOpenChange={setNoticeOpen}>
-        <DialogContent className="overflow-hidden p-0 text-right sm:max-w-2xl [&>button]:left-4 [&>button]:right-auto">
+        <DialogContent className="max-h-[90dvh] w-[calc(100vw-1rem)] overflow-hidden p-0 text-right sm:max-w-2xl [&>button]:left-4 [&>button]:right-auto">
           <div className="h-1 bg-amber-600" />
-          <DialogHeader className="space-y-4 px-6 pt-6 text-right">
-            <div className="flex items-start gap-4">
+
+          <DialogHeader className="space-y-4 px-4 pt-6 text-right sm:px-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-amber-600 text-white shadow-sm">
                 <AlertTriangle className="h-6 w-6" />
               </span>
-              <div>
-                <DialogTitle className="text-right text-xl font-black leading-8">
+
+              <div className="min-w-0">
+                <DialogTitle className="text-right text-lg font-black leading-8 sm:text-xl">
                   لطفا اطلاعات مانده ثبت سفارش را وارد کنید
                 </DialogTitle>
+
                 <DialogDescription className="mt-2 text-right leading-7">
                   اگر بخشی از ثبت سفارش و کرایه حمل استفاده شده، فقط باقیمانده
                   قابل فروش را در فرم وارد کنید.
@@ -109,7 +112,7 @@ export default function AddRegisteredOrderPage() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 px-6 py-5">
+          <div className="max-h-[calc(90dvh-220px)] space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-7 text-amber-900 dark:text-amber-100">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-1 h-5 w-5 shrink-0" />
@@ -127,6 +130,7 @@ export default function AddRegisteredOrderPage() {
                   <Scale className="h-5 w-5 text-sky-600" />
                   مانده قابل فروش
                 </div>
+
                 <p className="text-sm leading-7 text-muted-foreground">
                   مبالغ، تعداد، وزن و جمع جزء را فقط بر اساس مانده قابل فروش
                   وارد کنید.
@@ -138,6 +142,7 @@ export default function AddRegisteredOrderPage() {
                   <FileText className="h-5 w-5 text-emerald-600" />
                   فایل PDF الزامی
                 </div>
+
                 <p className="text-sm leading-7 text-muted-foreground">
                   فایل PDF ثبت سفارش را قبل از ذخیره انتخاب کنید؛ بدون PDF فرم
                   ثبت نمی‌شود.
@@ -149,6 +154,7 @@ export default function AddRegisteredOrderPage() {
                   <PackageCheck className="h-5 w-5 text-rose-600" />
                   تکمیل هر کالا
                 </div>
+
                 <p className="text-sm leading-7 text-muted-foreground">
                   برای هر کالا، HS Code، وضعیت کالا، مبدا، مقدار و جمع جزء را
                   جداگانه وارد کنید.
@@ -160,6 +166,7 @@ export default function AddRegisteredOrderPage() {
                   <Calculator className="h-5 w-5 text-slate-700 dark:text-slate-200" />
                   محاسبه خودکار
                 </div>
+
                 <p className="text-sm leading-7 text-muted-foreground">
                   قیمت واحد از مقدار و جمع جزء محاسبه می‌شود؛ فقط جمع جزء را
                   درست وارد کنید.
@@ -168,10 +175,10 @@ export default function AddRegisteredOrderPage() {
             </div>
           </div>
 
-          <DialogFooter className="border-t bg-muted/20 px-6 py-4 sm:justify-start">
+          <DialogFooter className="border-t bg-muted/20 px-4 py-4 sm:px-6 sm:justify-start">
             <Button
               type="button"
-              className="min-w-[150px]"
+              className="w-full sm:min-w-[150px] sm:w-auto"
               onClick={() => setNoticeOpen(false)}
             >
               <CheckCircle2 className="h-4 w-4" />
