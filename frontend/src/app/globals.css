@@ -65,6 +65,7 @@
 
 :root {
   --radius: 0.625rem;
+  --font-vazirmatn: "Vazirmatn", sans-serif;
 
   /* Surfaces (light) */
   --background: oklch(1 0 0);
