@@ -554,13 +554,23 @@ async function fetchNeeds(args: {
   if (args.q?.trim()) url.searchParams.set("q", args.q.trim());
   if (args.hsCode?.trim()) url.searchParams.set("hs_code", args.hsCode.trim());
   if (args.status?.trim()) url.searchParams.set("status", args.status.trim());
-  if (args.goodsStatus?.trim()) url.searchParams.set("goods_status", args.goodsStatus.trim());
-  if (args.currencyType?.trim()) url.searchParams.set("currency_type", args.currencyType.trim());
-  if (args.entryBorder?.trim()) url.searchParams.set("entry_border", args.entryBorder.trim());
-  if (args.customs?.trim()) url.searchParams.set("customs", args.customs.trim());
-  if (args.manufacturerCountry?.trim()) url.searchParams.set("manufacturer_country", args.manufacturerCountry.trim());
-  if (args.countryOfOrigin?.trim()) url.searchParams.set("country_of_origin", args.countryOfOrigin.trim());
-  if (args.meansOfTransport?.trim()) url.searchParams.set("means_of_transport", args.meansOfTransport.trim());
+  if (args.goodsStatus?.trim())
+    url.searchParams.set("goods_status", args.goodsStatus.trim());
+  if (args.currencyType?.trim())
+    url.searchParams.set("currency_type", args.currencyType.trim());
+  if (args.entryBorder?.trim())
+    url.searchParams.set("entry_border", args.entryBorder.trim());
+  if (args.customs?.trim())
+    url.searchParams.set("customs", args.customs.trim());
+  if (args.manufacturerCountry?.trim())
+    url.searchParams.set(
+      "manufacturer_country",
+      args.manufacturerCountry.trim(),
+    );
+  if (args.countryOfOrigin?.trim())
+    url.searchParams.set("country_of_origin", args.countryOfOrigin.trim());
+  if (args.meansOfTransport?.trim())
+    url.searchParams.set("means_of_transport", args.meansOfTransport.trim());
 
   const res = await fetch(url.toString(), {
     method: "GET",
@@ -587,7 +597,9 @@ function NeedCard({ need }: { need: GoodsNeed }) {
           </div>
         </div>
         <div>
-          <CardTitle className="text-lg">{safeText(need.description)}</CardTitle>
+          <CardTitle className="text-lg">
+            {safeText(need.description)}
+          </CardTitle>
           <CardDescription className="mt-2">
             نیاز کالا #{safeText(need.id)} توسط {safeText(need.user)}
           </CardDescription>
@@ -612,7 +624,7 @@ function NeedCard({ need }: { need: GoodsNeed }) {
           <div className="flex items-center justify-between gap-3">
             <span className="flex items-center gap-2 text-muted-foreground">
               <BadgeDollarSign className="h-4 w-4" />
-              قیمت
+              ارزش
             </span>
             <span className="font-semibold">
               {fmt(need.price)} {safeText(need.currency_type)}
@@ -642,7 +654,9 @@ function NeedCard({ need }: { need: GoodsNeed }) {
         <Separator />
 
         <Button asChild variant="outline" className="w-full">
-          <Link href={`/marketplace?hs_code=${encodeURIComponent(safeText(need.hs_code))}`}>
+          <Link
+            href={`/marketplace?hs_code=${encodeURIComponent(safeText(need.hs_code))}`}
+          >
             جستجوی ثبت سفارش مشابه
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -666,13 +680,17 @@ function ProformaCard({ need }: { need: GoodsNeed }) {
           <div className="flex flex-wrap justify-end gap-2">
             <Badge variant="outline">{safeText(need.status)}</Badge>
             <Badge variant="secondary">
-              {need.goods?.length ? `${fmt(need.goods.length)} کالا` : "بدون کالا"}
+              {need.goods?.length
+                ? `${fmt(need.goods.length)} کالا`
+                : "بدون کالا"}
             </Badge>
             <Badge variant="outline">{safeText(need.currency_type)}</Badge>
           </div>
         </div>
         <div>
-          <CardTitle className="text-lg">{safeText(firstGood?.description)}</CardTitle>
+          <CardTitle className="text-lg">
+            {safeText(firstGood?.description)}
+          </CardTitle>
           <CardDescription className="mt-2">
             پروفرما #{safeText(need.id)} توسط {safeText(need.user)}
           </CardDescription>
@@ -697,7 +715,7 @@ function ProformaCard({ need }: { need: GoodsNeed }) {
           <div className="flex items-center justify-between gap-3">
             <span className="flex items-center gap-2 text-muted-foreground">
               <BadgeDollarSign className="h-4 w-4" />
-              قیمت
+              ارزش
             </span>
             <span className="font-semibold">
               {fmt(firstGood?.price)} {safeText(need.currency_type)}
@@ -727,7 +745,9 @@ function ProformaCard({ need }: { need: GoodsNeed }) {
         <Separator />
 
         <Button asChild variant="outline" className="w-full">
-          <Link href={`/marketplace?hs_code=${encodeURIComponent(firstHsCode)}`}>
+          <Link
+            href={`/marketplace?hs_code=${encodeURIComponent(firstHsCode)}`}
+          >
             جستجوی ثبت سفارش مشابه
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -752,7 +772,8 @@ export default function NeedsMarketplaceList() {
   const [customs, setCustoms] = React.useState("");
   const [draftCustoms, setDraftCustoms] = React.useState("");
   const [manufacturerCountry, setManufacturerCountry] = React.useState("");
-  const [draftManufacturerCountry, setDraftManufacturerCountry] = React.useState("");
+  const [draftManufacturerCountry, setDraftManufacturerCountry] =
+    React.useState("");
   const [countryOfOrigin, setCountryOfOrigin] = React.useState("");
   const [draftCountryOfOrigin, setDraftCountryOfOrigin] = React.useState("");
   const [termsOfDelivery, setTermsOfDelivery] = React.useState("");
@@ -936,7 +957,11 @@ export default function NeedsMarketplaceList() {
                 ) : null}
                 <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="outline" className="rounded-xl" onClick={openFilters}>
+                    <Button
+                      variant="outline"
+                      className="rounded-xl"
+                      onClick={openFilters}
+                    >
                       <SlidersHorizontal className="ms-2 h-4 w-4" />
                       فیلترها
                       {activeFiltersCount ? (
@@ -951,10 +976,14 @@ export default function NeedsMarketplaceList() {
                     className="w-[92vw] max-w-[420px] p-0 [&>button]:left-4 [&>button]:right-auto [&>button]:top-4"
                   >
                     <SheetHeader className="p-4 text-right">
-                      <SheetTitle className="text-right">فیلترهای نیاز کالا</SheetTitle>
+                      <SheetTitle className="text-right">
+                        فیلترهای نیاز کالا
+                      </SheetTitle>
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <div className="text-xs text-muted-foreground">
-                          {activeFiltersCount ? `${fmt(activeFiltersCount)} فیلتر فعال` : "بدون فیلتر"}
+                          {activeFiltersCount
+                            ? `${fmt(activeFiltersCount)} فیلتر فعال`
+                            : "بدون فیلتر"}
                         </div>
                         <div className="flex items-center gap-2">
                           {activeFiltersCount ? (
@@ -1010,14 +1039,17 @@ export default function NeedsMarketplaceList() {
                                 }
                               />
                               <p className="text-xs leading-6 text-muted-foreground">
-                                برای match دقیق با ثبت سفارش‌ها، HS Code را از لیست انتخاب کنید.
+                                برای match دقیق با ثبت سفارش‌ها، HS Code را از
+                                لیست انتخاب کنید.
                               </p>
                               <div className="hidden">
                                 <Label className="text-sm">HS Code دقیق</Label>
                                 <div className="relative">
                                   <Input
                                     value={draftHsCode}
-                                    onChange={(event) => setDraftHsCode(event.target.value)}
+                                    onChange={(event) =>
+                                      setDraftHsCode(event.target.value)
+                                    }
                                     placeholder="مثلا 01012100"
                                     className="rounded-xl pl-9"
                                   />
@@ -1033,7 +1065,8 @@ export default function NeedsMarketplaceList() {
                                   ) : null}
                                 </div>
                                 <p className="text-xs leading-6 text-muted-foreground">
-                                  برای match دقیق با ثبت سفارش‌ها، کد HS را کامل وارد کنید.
+                                  برای match دقیق با ثبت سفارش‌ها، کد HS را کامل
+                                  وارد کنید.
                                 </p>
                               </div>
                             </AccordionContent>
@@ -1167,7 +1200,9 @@ export default function NeedsMarketplaceList() {
                                       type="button"
                                       variant="ghost"
                                       className="h-8 rounded-xl px-2 text-xs"
-                                      onClick={() => setDraftManufacturerCountry("")}
+                                      onClick={() =>
+                                        setDraftManufacturerCountry("")
+                                      }
                                     >
                                       <X className="h-4 w-4" />
                                       پاک کردن
@@ -1188,7 +1223,9 @@ export default function NeedsMarketplaceList() {
                                       type="button"
                                       variant="ghost"
                                       className="h-8 rounded-xl px-2 text-xs"
-                                      onClick={() => setDraftCountryOfOrigin("")}
+                                      onClick={() =>
+                                        setDraftCountryOfOrigin("")
+                                      }
                                     >
                                       <X className="h-4 w-4" />
                                       پاک کردن
@@ -1216,7 +1253,9 @@ export default function NeedsMarketplaceList() {
                                       type="button"
                                       variant="ghost"
                                       className="h-8 rounded-xl px-2 text-xs"
-                                      onClick={() => setDraftTermsOfDelivery("")}
+                                      onClick={() =>
+                                        setDraftTermsOfDelivery("")
+                                      }
                                     >
                                       <X className="h-4 w-4" />
                                       پاک کردن
@@ -1264,7 +1303,9 @@ export default function NeedsMarketplaceList() {
                                       type="button"
                                       variant="ghost"
                                       className="h-8 rounded-xl px-2 text-xs"
-                                      onClick={() => setDraftMeansOfTransport("")}
+                                      onClick={() =>
+                                        setDraftMeansOfTransport("")
+                                      }
                                     >
                                       <X className="h-4 w-4" />
                                       پاک کردن
@@ -1273,26 +1314,28 @@ export default function NeedsMarketplaceList() {
                                 }
                               />
                               <div className="hidden">
-                              <SearchableCombobox
-                                label="حمل به دفعات"
-                                value={draftPartialShipment}
-                                onChange={setDraftPartialShipment}
-                                items={partialShipmentOptions}
-                                placeholder="انتخاب وضعیت"
-                                rightAction={
-                                  draftPartialShipment ? (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      className="h-8 rounded-xl px-2 text-xs"
-                                      onClick={() => setDraftPartialShipment("")}
-                                    >
-                                      <X className="h-4 w-4" />
-                                      پاک کردن
-                                    </Button>
-                                  ) : null
-                                }
-                              />
+                                <SearchableCombobox
+                                  label="حمل به دفعات"
+                                  value={draftPartialShipment}
+                                  onChange={setDraftPartialShipment}
+                                  items={partialShipmentOptions}
+                                  placeholder="انتخاب وضعیت"
+                                  rightAction={
+                                    draftPartialShipment ? (
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className="h-8 rounded-xl px-2 text-xs"
+                                        onClick={() =>
+                                          setDraftPartialShipment("")
+                                        }
+                                      >
+                                        <X className="h-4 w-4" />
+                                        پاک کردن
+                                      </Button>
+                                    ) : null
+                                  }
+                                />
                               </div>
                             </AccordionContent>
                           </AccordionItem>
@@ -1319,7 +1362,11 @@ export default function NeedsMarketplaceList() {
                     </SheetFooter>
                   </SheetContent>
                 </Sheet>
-                <Button variant="outline" onClick={() => load()} disabled={loading}>
+                <Button
+                  variant="outline"
+                  onClick={() => load()}
+                  disabled={loading}
+                >
                   <RefreshCw className="h-4 w-4" />
                   بروزرسانی
                 </Button>
@@ -1395,7 +1442,8 @@ export default function NeedsMarketplaceList() {
                 ) : null}
                 {partialShipment ? (
                   <Badge variant="secondary">
-                    حمل به دفعات: {optionLabel(partialShipmentOptions, partialShipment)}
+                    حمل به دفعات:{" "}
+                    {optionLabel(partialShipmentOptions, partialShipment)}
                   </Badge>
                 ) : null}
               </div>

@@ -151,7 +151,9 @@ function NeedCard({ need }: { need: LatestNeed }) {
             <PackageSearch className="h-5 w-5" />
           </span>
           <Badge variant="secondary" className="rounded-xl">
-            {need.goods?.length ? `${fmt(need.goods.length)} کالا` : safeText(need.status)}
+            {need.goods?.length
+              ? `${fmt(need.goods.length)} کالا`
+              : safeText(need.status)}
           </Badge>
         </div>
         <div>
@@ -217,8 +219,8 @@ export default async function HomePage() {
                 ثبت سفارش و پروفرما را سریع‌تر به هم وصل کنید
               </h1>
               <p className="max-w-2xl text-base leading-8 text-muted-foreground md:text-lg">
-                کاربران ثبت سفارش‌های معتبر و پروفرماهای خود را ثبت می‌کنند
-                تا طرف‌های مشابه بر اساس کالا، HS Code، مرز ورودی و شرایط تجاری
+                کاربران ثبت سفارش‌های معتبر و پروفرماهای خود را ثبت می‌کنند تا
+                طرف‌های مشابه بر اساس کالا، HS Code، مرز ورودی و شرایط تجاری
                 سریع‌تر همدیگر را پیدا کنند.
               </p>
             </div>

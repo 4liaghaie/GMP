@@ -61,6 +61,7 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
     goods_read = ProformaGoodReadSerializer(source="goods", many=True, read_only=True)
     user = serializers.SerializerMethodField()
     country_of_origin = serializers.CharField(required=False, allow_blank=True, default="")
+    entry_border = serializers.CharField(required=False, allow_blank=True, default="")
 
     class Meta:
         model = GoodsNeed

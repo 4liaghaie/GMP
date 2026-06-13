@@ -91,7 +91,10 @@ const feeTypeOptions = [
   { value: "فی پرداختی", label: "فی پرداختی" },
 ];
 
-const borderOptions = borders.map((border) => ({ value: border, label: border }));
+const borderOptions = borders.map((border) => ({
+  value: border,
+  label: border,
+}));
 const customsOptions = iranCustoms.map((customs) => ({
   value: String(customs.ctmVCodeInt),
   label: `${customs.ctmNameStr} (${customs.ctmVCodeInt})`,
@@ -111,7 +114,8 @@ const goodSchema = z.object({
   quantity: z.coerce.number().positive("مقدار باید بیشتر از صفر باشد"),
   unit: z.string().min(1, "واحد الزامی است"),
   manufacturer_country: z.string().min(1, "کشور سازنده الزامی است"),
-  price: z.coerce.number().nonnegative("قیمت باید صفر یا بیشتر باشد"),
+  price: z.coerce.number().nonnegative("قیمت باید صفر یا بیشتر باشد").optional(),
+  line_subtotal: z.coerce.number().nonnegative("ارزش کل باید صفر یا بیشتر باشد"),
   nw_kg: z.coerce.number().nonnegative("وزن خالص باید صفر یا بیشتر باشد"),
   gw_kg: z.coerce.number().nonnegative("وزن ناخالص باید صفر یا بیشتر باشد"),
 });
@@ -124,13 +128,16 @@ const schema = z
     currency_type: z.string().min(1, "نوع ارز الزامی است"),
     fee_type: z.string().min(1, "نوع فی الزامی است"),
     fee_amount: z.coerce.number().nonnegative("مبلغ فی باید صفر یا بیشتر باشد"),
-    entry_border: z.string().min(1, "مرز ورودی الزامی است"),
+    entry_border: z.string().optional().default(""),
     customs: z.string().min(1, "گمرک الزامی است"),
     means_of_transport: z.string().min(1, "روش حمل الزامی است"),
     goods: z.array(goodSchema).min(1, "حداقل یک کالا الزامی است"),
   })
   .superRefine((value, ctx) => {
-    if (value.customs === ALL_CUSTOMS_VALUE && value.status !== NEED_STATUS_AT_ORIGIN) {
+    if (
+      value.customs === ALL_CUSTOMS_VALUE &&
+      value.status !== NEED_STATUS_AT_ORIGIN
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["customs"],
@@ -142,6 +149,27 @@ const schema = z
 export type GoodsNeedFormInput = z.input<typeof schema>;
 type GoodsNeedFormValue = z.output<typeof schema>;
 
+function calcUnitPrice(quantity: unknown, subtotal: unknown) {
+  const qty = Number(quantity || 0);
+  const total = Number(subtotal || 0);
+  if (!Number.isFinite(qty) || qty <= 0) return 0;
+  if (!Number.isFinite(total) || total < 0) return 0;
+  return total / qty;
+}
+
+function buildPayload(values: GoodsNeedFormValue) {
+  return {
+    ...values,
+    goods: values.goods.map((good) => {
+      const { line_subtotal, ...rest } = good;
+      return {
+        ...rest,
+        price: calcUnitPrice(good.quantity, line_subtotal),
+      };
+    }),
+  };
+}
+
 function Field(props: {
   label: string;
   error?: string;
@@ -151,7 +179,9 @@ function Field(props: {
     <div className="space-y-2">
       <Label className="text-sm">{props.label}</Label>
       {props.children}
-      {props.error ? <p className="text-sm text-destructive">{props.error}</p> : null}
+      {props.error ? (
+        <p className="text-sm text-destructive">{props.error}</p>
+      ) : null}
     </div>
   );
 }
@@ -206,13 +236,18 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
             aria-expanded={open}
             className="w-full justify-between"
           >
-            <span className={cn("truncate", !selected && "text-muted-foreground")}>
+            <span
+              className={cn("truncate", !selected && "text-muted-foreground")}
+            >
               {selected?.label || props.placeholder || "انتخاب..."}
             </span>
             <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <PopoverContent
+          className="w-[--radix-popover-trigger-width] p-0"
+          align="start"
+        >
           <Command shouldFilter={false}>
             <CommandInput
               placeholder={props.searchPlaceholder || "جستجو..."}
@@ -235,7 +270,12 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
                     className="flex items-center justify-between gap-3"
                   >
                     <span className="truncate">{it.label}</span>
-                    <Check className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
+                    <Check
+                      className={cn(
+                        "h-4 w-4",
+                        isSelected ? "opacity-100" : "opacity-0",
+                      )}
+                    />
                   </CommandItem>
                 );
               })}
@@ -243,7 +283,9 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
           </Command>
         </PopoverContent>
       </Popover>
-      {props.error ? <p className="text-sm text-destructive">{props.error}</p> : null}
+      {props.error ? (
+        <p className="text-sm text-destructive">{props.error}</p>
+      ) : null}
     </div>
   );
 }
@@ -297,7 +339,9 @@ function HSCodePicker(props: {
     const shortName = truncateText(name);
     return shortName ? `${selected.code} - ${shortName}` : selected.code;
   }, [selected]);
-  const displayLabel = selectedLabel || (props.value && props.selectedCode ? props.selectedCode : "");
+  const displayLabel =
+    selectedLabel ||
+    (props.value && props.selectedCode ? props.selectedCode : "");
 
   return (
     <div className="space-y-2">
@@ -311,26 +355,40 @@ function HSCodePicker(props: {
             aria-expanded={open}
             className="w-full justify-between"
           >
-            <span className={cn("truncate", !displayLabel && "text-muted-foreground")}>
+            <span
+              className={cn(
+                "truncate",
+                !displayLabel && "text-muted-foreground",
+              )}
+            >
               {displayLabel || "جستجو و انتخاب HS Code..."}
             </span>
             <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <PopoverContent
+          className="w-[--radix-popover-trigger-width] p-0"
+          align="start"
+        >
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="جستجو در سرور..."
               value={query}
               onValueChange={setQuery}
             />
-            {loading ? <div className="p-3 text-sm text-muted-foreground">در حال جستجو...</div> : null}
+            {loading ? (
+              <div className="p-3 text-sm text-muted-foreground">
+                در حال جستجو...
+              </div>
+            ) : null}
             <CommandEmpty>موردی پیدا نشد.</CommandEmpty>
             <CommandGroup className="max-h-[320px] overflow-auto">
               {items.map((item) => {
                 const name = item.goods_name_fa || item.goods_name_en || "";
                 const shortName = truncateText(name);
-                const label = shortName ? `${item.code} - ${shortName}` : item.code;
+                const label = shortName
+                  ? `${item.code} - ${shortName}`
+                  : item.code;
                 const isSelected = item.id === props.value;
                 return (
                   <CommandItem
@@ -345,7 +403,12 @@ function HSCodePicker(props: {
                     className="flex items-center justify-between gap-3"
                   >
                     <span className="truncate">{label}</span>
-                    <Check className={cn("h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
+                    <Check
+                      className={cn(
+                        "h-4 w-4",
+                        isSelected ? "opacity-100" : "opacity-0",
+                      )}
+                    />
                   </CommandItem>
                 );
               })}
@@ -353,30 +416,41 @@ function HSCodePicker(props: {
           </Command>
         </PopoverContent>
       </Popover>
-      {props.error ? <p className="text-sm text-destructive">{props.error}</p> : null}
+      {props.error ? (
+        <p className="text-sm text-destructive">{props.error}</p>
+      ) : null}
     </div>
   );
 }
 
-async function createGoodsNeed(values: GoodsNeedFormValue) {
+async function createGoodsNeed(values: ReturnType<typeof buildPayload>) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
   const res = await authFetch(`${API_BASE}/goods-needs/`, {
     method: "POST",
     body: JSON.stringify(values),
   });
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || JSON.stringify(data) || "خطا در ایجاد پروفرما");
+  if (!res.ok)
+    throw new Error(
+      data?.detail || JSON.stringify(data) || "خطا در ایجاد پروفرما",
+    );
   return data;
 }
 
-async function updateGoodsNeed(uuid: string, values: GoodsNeedFormValue) {
+async function updateGoodsNeed(uuid: string, values: ReturnType<typeof buildPayload>) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
-  const res = await authFetch(`${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`, {
-    method: "PUT",
-    body: JSON.stringify(values),
-  });
+  const res = await authFetch(
+    `${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`,
+    {
+      method: "PUT",
+      body: JSON.stringify(values),
+    },
+  );
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || JSON.stringify(data) || "خطا در ویرایش پروفرما");
+  if (!res.ok)
+    throw new Error(
+      data?.detail || JSON.stringify(data) || "خطا در ویرایش پروفرما",
+    );
   return data;
 }
 
@@ -388,6 +462,7 @@ const emptyGood = {
   unit: "KG",
   manufacturer_country: "CN",
   price: 0,
+  line_subtotal: 0,
   nw_kg: 0,
   gw_kg: 0,
 };
@@ -425,7 +500,10 @@ export function GoodsNeedForm(props: {
   }, [form, props.initialValues]);
 
   React.useEffect(() => {
-    if (selectedStatus !== NEED_STATUS_AT_ORIGIN && selectedCustoms === ALL_CUSTOMS_VALUE) {
+    if (
+      selectedStatus !== NEED_STATUS_AT_ORIGIN &&
+      selectedCustoms === ALL_CUSTOMS_VALUE
+    ) {
       setValue("customs", "", { shouldValidate: true });
     }
   }, [selectedCustoms, selectedStatus, setValue]);
@@ -436,8 +514,12 @@ export function GoodsNeedForm(props: {
     setSubmitting(true);
     try {
       const values = schema.parse(raw);
+      const payload = buildPayload(values);
       const uuid = String(values.uuid || "");
-      const saved = mode === "edit" ? await updateGoodsNeed(uuid, values) : await createGoodsNeed(values);
+      const saved =
+        mode === "edit"
+          ? await updateGoodsNeed(uuid, payload)
+          : await createGoodsNeed(payload);
       setSuccess(mode === "edit" ? "پروفرما ویرایش شد." : "پروفرما ایجاد شد.");
       props.onDone?.(String(saved?.uuid ?? uuid));
     } catch (err: any) {
@@ -462,7 +544,8 @@ export function GoodsNeedForm(props: {
             {mode === "edit" ? "ویرایش پروفرما" : "ایجاد پروفرما"}
           </CardTitle>
           <CardDescription>
-            اطلاعات مشترک پروفرما را وارد کنید؛ کالاها در بخش بعدی به صورت چند ردیفی ثبت می‌شوند.
+            اطلاعات مشترک پروفرما را وارد کنید؛ کالاها در بخش بعدی به صورت چند
+            ردیفی ثبت می‌شوند.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
@@ -522,7 +605,10 @@ export function GoodsNeedForm(props: {
               />
             )}
           />
-          <Field label="مبلغ فی برای هر واحد ارز" error={errors.fee_amount?.message}>
+          <Field
+            label="مبلغ فی برای هر واحد ارز"
+            error={errors.fee_amount?.message}
+          >
             <Input type="number" step="0.01" {...register("fee_amount")} />
           </Field>
           <Controller
@@ -534,7 +620,7 @@ export function GoodsNeedForm(props: {
                 value={field.value || ""}
                 onChange={field.onChange}
                 items={borderOptions}
-                placeholder="انتخاب مرز"
+                placeholder="اختیاری - انتخاب مرز"
                 error={errors.entry_border?.message}
               />
             )}
@@ -574,9 +660,15 @@ export function GoodsNeedForm(props: {
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-base">کالاهای پروفرما</CardTitle>
-            <CardDescription>برای هر پروفرما می‌توانید چند کالا ثبت کنید.</CardDescription>
+            <CardDescription>
+              برای هر پروفرما می‌توانید چند کالا ثبت کنید.
+            </CardDescription>
           </div>
-          <Button type="button" variant="outline" onClick={() => goodsFA.append(emptyGood)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => goodsFA.append(emptyGood)}
+          >
             <PlusCircle className="h-4 w-4" />
             افزودن کالا
           </Button>
@@ -584,6 +676,11 @@ export function GoodsNeedForm(props: {
         <CardContent className="space-y-6">
           {goodsFA.fields.map((field, idx) => {
             const rowErr: any = (errors as any)?.goods?.[idx];
+            const row = watch(`goods.${idx}` as const);
+            const calculatedUnitPrice = calcUnitPrice(
+              row?.quantity,
+              row?.line_subtotal,
+            );
             return (
               <div key={field.id} className="rounded-2xl border bg-card p-4">
                 <div className="mb-4 flex items-center justify-between gap-3">
@@ -610,7 +707,9 @@ export function GoodsNeedForm(props: {
                       <HSCodePicker
                         value={Number(field.value || 0)}
                         onChange={field.onChange}
-                        selectedCode={String(watch(`goods.${idx}.hs_code` as const) || "")}
+                        selectedCode={String(
+                          watch(`goods.${idx}.hs_code` as const) || "",
+                        )}
                         error={rowErr?.hs_code_id?.message}
                       />
                     )}
@@ -630,7 +729,11 @@ export function GoodsNeedForm(props: {
                     )}
                   />
                   <Field label="مقدار" error={rowErr?.quantity?.message}>
-                    <Input type="number" step="0.01" {...register(`goods.${idx}.quantity` as const)} />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...register(`goods.${idx}.quantity` as const)}
+                    />
                   </Field>
                   <Controller
                     control={control}
@@ -660,14 +763,37 @@ export function GoodsNeedForm(props: {
                       />
                     )}
                   />
-                  <Field label="قیمت" error={rowErr?.price?.message}>
-                    <Input type="number" step="0.0001" {...register(`goods.${idx}.price` as const)} />
+                  <Field label="ارزش کل ردیف" error={rowErr?.line_subtotal?.message}>
+                    <Input
+                      type="number"
+                      step="0.0001"
+                      {...register(`goods.${idx}.line_subtotal` as const)}
+                    />
+                  </Field>
+                  <Field label="قیمت واحد (محاسبه‌ای)">
+                    <Input
+                      value={
+                        Number.isFinite(calculatedUnitPrice)
+                          ? calculatedUnitPrice
+                          : 0
+                      }
+                      readOnly
+                      className="bg-muted/50"
+                    />
                   </Field>
                   <Field label="وزن خالص (kg)" error={rowErr?.nw_kg?.message}>
-                    <Input type="number" step="0.01" {...register(`goods.${idx}.nw_kg` as const)} />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...register(`goods.${idx}.nw_kg` as const)}
+                    />
                   </Field>
                   <Field label="وزن ناخالص (kg)" error={rowErr?.gw_kg?.message}>
-                    <Input type="number" step="0.01" {...register(`goods.${idx}.gw_kg` as const)} />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...register(`goods.${idx}.gw_kg` as const)}
+                    />
                   </Field>
                 </div>
               </div>

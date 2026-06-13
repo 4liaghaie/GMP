@@ -28,7 +28,7 @@ class RegisteredOrder(models.Model):
     fee_amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     applicant_name = models.CharField(max_length=255, default="")
     national_code = models.CharField(max_length=64, default="")
-    entry_border = models.CharField(max_length=255, default="")
+    entry_border = models.CharField(max_length=255, blank=True, default="")
     customs = models.CharField(max_length=255, default="")
     currency_supply = models.CharField(max_length=255, default="")
     bank_name = models.CharField(max_length=255, default="")

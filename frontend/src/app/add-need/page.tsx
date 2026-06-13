@@ -30,6 +30,7 @@ function defaultValues(): GoodsNeedFormInput {
         unit: "KG",
         manufacturer_country: "CN",
         price: 0,
+        line_subtotal: 0,
         nw_kg: 0,
         gw_kg: 0,
       },

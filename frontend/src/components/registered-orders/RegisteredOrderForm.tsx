@@ -10,7 +10,7 @@ import {
   useWatch,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -38,6 +39,8 @@ import {
 } from "@/components/ui/command";
 
 import { authFetch } from "@/lib/auth-api";
+import { bankOptions as rawBankOptions } from "@/lib/bankList";
+import { bankList as banksWithBranches } from "@/lib/branchList";
 import { borders } from "@/lib/borderList";
 import { countries } from "@/lib/countryList";
 import { iranCustoms } from "@/lib/customsList";
@@ -137,6 +140,36 @@ const customsOptions = iranCustoms.map((customs) => ({
   value: String(customs.ctmVCodeInt),
   label: `${customs.ctmNameStr} (${customs.ctmVCodeInt})`,
 }));
+
+const bankOptions = rawBankOptions.map((bank) => ({
+  value: String(bank.value),
+  label: bank.label,
+}));
+
+function getBranchOptions(bankValue: string) {
+  const selectedBank = banksWithBranches.find(
+    (bank) =>
+      String(bank.label) === bankValue ||
+      String(bank.value) === bankValue ||
+      String(bank.bankCode) === bankValue,
+  );
+  const branches = selectedBank
+    ? ([...((selectedBank as any).branches || [])] as Array<{
+        value: string | number;
+        label: string;
+      }>)
+    : (banksWithBranches.flatMap((bank) => [
+        ...(((bank as any).branches || []) as Array<{
+          value: string | number;
+          label: string;
+        }>),
+      ]) as Array<{ value: string | number; label: string }>);
+
+  return branches.map((branch) => ({
+    value: String(branch.value),
+    label: `${branch.label} (${branch.value})`,
+  }));
+}
 
 const goodSchema = z.object({
   description: z.string().min(1, "شرح کالا الزامی است"),
@@ -267,6 +300,83 @@ function Field(props: {
     <div className="space-y-2">
       <Label className="text-sm">{props.label}</Label>
       {props.children}
+      {props.error ? (
+        <p className="text-sm text-destructive">{props.error}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function parseDateValue(value: string) {
+  const match = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(value || "");
+  if (!match) return undefined;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return undefined;
+  }
+
+  return date;
+}
+
+function formatDateValue(date: Date) {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}/${month}/${day}`;
+}
+
+function DatePickerField(props: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const selected = React.useMemo(() => parseDateValue(props.value), [props.value]);
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm">{props.label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "w-full justify-between text-right font-normal",
+              !props.value && "text-muted-foreground",
+            )}
+          >
+            <span>{props.value || "انتخاب تاریخ"}</span>
+            <CalendarIcon className="ms-2 h-4 w-4 opacity-60" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            defaultMonth={selected || new Date(currentYear, 0, 1)}
+            startMonth={new Date(currentYear, 0, 1)}
+            endMonth={new Date(currentYear + 30, 11, 31)}
+            onSelect={(date) => {
+              if (!date) return;
+              props.onChange(formatDateValue(date));
+              setOpen(false);
+            }}
+            captionLayout="dropdown"
+          />
+        </PopoverContent>
+      </Popover>
       {props.error ? (
         <p className="text-sm text-destructive">{props.error}</p>
       ) : null}
@@ -635,11 +745,16 @@ export function RegisteredOrderForm(props: {
     form.reset(props.initialValues);
   }, [props.initialValues]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { control, register, handleSubmit, formState } = form;
+  const { control, register, handleSubmit, formState, setValue } = form;
   const { errors } = formState;
   const goodsFA = useFieldArray({ control, name: "goods" });
   const goods = useWatch({ control, name: "goods" }) || [];
   const freight = useWatch({ control, name: "freight_price" }) ?? 0;
+  const selectedBank = useWatch({ control, name: "bank_name" }) || "";
+  const branchOptions = React.useMemo(
+    () => getBranchOptions(String(selectedBank || "")),
+    [selectedBank],
+  );
 
   const goodsTotal = React.useMemo(
     () =>
@@ -866,13 +981,42 @@ export function RegisteredOrderForm(props: {
               )}
             />
 
-            <Field label="نام بانک" error={errors.bank_name?.message}>
-              <Input {...register("bank_name")} />
-            </Field>
+            <Controller
+              control={control}
+              name="bank_name"
+              render={({ field }) => (
+                <SearchableCombobox
+                  label="نام بانک"
+                  value={field.value}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    setValue("bank_branch", "", { shouldValidate: true });
+                  }}
+                  items={bankOptions}
+                  placeholder="انتخاب بانک"
+                  searchPlaceholder="جستجو در بانک‌ها..."
+                  error={errors.bank_name?.message}
+                />
+              )}
+            />
 
-            <Field label="شعبه بانک" error={errors.bank_branch?.message}>
-              <Input {...register("bank_branch")} />
-            </Field>
+            <Controller
+              control={control}
+              name="bank_branch"
+              render={({ field }) => (
+                <SearchableCombobox
+                  label="شعبه بانک"
+                  value={field.value}
+                  onChange={field.onChange}
+                  items={branchOptions}
+                  placeholder={
+                    selectedBank ? "انتخاب شعبه بانک" : "ابتدا بانک را انتخاب کنید"
+                  }
+                  searchPlaceholder="جستجو در شعب..."
+                  error={errors.bank_branch?.message}
+                />
+              )}
+            />
 
             <Field
               label="ابزار پرداخت"
@@ -894,12 +1038,18 @@ export function RegisteredOrderForm(props: {
               )}
             />
 
-            <Field
-              label="تاریخ انقضا (YYYY/MM/DD)"
-              error={errors.expire_date?.message}
-            >
-              <Input placeholder="2028/01/01" {...register("expire_date")} />
-            </Field>
+            <Controller
+              control={control}
+              name="expire_date"
+              render={({ field }) => (
+                <DatePickerField
+                  label="تاریخ انقضا"
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.expire_date?.message}
+                />
+              )}
+            />
 
             <Controller
               control={control}

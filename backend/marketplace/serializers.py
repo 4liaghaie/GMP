@@ -309,6 +309,30 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
             return obj.user.username
         return f"user-{obj.user_id}"
 
+    def get_user_email(self, obj):
+        request = self.context.get("request")
+        if request and is_admin_user(request.user):
+            return getattr(obj.user, "email", None)
+        return None
+
+    def get_user_phone(self, obj):
+        request = self.context.get("request")
+        if request and is_admin_user(request.user):
+            return getattr(obj.user, "phone", None)
+        return None
+
+    def get_applicant_name(self, obj):
+        request = self.context.get("request")
+        if can_view_private_order_fields(request, obj):
+            return obj.applicant_name
+        return None
+
+    def get_national_code(self, obj):
+        request = self.context.get("request")
+        if can_view_private_order_fields(request, obj):
+            return obj.national_code
+        return None
+
 
 class GoodsNeedSerializer(serializers.ModelSerializer):
     goods = GoodsNeedGoodWriteSerializer(many=True, write_only=True)

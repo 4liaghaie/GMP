@@ -1,9 +1,16 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
+import { Vazirmatn } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+
+const vazirmatn = Vazirmatn({
+  subsets: ["arabic"],
+  variable: "--font-vazirmatn",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "GMP",
@@ -17,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning className="h-full">
-      <body className="min-h-screen h-full font-sans antialiased">
+      <body className={`${vazirmatn.variable} ${vazirmatn.className} min-h-screen h-full antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

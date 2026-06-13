@@ -50,6 +50,7 @@ function toFormDefaults(data: any): GoodsNeedFormInput {
           unit: String(item?.unit ?? "KG"),
           manufacturer_country: String(item?.manufacturer_country ?? "CN"),
           price: Number(item?.price ?? 0),
+          line_subtotal: Number(item?.line_total ?? 0),
           nw_kg: Number(item?.nw_kg ?? 0),
           gw_kg: Number(item?.gw_kg ?? 0),
         }))
@@ -63,6 +64,7 @@ function toFormDefaults(data: any): GoodsNeedFormInput {
             unit: String(data?.unit ?? "KG"),
             manufacturer_country: String(data?.manufacturer_country ?? "CN"),
             price: Number(data?.price ?? 0),
+            line_subtotal: Number(data?.price ?? 0) * Number(data?.quantity ?? 1),
             nw_kg: Number(data?.nw_kg ?? 0),
             gw_kg: Number(data?.gw_kg ?? 0),
           },
