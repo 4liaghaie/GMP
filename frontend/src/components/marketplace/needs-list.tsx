@@ -692,7 +692,7 @@ function ProformaCard({ need }: { need: GoodsNeed }) {
             {safeText(firstGood?.description)}
           </CardTitle>
           <CardDescription className="mt-2">
-            پروفرما #{safeText(need.id)} توسط {safeText(need.user)}
+            بار #{safeText(need.id)} توسط {safeText(need.user)}
           </CardDescription>
         </div>
       </CardHeader>

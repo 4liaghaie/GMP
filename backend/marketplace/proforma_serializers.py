@@ -7,6 +7,10 @@ from customs.models import HSCode
 
 from .models import GoodsNeed, GoodsNeedGood, OrderGood
 
+ALL_CUSTOMS_VALUE = "ALL_CUSTOMS"
+ALL_BORDERS_VALUE = "ALL_BORDERS"
+ALL_TRANSPORTS_VALUE = "ALL_TRANSPORTS"
+
 
 class ProformaGoodWriteSerializer(serializers.ModelSerializer):
     hs_code_id = serializers.PrimaryKeyRelatedField(
@@ -60,7 +64,7 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
     goods = ProformaGoodWriteSerializer(many=True, write_only=True)
     goods_read = ProformaGoodReadSerializer(source="goods", many=True, read_only=True)
     user = serializers.SerializerMethodField()
-    country_of_origin = serializers.CharField(required=False, allow_blank=True, default="")
+    country_of_origin = serializers.CharField(required=True, allow_blank=False)
     entry_border = serializers.CharField(required=False, allow_blank=True, default="")
 
     class Meta:
@@ -87,12 +91,28 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
         attrs = super().validate(attrs)
         status_value = attrs.get("status", getattr(self.instance, "status", GoodsNeed.STATUS_AT_ORIGIN))
         customs_value = attrs.get("customs", getattr(self.instance, "customs", ""))
-        if customs_value == "ALL_CUSTOMS" and status_value != GoodsNeed.STATUS_AT_ORIGIN:
+        entry_border_value = attrs.get("entry_border", getattr(self.instance, "entry_border", ""))
+        means_of_transport_value = attrs.get(
+            "means_of_transport",
+            getattr(self.instance, "means_of_transport", ""),
+        )
+        customs_values = [item.strip() for item in customs_value.split(",") if item.strip()]
+        entry_border_values = [item.strip() for item in entry_border_value.split(",") if item.strip()]
+        transport_values = [item.strip() for item in means_of_transport_value.split(",") if item.strip()]
+        if ALL_CUSTOMS_VALUE in customs_values and status_value != GoodsNeed.STATUS_AT_ORIGIN:
             raise serializers.ValidationError(
                 {"customs": "تمام گمرکات فقط برای وضعیت در کشور مبدا مجاز است."}
             )
+        if ALL_BORDERS_VALUE in entry_border_values and status_value != GoodsNeed.STATUS_AT_ORIGIN:
+            raise serializers.ValidationError(
+                {"entry_border": "تمام مرزها فقط برای وضعیت در کشور مبدا مجاز است."}
+            )
+        if ALL_TRANSPORTS_VALUE in transport_values and len(transport_values) > 1:
+            raise serializers.ValidationError(
+                {"means_of_transport": "همه روش های حمل باید به صورت تنهایی انتخاب شود."}
+            )
         if self.instance is None and not attrs.get("goods"):
-            raise serializers.ValidationError({"goods": "حداقل یک کالای پروفرما الزامی است."})
+            raise serializers.ValidationError({"goods": "حداقل یک کالای بار الزامی است."})
         return attrs
 
     def get_user(self, obj):

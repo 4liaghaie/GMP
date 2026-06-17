@@ -161,7 +161,7 @@ function NeedCard({ need }: { need: LatestNeed }) {
             {safeText(firstGood?.description)}
           </CardTitle>
           <CardDescription className="mt-2 leading-7">
-            پروفرما #{safeText(need.id)} توسط {safeText(need.user)}
+            بار #{safeText(need.id)} توسط {safeText(need.user)}
           </CardDescription>
         </div>
       </CardHeader>
@@ -211,15 +211,15 @@ export default async function HomePage() {
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm">
               <Sparkles className="h-4 w-4 text-amber-600" />
-              بازار اتصال ثبت سفارش و پروفرما
+              بازار اتصال ثبت سفارش و بار
             </div>
 
             <div className="space-y-4">
               <h1 className="text-4xl font-black leading-tight tracking-tight md:text-6xl">
-                ثبت سفارش و پروفرما را سریع‌تر به هم وصل کنید
+                ثبت سفارش و بار را سریع‌تر به هم وصل کنید
               </h1>
               <p className="max-w-2xl text-base leading-8 text-muted-foreground md:text-lg">
-                کاربران ثبت سفارش‌های معتبر و پروفرماهای خود را ثبت می‌کنند تا
+                کاربران ثبت سفارش‌های معتبر و بارهای خود را ثبت می‌کنند تا
                 طرف‌های مشابه بر اساس کالا، HS Code، مرز ورودی و شرایط تجاری
                 سریع‌تر همدیگر را پیدا کنند.
               </p>
@@ -256,9 +256,9 @@ export default async function HomePage() {
               </div>
               <div className="rounded-2xl border bg-card p-4 shadow-sm">
                 <Boxes className="mb-3 h-5 w-5 text-amber-600" />
-                <p className="font-semibold">پروفرما</p>
+                <p className="font-semibold">بار</p>
                 <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                  پروفرماها با چند کالا و HS Code مشخص ثبت می‌شوند.
+                  بارها با چند کالا و HS Code مشخص ثبت می‌شوند.
                 </p>
               </div>
             </div>
@@ -271,7 +271,7 @@ export default async function HomePage() {
                 آخرین فعالیت‌ها
               </div>
               <CardTitle className="text-2xl">
-                جدیدترین سفارش‌ها و پروفرماها
+                جدیدترین سفارش‌ها و بارها
               </CardTitle>
               <CardDescription className="leading-7 text-white/65">
                 چند نمونه از آخرین داده‌های ثبت‌شده در سیستم.
@@ -364,9 +364,9 @@ export default async function HomePage() {
         <section className="mt-14 space-y-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-2xl font-black">آخرین پروفرماها</h2>
+              <h2 className="text-2xl font-black">آخرین بارها</h2>
               <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                پروفرماهای جدیدی که می‌توانند با ثبت سفارش‌های مشابه match شوند.
+                بارهای جدیدی که می‌توانند با ثبت سفارش‌های مشابه match شوند.
               </p>
             </div>
             <Button
@@ -374,7 +374,7 @@ export default async function HomePage() {
               variant="outline"
               className="rounded-xl bg-background"
             >
-              <Link href="/marketplace/needs">مشاهده همه پروفرماها</Link>
+              <Link href="/marketplace/needs">مشاهده همه بارها</Link>
             </Button>
           </div>
 
@@ -386,7 +386,7 @@ export default async function HomePage() {
             ) : (
               <Card className="md:col-span-3">
                 <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                  هنوز پروفرمایی برای نمایش ثبت نشده است.
+                  هنوز باریی برای نمایش ثبت نشده است.
                 </CardContent>
               </Card>
             )}

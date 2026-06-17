@@ -104,10 +104,10 @@ export default function DashboardPage() {
       featured: true,
     },
     {
-      title: "ایجاد پروفرما",
+      title: "ایجاد بار",
       description:
-        "پروفرمای چندکالایی ثبت کنید تا دارندگان ثبت سفارش مشابه بتوانند آن را پیدا کنند.",
-      buttonLabel: "ثبت پروفرما",
+        "باری چندکالایی ثبت کنید تا دارندگان ثبت سفارش مشابه بتوانند آن را پیدا کنند.",
+      buttonLabel: "ثبت بار",
       href: "/add-need",
       icon: <PackageSearch className="h-6 w-6" />,
       accent: "bg-amber-600",
@@ -123,8 +123,8 @@ export default function DashboardPage() {
       accent: "bg-emerald-600",
     },
     {
-      title: "پروفرماهای من",
-      description: "مدیریت پروفرماها، ویرایش اطلاعات و حذف موارد قدیمی.",
+      title: "بارهای من",
+      description: "مدیریت بارها، ویرایش اطلاعات و حذف موارد قدیمی.",
       buttonLabel: "مدیریت",
       href: "/my-needs",
       icon: <Search className="h-6 w-6" />,
@@ -151,7 +151,7 @@ export default function DashboardPage() {
             <div className="max-w-3xl">
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs text-white/80 backdrop-blur">
                 <Sparkles className="h-4 w-4 text-amber-300" />
-                مرکز کنترل ثبت سفارش و پروفرما
+                مرکز کنترل ثبت سفارش و بار
               </div>
 
               <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
@@ -159,8 +159,8 @@ export default function DashboardPage() {
               </h1>
 
               <p className="mt-4 max-w-2xl text-sm leading-8 text-white/75 sm:text-base">
-                ثبت سفارش، پروفرما، مدیریت درخواست‌ها و ورود به مارکت‌پلیس را
-                از یک مسیر سریع و منظم انجام دهید.
+                ثبت سفارش، بار، مدیریت درخواست‌ها و ورود به مارکت‌پلیس را از یک
+                مسیر سریع و منظم انجام دهید.
               </p>
             </div>
 

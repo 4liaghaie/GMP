@@ -60,7 +60,9 @@ function fmt(value: string | number | null | undefined) {
 }
 
 function customsLabel(value: string) {
-  return customsOptions.find((item) => item.value === value)?.label || value || "-";
+  return (
+    customsOptions.find((item) => item.value === value)?.label || value || "-"
+  );
 }
 
 async function fetchNeeds(signal?: AbortSignal) {
@@ -71,18 +73,21 @@ async function fetchNeeds(signal?: AbortSignal) {
     signal,
   });
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت پروفرماها");
+  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت بارها");
   return (Array.isArray(data) ? data : data?.results || []) as GoodsNeed[];
 }
 
 async function deleteNeed(uuid: string) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
-  const res = await authFetch(`${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`, {
-    method: "DELETE",
-  });
+  const res = await authFetch(
+    `${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`,
+    {
+      method: "DELETE",
+    },
+  );
   if (res.status === 204) return;
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "خطا در حذف پروفرما");
+  if (!res.ok) throw new Error(data?.detail || "خطا در حذف بار");
 }
 
 export default function MyNeedsPage() {
@@ -120,7 +125,7 @@ export default function MyNeedsPage() {
   }, [ready, load]);
 
   async function onDelete(uuid: string) {
-    if (!window.confirm("این پروفرما حذف شود؟")) return;
+    if (!window.confirm("این بار حذف شود؟")) return;
     setDeletingUuid(uuid);
     setError("");
     try {
@@ -140,15 +145,18 @@ export default function MyNeedsPage() {
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-10">
         <PageHeader
           eyebrow="مدیریت"
-          title="پروفرماهای من"
-          description="پروفرماهایی که با حساب شما ثبت شده‌اند."
+          title="بارهای من"
+          description="بارهایی که با حساب شما ثبت شده‌اند."
           icon={<ListChecks className="h-6 w-6" />}
           accentClassName="bg-rose-600"
           actions={
             <>
-              <Button variant="outline" onClick={() => router.push("/add-need")}>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/add-need")}
+              >
                 <FilePlus2 className="h-4 w-4" />
-                ایجاد پروفرما
+                ایجاد بار
               </Button>
               <Button variant="outline" onClick={() => load()}>
                 <RefreshCw className="h-4 w-4" />
@@ -160,8 +168,10 @@ export default function MyNeedsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">لیست پروفرماها</CardTitle>
-            <CardDescription>هر پروفرما می‌تواند چند کالا داشته باشد.</CardDescription>
+            <CardTitle className="text-base">لیست بارها</CardTitle>
+            <CardDescription>
+              هر بار می‌تواند چند کالا داشته باشد.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {error ? (
@@ -190,7 +200,10 @@ export default function MyNeedsPage() {
                 <tbody>
                   {!loading && items.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="px-3 py-6 text-center text-muted-foreground">
+                      <td
+                        colSpan={10}
+                        className="px-3 py-6 text-center text-muted-foreground"
+                      >
                         موردی یافت نشد.
                       </td>
                     </tr>
@@ -198,19 +211,25 @@ export default function MyNeedsPage() {
                     items.map((item) => {
                       const first = item.goods?.[0];
                       return (
-                        <tr key={item.uuid} className="border-t [&>td]:px-3 [&>td]:py-2">
+                        <tr
+                          key={item.uuid}
+                          className="border-t [&>td]:px-3 [&>td]:py-2"
+                        >
                           <td>{item.id}</td>
                           <td className="font-medium">
                             {first?.description || "-"}
                             <div className="text-xs text-muted-foreground">
-                              HS {first?.hs_code || "-"}، {fmt(first?.quantity)} {first?.unit || ""}
+                              HS {first?.hs_code || "-"}، {fmt(first?.quantity)}{" "}
+                              {first?.unit || ""}
                             </div>
                           </td>
                           <td>{fmt(item.goods?.length || 0)}</td>
                           <td>{item.status || "-"}</td>
                           <td>{item.country_of_origin || "-"}</td>
                           <td>{item.currency_type || "-"}</td>
-                          <td>{item.fee_type || "-"} / {fmt(item.fee_amount)}</td>
+                          <td>
+                            {item.fee_type || "-"} / {fmt(item.fee_amount)}
+                          </td>
                           <td>{item.entry_border || "-"}</td>
                           <td>{customsLabel(item.customs)}</td>
                           <td>
@@ -218,7 +237,11 @@ export default function MyNeedsPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => router.push(`/my-needs/${encodeURIComponent(item.uuid)}`)}
+                                onClick={() =>
+                                  router.push(
+                                    `/my-needs/${encodeURIComponent(item.uuid)}`,
+                                  )
+                                }
                               >
                                 ویرایش
                               </Button>

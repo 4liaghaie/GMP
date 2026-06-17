@@ -401,7 +401,7 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
                 {"customs": "تمام گمرکات فقط برای وضعیت در کشور مبدا مجاز است."}
             )
         if self.instance is None and not attrs.get("goods"):
-            raise serializers.ValidationError({"goods": "حداقل یک کالای پروفرما الزامی است."})
+            raise serializers.ValidationError({"goods": "حداقل یک کالای بار الزامی است."})
         return attrs
 
     def get_user(self, obj):
@@ -620,7 +620,7 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
                 {"customs": "تمام گمرکات فقط برای وضعیت در کشور مبدا مجاز است."}
             )
         if self.instance is None and not attrs.get("goods"):
-            raise serializers.ValidationError({"goods": "حداقل یک کالای پروفرما الزامی است."})
+            raise serializers.ValidationError({"goods": "حداقل یک کالای بار الزامی است."})
         return attrs
 
     def get_user(self, obj):

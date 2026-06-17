@@ -18,9 +18,9 @@ function defaultValues(): GoodsNeedFormInput {
     currency_type: "USD",
     fee_type: "فی دریافتی",
     fee_amount: 0,
-    entry_border: "",
-    customs: "",
-    means_of_transport: "SEA",
+    entry_border: [],
+    customs: [],
+    means_of_transport: ["SEA"],
     goods: [
       {
         description: "",
@@ -28,7 +28,7 @@ function defaultValues(): GoodsNeedFormInput {
         goods_status: "نو",
         quantity: 1,
         unit: "KG",
-        manufacturer_country: "CN",
+        manufacturer_country: ["CN"],
         price: 0,
         line_subtotal: 0,
         nw_kg: 0,
@@ -57,16 +57,19 @@ export default function AddNeedPage() {
     <div dir="rtl">
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-10">
         <PageHeader
-          eyebrow="پروفرما"
-          title="ایجاد پروفرما"
-          description="پروفرمای جدید را با چند کالا ثبت کنید تا دارندگان ثبت سفارش مشابه بتوانند آن را پیدا کنند."
+          eyebrow="بار"
+          title="ایجاد بار"
+          description="باری جدید را با چند کالا ثبت کنید تا دارندگان ثبت سفارش مشابه بتوانند آن را پیدا کنند."
           icon={<FilePlus2 className="h-6 w-6" />}
           accentClassName="bg-amber-600"
           actions={
             <>
-              <Button variant="outline" onClick={() => router.push("/my-needs")}>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/my-needs")}
+              >
                 <ListChecks className="h-4 w-4" />
-                لیست پروفرماهای من
+                لیست بارهای من
               </Button>
               <Button variant="outline" onClick={() => router.back()}>
                 <ArrowRight className="h-4 w-4" />

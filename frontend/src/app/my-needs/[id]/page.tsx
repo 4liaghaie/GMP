@@ -15,15 +15,25 @@ import { authFetch } from "@/lib/auth-api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
+function parseMultiValue(value: unknown) {
+  return String(value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 async function fetchNeed(uuid: string, signal?: AbortSignal) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
-  const res = await authFetch(`${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`, {
-    method: "GET",
-    cache: "no-store",
-    signal,
-  });
+  const res = await authFetch(
+    `${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`,
+    {
+      method: "GET",
+      cache: "no-store",
+      signal,
+    },
+  );
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت پروفرما");
+  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت بار");
   return data;
 }
 
@@ -36,9 +46,9 @@ function toFormDefaults(data: any): GoodsNeedFormInput {
     currency_type: String(data?.currency_type ?? "USD"),
     fee_type: String(data?.fee_type ?? "فی دریافتی"),
     fee_amount: Number(data?.fee_amount ?? 0),
-    entry_border: String(data?.entry_border ?? ""),
-    customs: String(data?.customs ?? ""),
-    means_of_transport: String(data?.means_of_transport ?? "SEA"),
+    entry_border: parseMultiValue(data?.entry_border),
+    customs: parseMultiValue(data?.customs),
+    means_of_transport: parseMultiValue(data?.means_of_transport || "SEA"),
     goods: goods.length
       ? goods.map((item: any) => ({
           uuid: String(item?.uuid ?? ""),
@@ -48,7 +58,9 @@ function toFormDefaults(data: any): GoodsNeedFormInput {
           goods_status: String(item?.goods_status ?? "نو"),
           quantity: Number(item?.quantity ?? 1),
           unit: String(item?.unit ?? "KG"),
-          manufacturer_country: String(item?.manufacturer_country ?? "CN"),
+          manufacturer_country: parseMultiValue(
+            item?.manufacturer_country || "CN",
+          ),
           price: Number(item?.price ?? 0),
           line_subtotal: Number(item?.line_total ?? 0),
           nw_kg: Number(item?.nw_kg ?? 0),
@@ -62,9 +74,12 @@ function toFormDefaults(data: any): GoodsNeedFormInput {
             goods_status: String(data?.goods_status ?? "نو"),
             quantity: Number(data?.quantity ?? 1),
             unit: String(data?.unit ?? "KG"),
-            manufacturer_country: String(data?.manufacturer_country ?? "CN"),
+            manufacturer_country: parseMultiValue(
+              data?.manufacturer_country || "CN",
+            ),
             price: Number(data?.price ?? 0),
-            line_subtotal: Number(data?.price ?? 0) * Number(data?.quantity ?? 1),
+            line_subtotal:
+              Number(data?.price ?? 0) * Number(data?.quantity ?? 1),
             nw_kg: Number(data?.nw_kg ?? 0),
             gw_kg: Number(data?.gw_kg ?? 0),
           },
@@ -79,7 +94,9 @@ export default function EditNeedPage() {
   const [ready, setReady] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
-  const [defaults, setDefaults] = React.useState<GoodsNeedFormInput | null>(null);
+  const [defaults, setDefaults] = React.useState<GoodsNeedFormInput | null>(
+    null,
+  );
 
   React.useEffect(() => {
     const access = localStorage.getItem("access");
@@ -114,17 +131,24 @@ export default function EditNeedPage() {
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-10">
         <PageHeader
           eyebrow="ویرایش"
-          title="ویرایش پروفرما"
+          title="ویرایش بار"
           description={`UUID: ${uuid}`}
           icon={<FilePenLine className="h-6 w-6" />}
           accentClassName="bg-amber-600"
           actions={
             <>
-              <Button variant="outline" onClick={() => router.push("/my-needs")}>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/my-needs")}
+              >
                 <ArrowRight className="h-4 w-4" />
                 بازگشت به لیست
               </Button>
-              <Button variant="outline" onClick={() => load()} disabled={loading}>
+              <Button
+                variant="outline"
+                onClick={() => load()}
+                disabled={loading}
+              >
                 <RefreshCw className="h-4 w-4" />
                 دریافت مجدد
               </Button>
@@ -140,9 +164,15 @@ export default function EditNeedPage() {
         ) : null}
 
         {loading || !defaults ? (
-          <div className="text-sm text-muted-foreground">در حال دریافت اطلاعات...</div>
+          <div className="text-sm text-muted-foreground">
+            در حال دریافت اطلاعات...
+          </div>
         ) : (
-          <GoodsNeedForm mode="edit" initialValues={defaults} onDone={() => load()} />
+          <GoodsNeedForm
+            mode="edit"
+            initialValues={defaults}
+            onDone={() => load()}
+          />
         )}
       </main>
     </div>

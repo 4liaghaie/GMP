@@ -9,7 +9,7 @@ import {
   type SubmitHandler,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, ChevronsUpDown, PlusCircle, Trash2 } from "lucide-react";
+import { Check, ChevronsUpDown, PlusCircle, Trash2, X } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,8 @@ import { cn } from "@/lib/utils";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 const NEED_STATUS_AT_ORIGIN = "در کشور مبدا";
 const ALL_CUSTOMS_VALUE = "ALL_CUSTOMS";
+const ALL_BORDERS_VALUE = "ALL_BORDERS";
+const ALL_TRANSPORTS_VALUE = "ALL_TRANSPORTS";
 
 type HSCodeOption = {
   id: number;
@@ -80,6 +82,7 @@ const unitOptions = [
 ];
 
 const transportMeans = [
+  { value: ALL_TRANSPORTS_VALUE, label: "همه روش های حمل" },
   { value: "SEA", label: "دریایی" },
   { value: "AIR", label: "هوایی" },
   { value: "ROAD", label: "زمینی" },
@@ -95,6 +98,7 @@ const borderOptions = borders.map((border) => ({
   value: border,
   label: border,
 }));
+const allBordersOption = { value: ALL_BORDERS_VALUE, label: "همه مرز ها" };
 const customsOptions = iranCustoms.map((customs) => ({
   value: String(customs.ctmVCodeInt),
   label: `${customs.ctmNameStr} (${customs.ctmVCodeInt})`,
@@ -113,9 +117,16 @@ const goodSchema = z.object({
   goods_status: z.string().min(1, "وضعیت کالا الزامی است"),
   quantity: z.coerce.number().positive("مقدار باید بیشتر از صفر باشد"),
   unit: z.string().min(1, "واحد الزامی است"),
-  manufacturer_country: z.string().min(1, "کشور سازنده الزامی است"),
-  price: z.coerce.number().nonnegative("قیمت باید صفر یا بیشتر باشد").optional(),
-  line_subtotal: z.coerce.number().nonnegative("ارزش کل باید صفر یا بیشتر باشد"),
+  manufacturer_country: z
+    .array(z.string())
+    .min(1, "کشور سازنده الزامی است"),
+  price: z.coerce
+    .number()
+    .nonnegative("قیمت باید صفر یا بیشتر باشد")
+    .optional(),
+  line_subtotal: z.coerce
+    .number()
+    .nonnegative("ارزش کل باید صفر یا بیشتر باشد"),
   nw_kg: z.coerce.number().nonnegative("وزن خالص باید صفر یا بیشتر باشد"),
   gw_kg: z.coerce.number().nonnegative("وزن ناخالص باید صفر یا بیشتر باشد"),
 });
@@ -123,25 +134,47 @@ const goodSchema = z.object({
 const schema = z
   .object({
     uuid: z.string().optional(),
-    status: z.string().min(1, "وضعیت پروفرما الزامی است"),
-    country_of_origin: z.string().optional().default(""),
+    status: z.string().min(1, "وضعیت بار الزامی است"),
+    country_of_origin: z.string().min(1, "کشور مبدا الزامی است"),
     currency_type: z.string().min(1, "نوع ارز الزامی است"),
     fee_type: z.string().min(1, "نوع فی الزامی است"),
     fee_amount: z.coerce.number().nonnegative("مبلغ فی باید صفر یا بیشتر باشد"),
-    entry_border: z.string().optional().default(""),
-    customs: z.string().min(1, "گمرک الزامی است"),
-    means_of_transport: z.string().min(1, "روش حمل الزامی است"),
+    entry_border: z.array(z.string()).optional().default([]),
+    customs: z.array(z.string()).min(1, "گمرک الزامی است"),
+    means_of_transport: z
+      .array(z.string())
+      .min(1, "روش حمل الزامی است"),
     goods: z.array(goodSchema).min(1, "حداقل یک کالا الزامی است"),
   })
   .superRefine((value, ctx) => {
     if (
-      value.customs === ALL_CUSTOMS_VALUE &&
+      value.customs.includes(ALL_CUSTOMS_VALUE) &&
       value.status !== NEED_STATUS_AT_ORIGIN
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["customs"],
         message: "تمام گمرکات فقط برای وضعیت در کشور مبدا قابل انتخاب است",
+      });
+    }
+    if (
+      value.entry_border.includes(ALL_BORDERS_VALUE) &&
+      value.status !== NEED_STATUS_AT_ORIGIN
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["entry_border"],
+        message: "همه مرز ها فقط برای وضعیت در کشور مبدا قابل انتخاب است",
+      });
+    }
+    if (
+      value.means_of_transport.includes(ALL_TRANSPORTS_VALUE) &&
+      value.means_of_transport.length > 1
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["means_of_transport"],
+        message: "همه روش های حمل باید به صورت تنهایی انتخاب شود",
       });
     }
   });
@@ -160,10 +193,14 @@ function calcUnitPrice(quantity: unknown, subtotal: unknown) {
 function buildPayload(values: GoodsNeedFormValue) {
   return {
     ...values,
+    entry_border: values.entry_border.join(", "),
+    customs: values.customs.join(", "),
+    means_of_transport: values.means_of_transport.join(", "),
     goods: values.goods.map((good) => {
       const { line_subtotal, ...rest } = good;
       return {
         ...rest,
+        manufacturer_country: good.manufacturer_country.join(", "),
         price: calcUnitPrice(good.quantity, line_subtotal),
       };
     }),
@@ -283,6 +320,145 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
           </Command>
         </PopoverContent>
       </Popover>
+      {props.error ? (
+        <p className="text-sm text-destructive">{props.error}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function MultiSelectCombobox<T extends { value: string; label: string }>(props: {
+  label: string;
+  values: string[];
+  onChange: (v: string[]) => void;
+  items: readonly T[];
+  exclusiveValues?: string[];
+  placeholder?: string;
+  error?: string;
+  searchPlaceholder?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [q, setQ] = React.useState("");
+  const filtered = React.useMemo(() => {
+    const qq = normalizeFa(q);
+    if (!qq) return props.items;
+    return props.items.filter((it) =>
+      normalizeFa(`${it.label} ${it.value}`).includes(qq),
+    );
+  }, [props.items, q]);
+  const selectedItems = React.useMemo(
+    () => props.items.filter((item) => props.values.includes(item.value)),
+    [props.items, props.values],
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <Label className="text-sm">{props.label}</Label>
+        {selectedItems.length ? (
+          <button
+            type="button"
+            className="text-xs text-muted-foreground transition hover:text-foreground"
+            onClick={() => props.onChange([])}
+          >
+            پاک کردن همه
+          </button>
+        ) : null}
+      </div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
+          >
+            <span
+              className={cn(
+                "truncate",
+                selectedItems.length === 0 && "text-muted-foreground",
+              )}
+            >
+              {selectedItems.length
+                ? `${selectedItems.length} مورد انتخاب شده`
+                : props.placeholder || "انتخاب..."}
+            </span>
+            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[--radix-popover-trigger-width] p-0"
+          align="start"
+        >
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder={props.searchPlaceholder || "جستجو..."}
+              value={q}
+              onValueChange={setQ}
+            />
+            <CommandEmpty>موردی پیدا نشد.</CommandEmpty>
+            <CommandGroup className="max-h-[320px] overflow-auto">
+              {filtered.map((it) => {
+                const isSelected = props.values.includes(it.value);
+                const isExclusive = props.exclusiveValues?.includes(it.value);
+                return (
+                  <CommandItem
+                    key={it.value}
+                    value={it.value}
+                    onSelect={() => {
+                      if (isSelected) {
+                        props.onChange(
+                          props.values.filter((value) => value !== it.value),
+                        );
+                        return;
+                      }
+                      if (isExclusive) {
+                        props.onChange([it.value]);
+                        return;
+                      }
+                      props.onChange([
+                        ...props.values.filter(
+                          (value) => !props.exclusiveValues?.includes(value),
+                        ),
+                        it.value,
+                      ]);
+                    }}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="truncate">{it.label}</span>
+                    <Check
+                      className={cn(
+                        "h-4 w-4",
+                        isSelected ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {selectedItems.length ? (
+        <div className="flex flex-wrap gap-2">
+          {selectedItems.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() =>
+                props.onChange(
+                  props.values.filter((value) => value !== item.value),
+                )
+              }
+              className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-3 py-1 text-xs transition hover:bg-muted"
+            >
+              <span>{item.label}</span>
+              <X className="h-3.5 w-3.5 opacity-70" />
+            </button>
+          ))}
+        </div>
+      ) : null}
       {props.error ? (
         <p className="text-sm text-destructive">{props.error}</p>
       ) : null}
@@ -431,13 +607,14 @@ async function createGoodsNeed(values: ReturnType<typeof buildPayload>) {
   });
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok)
-    throw new Error(
-      data?.detail || JSON.stringify(data) || "خطا در ایجاد پروفرما",
-    );
+    throw new Error(data?.detail || JSON.stringify(data) || "خطا در ایجاد بار");
   return data;
 }
 
-async function updateGoodsNeed(uuid: string, values: ReturnType<typeof buildPayload>) {
+async function updateGoodsNeed(
+  uuid: string,
+  values: ReturnType<typeof buildPayload>,
+) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
   const res = await authFetch(
     `${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`,
@@ -449,7 +626,7 @@ async function updateGoodsNeed(uuid: string, values: ReturnType<typeof buildPayl
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok)
     throw new Error(
-      data?.detail || JSON.stringify(data) || "خطا در ویرایش پروفرما",
+      data?.detail || JSON.stringify(data) || "خطا در ویرایش بار",
     );
   return data;
 }
@@ -460,7 +637,7 @@ const emptyGood = {
   goods_status: "نو",
   quantity: 1,
   unit: "KG",
-  manufacturer_country: "CN",
+  manufacturer_country: ["CN"],
   price: 0,
   line_subtotal: 0,
   nw_kg: 0,
@@ -486,13 +663,19 @@ export function GoodsNeedForm(props: {
   const goodsFA = useFieldArray({ control, name: "goods" });
   const mode = props.mode || "create";
   const selectedStatus = String(watch("status") || "");
-  const selectedCustoms = String(watch("customs") || "");
+  const selectedCustoms = watch("customs") || [];
+  const selectedEntryBorder = watch("entry_border") || [];
+  const isAtOrigin = selectedStatus === NEED_STATUS_AT_ORIGIN;
+  const availableBorderOptions = React.useMemo(
+    () => (isAtOrigin ? [allBordersOption, ...borderOptions] : borderOptions),
+    [isAtOrigin],
+  );
   const availableCustomsOptions = React.useMemo(
     () =>
-      selectedStatus === NEED_STATUS_AT_ORIGIN
+      isAtOrigin
         ? [allCustomsOption, ...customsOptions]
         : customsOptions,
-    [selectedStatus],
+    [isAtOrigin],
   );
 
   React.useEffect(() => {
@@ -500,13 +683,23 @@ export function GoodsNeedForm(props: {
   }, [form, props.initialValues]);
 
   React.useEffect(() => {
-    if (
-      selectedStatus !== NEED_STATUS_AT_ORIGIN &&
-      selectedCustoms === ALL_CUSTOMS_VALUE
-    ) {
-      setValue("customs", "", { shouldValidate: true });
+    if (!isAtOrigin) {
+      if (selectedCustoms.includes(ALL_CUSTOMS_VALUE)) {
+        setValue("customs", [], { shouldValidate: true });
+      } else if (selectedCustoms.length > 1) {
+        setValue("customs", selectedCustoms.slice(0, 1), {
+          shouldValidate: true,
+        });
+      }
+      if (selectedEntryBorder.includes(ALL_BORDERS_VALUE)) {
+        setValue("entry_border", [], { shouldValidate: true });
+      } else if (selectedEntryBorder.length > 1) {
+        setValue("entry_border", selectedEntryBorder.slice(0, 1), {
+          shouldValidate: true,
+        });
+      }
     }
-  }, [selectedCustoms, selectedStatus, setValue]);
+  }, [isAtOrigin, selectedCustoms, selectedEntryBorder, setValue]);
 
   const onSubmit: SubmitHandler<GoodsNeedFormInput> = async (raw) => {
     setError("");
@@ -520,7 +713,7 @@ export function GoodsNeedForm(props: {
         mode === "edit"
           ? await updateGoodsNeed(uuid, payload)
           : await createGoodsNeed(payload);
-      setSuccess(mode === "edit" ? "پروفرما ویرایش شد." : "پروفرما ایجاد شد.");
+      setSuccess(mode === "edit" ? "بار ویرایش شد." : "بار ایجاد شد.");
       props.onDone?.(String(saved?.uuid ?? uuid));
     } catch (err: any) {
       setError(err?.message || "خطا");
@@ -541,11 +734,11 @@ export function GoodsNeedForm(props: {
       <Card className="overflow-hidden before:h-1 before:bg-amber-600 before:content-['']">
         <CardHeader>
           <CardTitle className="text-base">
-            {mode === "edit" ? "ویرایش پروفرما" : "ایجاد پروفرما"}
+            {mode === "edit" ? "ویرایش بار" : "ایجاد بار"}
           </CardTitle>
           <CardDescription>
-            اطلاعات مشترک پروفرما را وارد کنید؛ کالاها در بخش بعدی به صورت چند
-            ردیفی ثبت می‌شوند.
+            اطلاعات مشترک بار را وارد کنید؛ کالاها در بخش بعدی به صورت چند ردیفی
+            ثبت می‌شوند.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
@@ -554,11 +747,11 @@ export function GoodsNeedForm(props: {
             name="status"
             render={({ field }) => (
               <SearchableCombobox
-                label="وضعیت پروفرما"
+                label="وضعیت بار"
                 value={field.value || ""}
                 onChange={field.onChange}
                 items={proformaStatusOptions}
-                placeholder="انتخاب وضعیت پروفرما"
+                placeholder="انتخاب وضعیت بار"
                 error={errors.status?.message}
               />
             )}
@@ -572,7 +765,7 @@ export function GoodsNeedForm(props: {
                 value={field.value || ""}
                 onChange={field.onChange}
                 items={countryOptions}
-                placeholder="اختیاری - انتخاب کشور"
+                placeholder="انتخاب کشور"
                 error={errors.country_of_origin?.message}
               />
             )}
@@ -615,39 +808,64 @@ export function GoodsNeedForm(props: {
             control={control}
             name="entry_border"
             render={({ field }) => (
-              <SearchableCombobox
-                label="مرز ورودی"
-                value={field.value || ""}
-                onChange={field.onChange}
-                items={borderOptions}
-                placeholder="اختیاری - انتخاب مرز"
-                error={errors.entry_border?.message}
-              />
+              isAtOrigin ? (
+                <MultiSelectCombobox
+                  label="مرز ورودی"
+                  values={field.value || []}
+                  onChange={field.onChange}
+                  items={availableBorderOptions}
+                  exclusiveValues={[ALL_BORDERS_VALUE]}
+                  placeholder="اختیاری - انتخاب مرز"
+                  error={errors.entry_border?.message}
+                />
+              ) : (
+                <SearchableCombobox
+                  label="مرز ورودی"
+                  value={field.value?.[0] || ""}
+                  onChange={(value) => field.onChange(value ? [value] : [])}
+                  items={availableBorderOptions}
+                  placeholder="اختیاری - انتخاب مرز"
+                  error={errors.entry_border?.message}
+                />
+              )
             )}
           />
           <Controller
             control={control}
             name="customs"
             render={({ field }) => (
-              <SearchableCombobox
-                label="گمرک"
-                value={field.value || ""}
-                onChange={field.onChange}
-                items={availableCustomsOptions}
-                placeholder="انتخاب گمرک"
-                error={errors.customs?.message}
-              />
+              isAtOrigin ? (
+                <MultiSelectCombobox
+                  label="گمرک"
+                  values={field.value || []}
+                  onChange={field.onChange}
+                  items={availableCustomsOptions}
+                  exclusiveValues={[ALL_CUSTOMS_VALUE]}
+                  placeholder="انتخاب گمرک"
+                  error={errors.customs?.message}
+                />
+              ) : (
+                <SearchableCombobox
+                  label="گمرک"
+                  value={field.value?.[0] || ""}
+                  onChange={(value) => field.onChange(value ? [value] : [])}
+                  items={availableCustomsOptions}
+                  placeholder="انتخاب گمرک"
+                  error={errors.customs?.message}
+                />
+              )
             )}
           />
           <Controller
             control={control}
             name="means_of_transport"
             render={({ field }) => (
-              <SearchableCombobox
+              <MultiSelectCombobox
                 label="روش حمل"
-                value={field.value || ""}
+                values={field.value || []}
                 onChange={field.onChange}
                 items={transportMeans}
+                exclusiveValues={[ALL_TRANSPORTS_VALUE]}
                 placeholder="انتخاب"
                 error={errors.means_of_transport?.message}
               />
@@ -659,9 +877,9 @@ export function GoodsNeedForm(props: {
       <Card className="overflow-hidden before:h-1 before:bg-slate-900 before:content-['']">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-base">کالاهای پروفرما</CardTitle>
+            <CardTitle className="text-base">کالاهای بار</CardTitle>
             <CardDescription>
-              برای هر پروفرما می‌توانید چند کالا ثبت کنید.
+              برای هر بار می‌توانید چند کالا ثبت کنید.
             </CardDescription>
           </div>
           <Button
@@ -753,9 +971,9 @@ export function GoodsNeedForm(props: {
                     control={control}
                     name={`goods.${idx}.manufacturer_country` as const}
                     render={({ field }) => (
-                      <SearchableCombobox
+                      <MultiSelectCombobox
                         label="کشور سازنده"
-                        value={field.value || ""}
+                        values={field.value || []}
                         onChange={field.onChange}
                         items={countryOptions}
                         placeholder="انتخاب کشور"
@@ -763,7 +981,10 @@ export function GoodsNeedForm(props: {
                       />
                     )}
                   />
-                  <Field label="ارزش کل ردیف" error={rowErr?.line_subtotal?.message}>
+                  <Field
+                    label="ارزش کل ردیف"
+                    error={rowErr?.line_subtotal?.message}
+                  >
                     <Input
                       type="number"
                       step="0.0001"
@@ -808,7 +1029,7 @@ export function GoodsNeedForm(props: {
             ? "در حال ذخیره..."
             : mode === "edit"
               ? "ذخیره تغییرات"
-              : "ایجاد پروفرما"}
+              : "ایجاد بار"}
         </Button>
       </div>
     </form>
