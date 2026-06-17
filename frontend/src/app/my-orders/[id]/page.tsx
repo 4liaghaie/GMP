@@ -57,6 +57,13 @@ function resolveOrderPdfUrl(value: unknown) {
   }
 }
 
+function parseMultiValue(value: unknown) {
+  return String(value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function toFormDefaults(apiData: any): RegisteredOrderFormInput {
   return {
     uuid: String(apiData?.uuid ?? ""),
@@ -73,19 +80,17 @@ function toFormDefaults(apiData: any): RegisteredOrderFormInput {
     fee_amount: Number(apiData?.fee_amount ?? 0),
     applicant_name: String(apiData?.applicant_name ?? ""),
     national_code: String(apiData?.national_code ?? ""),
-    entry_border: String(apiData?.entry_border ?? ""),
-    customs: String(apiData?.customs ?? ""),
+    entry_border: parseMultiValue(apiData?.entry_border),
+    customs: parseMultiValue(apiData?.customs),
     currency_supply: String(apiData?.currency_supply ?? ""),
     bank_name: String(apiData?.bank_name ?? ""),
     bank_branch: String(apiData?.bank_branch ?? ""),
     payment_instrument: String(apiData?.payment_instrument ?? ""),
-    expire_date: String(apiData?.expire_date ?? "2028/01/01"),
+    expire_date: String(apiData?.expire_date ?? "1406/10/11"),
     terms_of_delivery: String(apiData?.terms_of_delivery ?? "FOB"),
-    terms_of_payment: String(apiData?.terms_of_payment ?? "TT"),
     partial_shipment: Boolean(apiData?.partial_shipment ?? false),
-    means_of_transport: String(apiData?.means_of_transport ?? "SEA"),
-    country_of_origin: String(apiData?.country_of_origin ?? "CN"),
-    standard: String(apiData?.standard ?? "STD"),
+    means_of_transport: parseMultiValue(apiData?.means_of_transport || "SEA"),
+    country_of_origin: parseMultiValue(apiData?.country_of_origin || "CN"),
 
     goods:
       Array.isArray(apiData?.goods) && apiData.goods.length
@@ -95,7 +100,7 @@ function toFormDefaults(apiData: any): RegisteredOrderFormInput {
             hs_code_id: Number(g?.hs_code_id ?? g?.hs_code?.id ?? 0),
             goods_status: String(g?.goods_status ?? "نو"),
             quantity: Number(g?.quantity ?? 1),
-            origin: String(g?.origin ?? "CN"),
+            origin: parseMultiValue(g?.origin || "CN"),
             unit_price: Number(g?.unit_price ?? 0),
             line_subtotal:
               Number(g?.line_total ?? 0) ||
@@ -111,7 +116,7 @@ function toFormDefaults(apiData: any): RegisteredOrderFormInput {
               hs_code_id: 0,
               goods_status: "نو",
               quantity: 1,
-              origin: "CN",
+              origin: ["CN"],
               unit_price: 0,
               line_subtotal: 0,
               unit: "KG",

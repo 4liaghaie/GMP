@@ -18,9 +18,7 @@ class RegisteredOrderMarketplaceFilter(filters.FilterSet):
     payment_instrument = filters.CharFilter(field_name="payment_instrument", lookup_expr="icontains")
     currency_type = filters.CharFilter(field_name="currency_type", lookup_expr="icontains")
     terms_of_delivery = filters.CharFilter(field_name="terms_of_delivery", lookup_expr="icontains")
-    terms_of_payment = filters.CharFilter(field_name="terms_of_payment", lookup_expr="icontains")
     means_of_transport = filters.CharFilter(field_name="means_of_transport", lookup_expr="icontains")
-    standard = filters.CharFilter(field_name="standard", lookup_expr="icontains")
     country_of_origin = filters.CharFilter(field_name="country_of_origin", lookup_expr="icontains")
 
     partial_shipment = filters.BooleanFilter(field_name="partial_shipment")
@@ -65,9 +63,7 @@ class RegisteredOrderMarketplaceFilter(filters.FilterSet):
             "payment_instrument",
             "currency_type",
             "terms_of_delivery",
-            "terms_of_payment",
             "partial_shipment",
             "means_of_transport",
-            "standard",
             "country_of_origin",
         ]

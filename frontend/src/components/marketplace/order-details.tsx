@@ -75,6 +75,26 @@ function safeText(x: any) {
   return String(x);
 }
 
+function formatExpireDate(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "—";
+  const match = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(raw);
+  if (!match) return raw;
+  const year = Number(match[1]);
+  if (year < 1700) return raw;
+  const date = new Date(year, Number(match[2]) - 1, Number(match[3]));
+  if (Number.isNaN(date.getTime())) return raw;
+  const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian-nu-latn", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const jy = parts.find((part) => part.type === "year")?.value ?? "";
+  const jm = parts.find((part) => part.type === "month")?.value ?? "";
+  const jd = parts.find((part) => part.type === "day")?.value ?? "";
+  return `${jy}/${jm}/${jd}`;
+}
+
 function useMediaQuery(query: string) {
   const [matches, setMatches] = React.useState(false);
   React.useEffect(() => {
@@ -356,16 +376,14 @@ function DetailsMeta({ order }: { order: MarketplaceOrder }) {
           value={safeText(order.payment_instrument)}
         />
         <KeyValue label="تحویل" value={safeText(order.terms_of_delivery)} />
-        <KeyValue label="پرداخت" value={safeText(order.terms_of_payment)} />
         <KeyValue label="حمل" value={safeText(order.means_of_transport)} />
         <KeyValue label="گمرک" value={safeText(order.customs)} />
         <KeyValue label="مبدا" value={safeText(order.country_of_origin)} />
-        <KeyValue label="استاندارد" value={safeText(order.standard)} />
         <KeyValue
           label="حمل به دفعات"
           value={order.partial_shipment ? "بله" : "خیر"}
         />
-        <KeyValue label="انقضا" value={safeText(order.expire_date)} />
+        <KeyValue label="انقضا" value={formatExpireDate(order.expire_date)} />
       </CardContent>
     </Card>
   );
@@ -597,7 +615,7 @@ function DesktopLayout({
                 />
                 {order.applicant_name ? (
                   <KeyValue
-                    label="درخواست دهنده"
+                    label="متقاضی"
                     value={safeText(order.applicant_name)}
                     icon={<User2 className="h-4 w-4" />}
                   />
@@ -676,7 +694,7 @@ function MobileBody({ order }: { order: MarketplaceOrder }) {
           <div className="grid gap-2">
             {order.applicant_name ? (
               <KeyValue
-                label="درخواست دهنده"
+                label="متقاضی"
                 value={safeText(order.applicant_name)}
                 icon={<User2 className="h-4 w-4" />}
               />
@@ -826,7 +844,7 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
               <div className="grid gap-2 sm:grid-cols-2">
                 {order.applicant_name ? (
                   <KeyValue
-                    label="درخواست دهنده"
+                    label="متقاضی"
                     value={safeText(order.applicant_name)}
                     icon={<User2 className="h-4 w-4" />}
                   />

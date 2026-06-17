@@ -10,7 +10,13 @@ import {
   useWatch,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown, X } from "lucide-react";
+import {
+  Calendar as JalaliCalendar,
+  DateObject,
+} from "react-multi-date-picker";
+import persian from "react-date-object/calendars/persian";
+import persian_fa from "react-date-object/locales/persian_fa";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +28,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -93,14 +98,6 @@ const deliveryTerms = [
   { value: "DPU", label: "DPU (تحویل در محل تخلیه‌شده)" },
 ] as const;
 
-const paymentTerms = [
-  { value: "TT", label: "TT (حواله بانکی)" },
-  { value: "LC", label: "LC (اعتبار اسنادی)" },
-  { value: "CAD", label: "CAD (اسناد در مقابل پرداخت)" },
-  { value: "DP", label: "D/P (اسناد در مقابل پرداخت)" },
-  { value: "DA", label: "D/A (اسناد در مقابل قبول)" },
-] as const;
-
 const currencySupplyOptions = [
   { value: "خرید ارز از سیستم بانکی", label: "خرید ارز از سیستم بانکی" },
   { value: "از محل ارز خود", label: "از محل ارز خود" },
@@ -121,14 +118,6 @@ const transportMeans = [
   { value: "AIR", label: "هوایی" },
   { value: "ROAD", label: "زمینی" },
   { value: "RAIL", label: "ریلی" },
-] as const;
-
-const standards = [
-  { value: "STD", label: "استاندارد (STD)" },
-  { value: "ISO", label: "ISO" },
-  { value: "CE", label: "CE" },
-  { value: "FDA", label: "FDA" },
-  { value: "OTHER", label: "سایر" },
 ] as const;
 
 const borderOptions = borders.map((border) => ({
@@ -177,9 +166,9 @@ const goodSchema = z.object({
   hs_code_id: z.coerce.number().int().positive("کد HS الزامی است"),
   goods_status: z.string().min(1, "وضعیت کالا الزامی است"),
   quantity: z.coerce.number().positive("مقدار باید بیشتر از ۰ باشد"),
-  origin: z.string().min(1, "مبدا الزامی است"),
+  origin: z.array(z.string()).min(1, "مبدا الزامی است"),
   unit_price: z.coerce.number().nonnegative("قیمت واحد باید >= ۰ باشد"),
-  line_subtotal: z.coerce.number().nonnegative("جمع جزء باید >= ۰ باشد"),
+  line_subtotal: z.coerce.number().nonnegative("ارزش کالا باید >= ۰ باشد"),
   unit: z.string().min(1, "واحد الزامی است"),
   nw_kg: z.coerce.number().nonnegative("وزن خالص باید >= ۰ باشد"),
   gw_kg: z.coerce.number().nonnegative("وزن ناخالص باید >= ۰ باشد"),
@@ -196,20 +185,18 @@ const orderSchema = z.object({
   fee_type: z.string().min(1, "نوع فی الزامی است"),
   fee_amount: z.coerce.number().nonnegative("مبلغ فی باید >= ۰ باشد"),
   applicant_name: z.string().min(1, "نام درخواست‌دهنده الزامی است"),
-  national_code: z.string().min(1, "کد/شناسه ملی الزامی است"),
-  entry_border: z.string().min(1, "مرز ورودی الزامی است"),
-  customs: z.string().min(1, "گمرک الزامی است"),
+  national_code: z.string().optional().default(""),
+  entry_border: z.array(z.string()).min(1, "مرز ورودی الزامی است"),
+  customs: z.array(z.string()).min(1, "گمرک الزامی است"),
   currency_supply: z.string().min(1, "تامین ارز الزامی است"),
   bank_name: z.string().min(1, "نام بانک الزامی است"),
   bank_branch: z.string().min(1, "شعبه بانک الزامی است"),
   payment_instrument: z.string().min(1, "ابزار پرداخت الزامی است"),
   expire_date: z.string().min(1, "تاریخ انقضا الزامی است"),
   terms_of_delivery: z.string().min(1, "شرایط تحویل الزامی است"),
-  terms_of_payment: z.string().min(1, "شرایط پرداخت الزامی است"),
   partial_shipment: z.boolean().default(false),
-  means_of_transport: z.string().min(1, "روش حمل الزامی است"),
-  country_of_origin: z.string().min(1, "کشور مبدا الزامی است"),
-  standard: z.string().min(1, "استاندارد الزامی است"),
+  means_of_transport: z.array(z.string()).min(1, "روش حمل الزامی است"),
+  country_of_origin: z.array(z.string()).min(1, "کشور مبدا الزامی است"),
   goods: z.array(goodSchema).min(1, "حداقل یک کالا اضافه کنید"),
 });
 
@@ -246,6 +233,56 @@ function truncateText(s: string, max = 30) {
   const t = (s ?? "").trim();
   if (!t) return "";
   return t.length > max ? t.slice(0, max) + "..." : t;
+}
+
+function joinMultiValue(values: string[]) {
+  return values
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+function formatGregorianAsJalali(date: Date) {
+  const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian-nu-latn", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+  return `${year}/${month}/${day}`;
+}
+
+function parseGregorianDateValue(value: string) {
+  const match = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(value || "");
+  if (!match) return undefined;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return undefined;
+  }
+
+  return date;
+}
+
+function normalizeExpireDateValue(value: string) {
+  const raw = (value || "").trim();
+  if (!raw) return "";
+  const year = Number(raw.slice(0, 4));
+  if (Number.isFinite(year) && year >= 1700) {
+    const gregorianDate = parseGregorianDateValue(raw);
+    return gregorianDate ? formatGregorianAsJalali(gregorianDate) : raw;
+  }
+  return raw;
 }
 
 function useDebouncedValue<T>(value: T, delay = 250) {
@@ -307,33 +344,6 @@ function Field(props: {
   );
 }
 
-function parseDateValue(value: string) {
-  const match = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(value || "");
-  if (!match) return undefined;
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(year, month - 1, day);
-
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  ) {
-    return undefined;
-  }
-
-  return date;
-}
-
-function formatDateValue(date: Date) {
-  const year = String(date.getFullYear());
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}/${month}/${day}`;
-}
-
 function DatePickerField(props: {
   label: string;
   value: string;
@@ -341,8 +351,10 @@ function DatePickerField(props: {
   error?: string;
 }) {
   const [open, setOpen] = React.useState(false);
-  const selected = React.useMemo(() => parseDateValue(props.value), [props.value]);
-  const currentYear = new Date().getFullYear();
+  const normalizedValue = React.useMemo(
+    () => normalizeExpireDateValue(props.value),
+    [props.value],
+  );
 
   return (
     <div className="space-y-2">
@@ -357,23 +369,26 @@ function DatePickerField(props: {
               !props.value && "text-muted-foreground",
             )}
           >
-            <span>{props.value || "انتخاب تاریخ"}</span>
+            <span>{normalizedValue || "انتخاب تاریخ"}</span>
             <CalendarIcon className="ms-2 h-4 w-4 opacity-60" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={selected}
-            defaultMonth={selected || new Date(currentYear, 0, 1)}
-            startMonth={new Date(currentYear, 0, 1)}
-            endMonth={new Date(currentYear + 30, 11, 31)}
-            onSelect={(date) => {
-              if (!date) return;
-              props.onChange(formatDateValue(date));
+          <JalaliCalendar
+            value={normalizedValue || undefined}
+            calendar={persian}
+            locale={persian_fa}
+            format="YYYY/MM/DD"
+            onChange={(value) => {
+              if (!value) return;
+              props.onChange(
+                value instanceof DateObject
+                  ? value.format("YYYY/MM/DD")
+                  : String(value),
+              );
               setOpen(false);
             }}
-            captionLayout="dropdown"
+            className="shadow-none"
           />
         </PopoverContent>
       </Popover>
@@ -473,6 +488,134 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
   );
 }
 
+function MultiSelectCombobox<
+  T extends { value: string; label: string },
+>(props: {
+  label: string;
+  values: string[];
+  onChange: (values: string[]) => void;
+  items: readonly T[];
+  placeholder?: string;
+  error?: string;
+  searchPlaceholder?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [q, setQ] = React.useState("");
+  const filtered = React.useMemo(() => {
+    const qq = normalizeFa(q);
+    if (!qq) return props.items;
+    return props.items.filter((it) =>
+      normalizeFa(`${it.label} ${it.value}`).includes(qq),
+    );
+  }, [props.items, q]);
+  const selectedItems = React.useMemo(
+    () => props.items.filter((item) => props.values.includes(item.value)),
+    [props.items, props.values],
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <Label className="text-sm">{props.label}</Label>
+        {selectedItems.length ? (
+          <button
+            type="button"
+            className="text-xs text-muted-foreground transition hover:text-foreground"
+            onClick={() => props.onChange([])}
+          >
+            پاک کردن همه
+          </button>
+        ) : null}
+      </div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
+          >
+            <span
+              className={cn(
+                "truncate",
+                selectedItems.length === 0 && "text-muted-foreground",
+              )}
+            >
+              {selectedItems.length
+                ? `${selectedItems.length} مورد انتخاب شده`
+                : props.placeholder || "انتخاب..."}
+            </span>
+            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[--radix-popover-trigger-width] p-0"
+          align="start"
+        >
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder={props.searchPlaceholder || "جستجو..."}
+              value={q}
+              onValueChange={setQ}
+            />
+            <CommandEmpty>موردی پیدا نشد.</CommandEmpty>
+            <CommandGroup className="max-h-[320px] overflow-auto">
+              {filtered.map((it) => {
+                const isSelected = props.values.includes(it.value);
+                return (
+                  <CommandItem
+                    key={it.value}
+                    value={it.value}
+                    onSelect={() => {
+                      props.onChange(
+                        isSelected
+                          ? props.values.filter((value) => value !== it.value)
+                          : [...props.values, it.value],
+                      );
+                    }}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="truncate">{it.label}</span>
+                    <Check
+                      className={cn(
+                        "h-4 w-4",
+                        isSelected ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {selectedItems.length ? (
+        <div className="flex flex-wrap gap-2">
+          {selectedItems.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() =>
+                props.onChange(
+                  props.values.filter((value) => value !== item.value),
+                )
+              }
+              className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-3 py-1 text-xs transition hover:bg-muted"
+            >
+              <span>{item.label}</span>
+              <X className="h-3.5 w-3.5 opacity-70" />
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {props.error ? (
+        <p className="text-sm text-destructive">{props.error}</p>
+      ) : null}
+    </div>
+  );
+}
+
 function CountryCombobox(props: {
   label: string;
   value: string;
@@ -493,6 +636,35 @@ function CountryCombobox(props: {
     <SearchableCombobox
       label={props.label}
       value={props.value}
+      onChange={props.onChange}
+      items={items}
+      placeholder={props.placeholder || "انتخاب کشور..."}
+      error={props.error}
+      searchPlaceholder="جستجو: نام فارسی / انگلیسی / کد..."
+    />
+  );
+}
+
+function CountryMultiSelectCombobox(props: {
+  label: string;
+  values: string[];
+  onChange: (codes: string[]) => void;
+  error?: string;
+  placeholder?: string;
+}) {
+  const items = React.useMemo(
+    () =>
+      countries.map((c: Country) => ({
+        value: c.code,
+        label: `${c.persianName} (${c.code})`,
+      })),
+    [],
+  );
+
+  return (
+    <MultiSelectCombobox
+      label={props.label}
+      values={props.values}
       onChange={props.onChange}
       items={items}
       placeholder={props.placeholder || "انتخاب کشور..."}
@@ -670,23 +842,27 @@ function buildOrderFormData(values: RegisteredOrderForm) {
   formData.append("fee_type", values.fee_type);
   formData.append("fee_amount", String(values.fee_amount ?? 0));
   formData.append("applicant_name", values.applicant_name);
-  formData.append("national_code", values.national_code);
-  formData.append("entry_border", values.entry_border);
-  formData.append("customs", values.customs);
+  formData.append("national_code", values.national_code || "");
+  formData.append("entry_border", joinMultiValue(values.entry_border));
+  formData.append("customs", joinMultiValue(values.customs));
   formData.append("currency_supply", values.currency_supply);
   formData.append("bank_name", values.bank_name);
   formData.append("bank_branch", values.bank_branch);
   formData.append("payment_instrument", values.payment_instrument);
-  formData.append("expire_date", values.expire_date);
+  formData.append("expire_date", normalizeExpireDateValue(values.expire_date));
   formData.append("terms_of_delivery", values.terms_of_delivery);
-  formData.append("terms_of_payment", values.terms_of_payment);
   formData.append(
     "partial_shipment",
     values.partial_shipment ? "true" : "false",
   );
-  formData.append("means_of_transport", values.means_of_transport);
-  formData.append("country_of_origin", values.country_of_origin);
-  formData.append("standard", values.standard);
+  formData.append(
+    "means_of_transport",
+    joinMultiValue(values.means_of_transport),
+  );
+  formData.append(
+    "country_of_origin",
+    joinMultiValue(values.country_of_origin),
+  );
   formData.append(
     "goods",
     JSON.stringify(
@@ -695,7 +871,7 @@ function buildOrderFormData(values: RegisteredOrderForm) {
         hs_code_id: Number(g.hs_code_id),
         goods_status: g.goods_status,
         quantity: String(g.quantity ?? 0),
-        origin: g.origin,
+        origin: joinMultiValue(g.origin),
         unit_price: String(calcUnitPrice(g.quantity, g.line_subtotal)),
         unit: g.unit,
         nw_kg: String(g.nw_kg ?? 0),
@@ -922,10 +1098,7 @@ export function RegisteredOrderForm(props: {
               <Input type="number" step="0.01" {...register("fee_amount")} />
             </Field>
 
-            <Field
-              label="نام درخواست دهنده"
-              error={errors.applicant_name?.message}
-            >
+            <Field label="نام متقاضی" error={errors.applicant_name?.message}>
               <Input {...register("applicant_name")} />
             </Field>
 
@@ -937,9 +1110,9 @@ export function RegisteredOrderForm(props: {
               control={control}
               name="entry_border"
               render={({ field }) => (
-                <SearchableCombobox
+                <MultiSelectCombobox
                   label="مرز ورودی"
-                  value={field.value}
+                  values={field.value}
                   onChange={field.onChange}
                   items={borderOptions}
                   placeholder="انتخاب مرز ورودی"
@@ -953,9 +1126,9 @@ export function RegisteredOrderForm(props: {
               control={control}
               name="customs"
               render={({ field }) => (
-                <SearchableCombobox
+                <MultiSelectCombobox
                   label="گمرک"
-                  value={field.value}
+                  values={field.value}
                   onChange={field.onChange}
                   items={customsOptions}
                   placeholder="انتخاب گمرک"
@@ -1010,7 +1183,9 @@ export function RegisteredOrderForm(props: {
                   onChange={field.onChange}
                   items={branchOptions}
                   placeholder={
-                    selectedBank ? "انتخاب شعبه بانک" : "ابتدا بانک را انتخاب کنید"
+                    selectedBank
+                      ? "انتخاب شعبه بانک"
+                      : "ابتدا بانک را انتخاب کنید"
                   }
                   searchPlaceholder="جستجو در شعب..."
                   error={errors.bank_branch?.message}
@@ -1029,9 +1204,9 @@ export function RegisteredOrderForm(props: {
               control={control}
               name="country_of_origin"
               render={({ field }) => (
-                <CountryCombobox
+                <CountryMultiSelectCombobox
                   label="کشور مبدا"
-                  value={field.value}
+                  values={field.value}
                   onChange={field.onChange}
                   error={errors.country_of_origin?.message}
                 />
@@ -1069,48 +1244,16 @@ export function RegisteredOrderForm(props: {
 
             <Controller
               control={control}
-              name="terms_of_payment"
-              render={({ field }) => (
-                <SearchableCombobox
-                  label="شرایط پرداخت"
-                  value={field.value}
-                  onChange={field.onChange}
-                  items={paymentTerms}
-                  placeholder="انتخاب..."
-                  searchPlaceholder="جستجو..."
-                  error={(errors as any)?.terms_of_payment?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
               name="means_of_transport"
               render={({ field }) => (
-                <SearchableCombobox
+                <MultiSelectCombobox
                   label="روش حمل"
-                  value={field.value}
+                  values={field.value}
                   onChange={field.onChange}
                   items={transportMeans}
                   placeholder="انتخاب..."
                   searchPlaceholder="جستجو..."
                   error={(errors as any)?.means_of_transport?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="standard"
-              render={({ field }) => (
-                <SearchableCombobox
-                  label="استاندارد"
-                  value={field.value}
-                  onChange={field.onChange}
-                  items={standards}
-                  placeholder="انتخاب..."
-                  searchPlaceholder="جستجو..."
-                  error={(errors as any)?.standard?.message}
                 />
               )}
             />
@@ -1133,7 +1276,7 @@ export function RegisteredOrderForm(props: {
                 hs_code_id: 0,
                 goods_status: "نو",
                 quantity: 1,
-                origin: "CN",
+                origin: ["CN"],
                 unit_price: 0,
                 line_subtotal: 0,
                 unit: "KG",
@@ -1226,7 +1369,10 @@ export function RegisteredOrderForm(props: {
                     )}
                   />
 
-                  <Field label="جمع جزء" error={rowErr?.line_subtotal?.message}>
+                  <Field
+                    label="ارزش کالا"
+                    error={rowErr?.line_subtotal?.message}
+                  >
                     <Input
                       type="number"
                       step="0.0001"
@@ -1252,9 +1398,9 @@ export function RegisteredOrderForm(props: {
                     control={control}
                     name={`goods.${idx}.origin` as const}
                     render={({ field }) => (
-                      <CountryCombobox
+                      <CountryMultiSelectCombobox
                         label="مبدا"
-                        value={field.value || ""}
+                        values={field.value || []}
                         onChange={field.onChange}
                         error={rowErr?.origin?.message}
                       />

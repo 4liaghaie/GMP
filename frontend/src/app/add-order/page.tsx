@@ -40,26 +40,24 @@ function defaultValues(): RegisteredOrderFormInput {
     fee_amount: 0,
     applicant_name: "",
     national_code: "",
-    entry_border: "",
-    customs: "",
+    entry_border: [],
+    customs: [],
     currency_supply: "",
     bank_name: "",
     bank_branch: "",
     payment_instrument: "",
-    expire_date: "2028/01/01",
+    expire_date: "1406/10/11",
     terms_of_delivery: "FOB",
-    terms_of_payment: "TT",
     partial_shipment: false,
-    means_of_transport: "SEA",
-    country_of_origin: "CN",
-    standard: "STD",
+    means_of_transport: ["SEA"],
+    country_of_origin: ["CN"],
     goods: [
       {
         description: "",
         hs_code_id: 0,
         goods_status: "نو",
         quantity: 1,
-        origin: "CN",
+        origin: ["CN"],
         unit_price: 0,
         line_subtotal: 0,
         unit: "KG",
@@ -132,7 +130,7 @@ export default function AddRegisteredOrderPage() {
                 </div>
 
                 <p className="text-sm leading-7 text-muted-foreground">
-                  مبالغ، تعداد، وزن و جمع جزء را فقط بر اساس مانده قابل فروش
+                  مبالغ، تعداد، وزن و ارزش کالا را فقط بر اساس مانده قابل فروش
                   وارد کنید.
                 </p>
               </div>
@@ -156,7 +154,7 @@ export default function AddRegisteredOrderPage() {
                 </div>
 
                 <p className="text-sm leading-7 text-muted-foreground">
-                  برای هر کالا، HS Code، وضعیت کالا، مبدا، مقدار و جمع جزء را
+                  برای هر کالا، HS Code، وضعیت کالا، مبدا، مقدار و ارزش کالا را
                   جداگانه وارد کنید.
                 </p>
               </div>
@@ -168,7 +166,7 @@ export default function AddRegisteredOrderPage() {
                 </div>
 
                 <p className="text-sm leading-7 text-muted-foreground">
-                  قیمت واحد از مقدار و جمع جزء محاسبه می‌شود؛ فقط جمع جزء را
+                  قیمت واحد از مقدار و ارزش کالا محاسبه می‌شود؛ فقط ارزش کالا را
                   درست وارد کنید.
                 </p>
               </div>

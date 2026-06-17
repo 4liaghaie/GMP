@@ -54,6 +54,26 @@ function fmt(n: number) {
   return n.toLocaleString("fa-IR", { maximumFractionDigits: 2 });
 }
 
+function formatExpireDate(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "-";
+  const match = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(raw);
+  if (!match) return raw;
+  const year = Number(match[1]);
+  if (year < 1700) return raw;
+  const date = new Date(year, Number(match[2]) - 1, Number(match[3]));
+  if (Number.isNaN(date.getTime())) return raw;
+  const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian-nu-latn", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const jy = parts.find((part) => part.type === "year")?.value ?? "";
+  const jm = parts.find((part) => part.type === "month")?.value ?? "";
+  const jd = parts.find((part) => part.type === "day")?.value ?? "";
+  return `${jy}/${jm}/${jd}`;
+}
+
 async function fetchMyOrders(signal?: AbortSignal) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
 
@@ -160,7 +180,8 @@ export default function MyOrdersPage() {
     if (!s) return items;
 
     return items.filter((o) => {
-      const hay = `${o.order_number ?? ""} ${o.id ?? ""} ${o.uuid ?? ""}`.toLowerCase();
+      const hay =
+        `${o.order_number ?? ""} ${o.id ?? ""} ${o.uuid ?? ""}`.toLowerCase();
       return hay.includes(s);
     });
   }, [items, q]);
@@ -182,7 +203,8 @@ export default function MyOrdersPage() {
 
   async function onToggleVerify(item: RegisteredOrderListItem) {
     const next = !Boolean(item.verified);
-    if (!window.confirm(next ? "Verify this order?" : "Remove verification?")) return;
+    if (!window.confirm(next ? "Verify this order?" : "Remove verification?"))
+      return;
 
     setVerifyingUuid(item.uuid);
     setErr("");
@@ -190,7 +212,9 @@ export default function MyOrdersPage() {
       const updated = await setOrderVerified(item.uuid, next);
       setItems((prev) =>
         prev.map((x) =>
-          x.uuid === item.uuid ? { ...x, verified: Boolean(updated.verified) } : x,
+          x.uuid === item.uuid
+            ? { ...x, verified: Boolean(updated.verified) }
+            : x,
         ),
       );
     } catch (e: any) {
@@ -213,14 +237,16 @@ export default function MyOrdersPage() {
           accentClassName="bg-emerald-600"
           actions={
             <>
-            <Button variant="outline" onClick={() => router.push("/add-order")}>
-              <PlusCircle className="h-4 w-4" />
-              + ایجاد سفارش
-            </Button>
-            <Button variant="outline" onClick={() => load()}>
-              <RefreshCw className="h-4 w-4" />
-              بروزرسانی
-            </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/add-order")}
+              >
+                <PlusCircle className="h-4 w-4" />+ ایجاد سفارش
+              </Button>
+              <Button variant="outline" onClick={() => load()}>
+                <RefreshCw className="h-4 w-4" />
+                بروزرسانی
+              </Button>
             </>
           }
         />
@@ -228,7 +254,9 @@ export default function MyOrdersPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-base">لیست</CardTitle>
-            <CardDescription>برای ویرایش روی دکمه ویرایش بزنید.</CardDescription>
+            <CardDescription>
+              برای ویرایش روی دکمه ویرایش بزنید.
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -261,7 +289,7 @@ export default function MyOrdersPage() {
                     <th>ID</th>
                     <th>انقضا</th>
                     <th>ارز</th>
-                    {isAdmin && <th>درخواست دهنده</th>}
+                    {isAdmin && <th>متقاضی</th>}
                     {isAdmin && <th>شناسه ملی</th>}
                     <th>مرز ورودی</th>
                     <th>نوع فی</th>
@@ -288,29 +316,44 @@ export default function MyOrdersPage() {
                     </tr>
                   ) : (
                     filtered.map((o) => {
-                      const goodsCount = Array.isArray(o.goods) ? o.goods.length : 0;
+                      const goodsCount = Array.isArray(o.goods)
+                        ? o.goods.length
+                        : 0;
                       const total = safeNum(o.sub_total);
 
                       return (
-                        <tr key={o.uuid} className="border-t [&>td]:px-3 [&>td]:py-2">
-                          <td className="font-medium">{o.order_number || "-"}</td>
+                        <tr
+                          key={o.uuid}
+                          className="border-t [&>td]:px-3 [&>td]:py-2"
+                        >
+                          <td className="font-medium">
+                            {o.order_number || "-"}
+                          </td>
                           <td>{o.id || "-"}</td>
-                          <td>{o.expire_date || "-"}</td>
+                          <td>{formatExpireDate(o.expire_date)}</td>
                           <td>{o.currency_type || "-"}</td>
                           {isAdmin && <td>{o.applicant_name || "-"}</td>}
                           {isAdmin && <td>{o.national_code || "-"}</td>}
                           <td>{o.entry_border || "-"}</td>
                           <td>{o.fee_type || "-"}</td>
-                          <td>{safeNum(o.fee_amount) ? fmt(safeNum(o.fee_amount)) : "-"}</td>
+                          <td>
+                            {safeNum(o.fee_amount)
+                              ? fmt(safeNum(o.fee_amount))
+                              : "-"}
+                          </td>
                           {isAdmin && <td>{o.user || "-"}</td>}
                           {isAdmin && <td>{o.user_email || "-"}</td>}
                           {isAdmin && <td>{o.user_phone || "-"}</td>}
                           {isAdmin && (
                             <td>
                               {o.verified ? (
-                                <span className="text-emerald-700">تایید شده</span>
+                                <span className="text-emerald-700">
+                                  تایید شده
+                                </span>
                               ) : (
-                                <span className="text-amber-700">در انتظار تایید</span>
+                                <span className="text-amber-700">
+                                  در انتظار تایید
+                                </span>
                               )}
                             </td>
                           )}
@@ -319,7 +362,9 @@ export default function MyOrdersPage() {
                           <td>
                             <div className="flex gap-2">
                               <Button asChild size="sm" variant="outline">
-                                <Link href={`/my-orders/${encodeURIComponent(o.uuid)}`}>
+                                <Link
+                                  href={`/my-orders/${encodeURIComponent(o.uuid)}`}
+                                >
                                   ویرایش
                                 </Link>
                               </Button>

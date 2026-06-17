@@ -151,11 +151,9 @@ class RegisteredOrderCreateUpdateSerializer(serializers.ModelSerializer):
             "payment_instrument",
             "expire_date",
             "terms_of_delivery",
-            "terms_of_payment",
             "partial_shipment",
             "means_of_transport",
             "country_of_origin",
-            "standard",
             "total_gw",
             "total_nw",
             "total_qty",
@@ -169,6 +167,9 @@ class RegisteredOrderCreateUpdateSerializer(serializers.ModelSerializer):
             "total_nw",
             "total_qty",
         ]
+        extra_kwargs = {
+            "national_code": {"required": False, "allow_blank": True},
+        }
 
     def validate_order_number(self, value):
         request = self.context["request"]
@@ -293,11 +294,9 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
             "payment_instrument",
             "expire_date",
             "terms_of_delivery",
-            "terms_of_payment",
             "partial_shipment",
             "means_of_transport",
             "country_of_origin",
-            "standard",
             "total_gw",
             "total_nw",
             "total_qty",
@@ -754,11 +753,9 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
             "payment_instrument",
             "expire_date",
             "terms_of_delivery",
-            "terms_of_payment",
             "partial_shipment",
             "means_of_transport",
             "country_of_origin",
-            "standard",
             "total_gw",
             "total_nw",
             "total_qty",

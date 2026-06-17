@@ -102,13 +102,10 @@ export type MarketplaceOrder = {
   expire_date: string;
 
   terms_of_delivery: string;
-  terms_of_payment: string;
-
   partial_shipment: boolean;
   means_of_transport: string;
 
   country_of_origin: string;
-  standard: string;
 
   total_gw: string;
   total_nw: string;
@@ -135,27 +132,11 @@ const deliveryTerms = [
   { value: "DPU", label: "DPU (تحویل در محل)" },
 ] as const;
 
-const paymentTerms = [
-  { value: "TT", label: "TT (حواله بانکی)" },
-  { value: "LC", label: "LC (اعتبار اسنادی)" },
-  { value: "CAD", label: "CAD (اسناد در مقابل پرداخت)" },
-  { value: "DP", label: "D/P (اسناد در مقابل پرداخت)" },
-  { value: "DA", label: "D/A (اسناد در مقابل قبول)" },
-] as const;
-
 const transportMeans = [
   { value: "SEA", label: "دریایی" },
   { value: "AIR", label: "هوایی" },
   { value: "ROAD", label: "زمینی" },
   { value: "RAIL", label: "ریلی" },
-] as const;
-
-const standards = [
-  { value: "STD", label: "استاندارد (STD)" },
-  { value: "ISO", label: "ISO" },
-  { value: "CE", label: "CE" },
-  { value: "FDA", label: "FDA" },
-  { value: "OTHER", label: "سایر" },
 ] as const;
 
 const currencyOptions = [
@@ -619,12 +600,9 @@ async function fetchMarketplaceOrders(args: {
   currency_type: string;
 
   terms_of_delivery: string;
-  terms_of_payment: string;
-
   partial_shipment: string; // any/true/false
   means_of_transport: string;
 
-  standard: string;
   country_of_origin: string;
 
   ordering: SortKey;
@@ -640,10 +618,8 @@ async function fetchMarketplaceOrders(args: {
     applicant_name,
     currency_type,
     terms_of_delivery,
-    terms_of_payment,
     partial_shipment,
     means_of_transport,
-    standard,
     country_of_origin,
     ordering,
     page,
@@ -668,12 +644,8 @@ async function fetchMarketplaceOrders(args: {
     currency_type: currency_type || undefined,
 
     terms_of_delivery: terms_of_delivery || undefined,
-    terms_of_payment: terms_of_payment || undefined,
-
     partial_shipment: partial ?? undefined,
     means_of_transport: means_of_transport || undefined,
-
-    standard: standard || undefined,
     country_of_origin: country_of_origin || undefined,
 
     ordering: ordering === "newest" ? "-created_at" : "created_at",
@@ -836,12 +808,9 @@ export default function OrdersList() {
   const [currencyType, setCurrencyType] = React.useState<string>("");
 
   const [termsDelivery, setTermsDelivery] = React.useState<string>("");
-  const [termsPayment, setTermsPayment] = React.useState<string>("");
-
   const [partialShipment, setPartialShipment] = React.useState<string>("any");
   const [transport, setTransport] = React.useState<string>("");
 
-  const [standard, setStandard] = React.useState<string>("");
   const [originCountry, setOriginCountry] = React.useState<string>("");
 
   // UI controls
@@ -875,10 +844,8 @@ export default function OrdersList() {
     applicantName,
     currencyType,
     termsDelivery,
-    termsPayment,
     partialShipment,
     transport,
-    standard,
     originCountry,
     ordering,
     pageSize,
@@ -900,12 +867,8 @@ export default function OrdersList() {
       currency_type: currencyType.trim(),
 
       terms_of_delivery: termsDelivery.trim(),
-      terms_of_payment: termsPayment.trim(),
-
       partial_shipment: partialShipment,
       means_of_transport: transport.trim(),
-
-      standard: standard.trim(),
       country_of_origin: originCountry.trim(),
 
       ordering,
@@ -934,10 +897,8 @@ export default function OrdersList() {
     applicantName,
     currencyType,
     termsDelivery,
-    termsPayment,
     partialShipment,
     transport,
-    standard,
     originCountry,
     ordering,
     page,
@@ -961,10 +922,8 @@ export default function OrdersList() {
       applicantName,
       currencyType,
       termsDelivery,
-      termsPayment,
       partialShipment,
       transport,
-      standard,
       originCountry,
       q: qDebounced,
       ordering,
@@ -976,10 +935,8 @@ export default function OrdersList() {
     applicantName,
     currencyType,
     termsDelivery,
-    termsPayment,
     partialShipment,
     transport,
-    standard,
     originCountry,
     qDebounced,
     ordering,
@@ -998,12 +955,9 @@ export default function OrdersList() {
     setCurrencyType("");
 
     setTermsDelivery("");
-    setTermsPayment("");
-
     setPartialShipment("any");
     setTransport("");
 
-    setStandard("");
     setOriginCountry("");
 
     setOrdering("newest");
@@ -1190,16 +1144,14 @@ export default function OrdersList() {
                             </AccordionTrigger>
                             <AccordionContent className="space-y-4">
                               <div className="space-y-2">
-                                <Label className="text-sm">
-                                  نام درخواست دهنده
-                                </Label>
+                                <Label className="text-sm">نام متقاضی</Label>
                                 <div className="relative">
                                   <Input
                                     value={applicantName}
                                     onChange={(e) =>
                                       setApplicantName(e.target.value)
                                     }
-                                    placeholder="جستجو بر اساس نام درخواست دهنده..."
+                                    placeholder="جستجو بر اساس نام متقاضی..."
                                     className="rounded-xl"
                                   />
                                   {applicantName ? (
@@ -1207,7 +1159,7 @@ export default function OrdersList() {
                                       type="button"
                                       className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                                       onClick={() => setApplicantName("")}
-                                      aria-label="پاک کردن نام درخواست دهنده"
+                                      aria-label="پاک کردن نام متقاضی"
                                     >
                                       <X className="h-4 w-4" />
                                     </button>
@@ -1284,27 +1236,6 @@ export default function OrdersList() {
                               />
 
                               <SearchableCombobox
-                                label="شرایط پرداخت"
-                                value={termsPayment}
-                                onChange={setTermsPayment}
-                                items={paymentTerms}
-                                placeholder="انتخاب شرایط پرداخت..."
-                                searchPlaceholder="جستجو..."
-                                rightAction={
-                                  termsPayment ? (
-                                    <button
-                                      type="button"
-                                      className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                                      onClick={() => setTermsPayment("")}
-                                      aria-label="پاک کردن پرداخت"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </button>
-                                  ) : null
-                                }
-                              />
-
-                              <SearchableCombobox
                                 label="حمل به دفعات"
                                 value={partialShipment}
                                 onChange={setPartialShipment}
@@ -1335,27 +1266,6 @@ export default function OrdersList() {
                                       className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                                       onClick={() => setTransport("")}
                                       aria-label="پاک کردن حمل"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </button>
-                                  ) : null
-                                }
-                              />
-
-                              <SearchableCombobox
-                                label="استاندارد"
-                                value={standard}
-                                onChange={setStandard}
-                                items={standards}
-                                placeholder="انتخاب استاندارد..."
-                                searchPlaceholder="جستجو..."
-                                rightAction={
-                                  standard ? (
-                                    <button
-                                      type="button"
-                                      className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                                      onClick={() => setStandard("")}
-                                      aria-label="پاک کردن استاندارد"
                                     >
                                       <X className="h-4 w-4" />
                                     </button>
