@@ -1399,7 +1399,7 @@ export function RegisteredOrderForm(props: {
                     name={`goods.${idx}.origin` as const}
                     render={({ field }) => (
                       <CountryMultiSelectCombobox
-                        label="مبدا"
+                        label="کشور سازنده"
                         values={field.value || []}
                         onChange={field.onChange}
                         error={rowErr?.origin?.message}

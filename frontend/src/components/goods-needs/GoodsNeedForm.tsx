@@ -117,9 +117,7 @@ const goodSchema = z.object({
   goods_status: z.string().min(1, "وضعیت کالا الزامی است"),
   quantity: z.coerce.number().positive("مقدار باید بیشتر از صفر باشد"),
   unit: z.string().min(1, "واحد الزامی است"),
-  manufacturer_country: z
-    .array(z.string())
-    .min(1, "کشور سازنده الزامی است"),
+  manufacturer_country: z.array(z.string()).min(1, "کشور سازنده الزامی است"),
   price: z.coerce
     .number()
     .nonnegative("قیمت باید صفر یا بیشتر باشد")
@@ -141,9 +139,7 @@ const schema = z
     fee_amount: z.coerce.number().nonnegative("مبلغ فی باید صفر یا بیشتر باشد"),
     entry_border: z.array(z.string()).optional().default([]),
     customs: z.array(z.string()).min(1, "گمرک الزامی است"),
-    means_of_transport: z
-      .array(z.string())
-      .min(1, "روش حمل الزامی است"),
+    means_of_transport: z.array(z.string()).min(1, "روش حمل الزامی است"),
     goods: z.array(goodSchema).min(1, "حداقل یک کالا الزامی است"),
   })
   .superRefine((value, ctx) => {
@@ -327,7 +323,9 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
   );
 }
 
-function MultiSelectCombobox<T extends { value: string; label: string }>(props: {
+function MultiSelectCombobox<
+  T extends { value: string; label: string },
+>(props: {
   label: string;
   values: string[];
   onChange: (v: string[]) => void;
@@ -671,10 +669,7 @@ export function GoodsNeedForm(props: {
     [isAtOrigin],
   );
   const availableCustomsOptions = React.useMemo(
-    () =>
-      isAtOrigin
-        ? [allCustomsOption, ...customsOptions]
-        : customsOptions,
+    () => (isAtOrigin ? [allCustomsOption, ...customsOptions] : customsOptions),
     [isAtOrigin],
   );
 
@@ -799,7 +794,7 @@ export function GoodsNeedForm(props: {
             )}
           />
           <Field
-            label="مبلغ فی برای هر واحد ارز"
+            label="مبلغ فی (تومان) برای هر واحد ارز"
             error={errors.fee_amount?.message}
           >
             <Input type="number" step="0.01" {...register("fee_amount")} />
@@ -807,7 +802,7 @@ export function GoodsNeedForm(props: {
           <Controller
             control={control}
             name="entry_border"
-            render={({ field }) => (
+            render={({ field }) =>
               isAtOrigin ? (
                 <MultiSelectCombobox
                   label="مرز ورودی"
@@ -828,12 +823,12 @@ export function GoodsNeedForm(props: {
                   error={errors.entry_border?.message}
                 />
               )
-            )}
+            }
           />
           <Controller
             control={control}
             name="customs"
-            render={({ field }) => (
+            render={({ field }) =>
               isAtOrigin ? (
                 <MultiSelectCombobox
                   label="گمرک"
@@ -854,7 +849,7 @@ export function GoodsNeedForm(props: {
                   error={errors.customs?.message}
                 />
               )
-            )}
+            }
           />
           <Controller
             control={control}
