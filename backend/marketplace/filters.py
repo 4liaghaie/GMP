@@ -10,18 +10,12 @@ class RegisteredOrderMarketplaceFilter(filters.FilterSet):
     total_value_min = filters.NumberFilter(field_name="total_value", lookup_expr="gte")
     total_value_max = filters.NumberFilter(field_name="total_value", lookup_expr="lte")
 
-    entry_border = filters.CharFilter(field_name="entry_border", lookup_expr="icontains")
-    customs = filters.CharFilter(field_name="customs", lookup_expr="icontains")
     currency_supply = filters.CharFilter(field_name="currency_supply", lookup_expr="icontains")
     bank_name = filters.CharFilter(field_name="bank_name", lookup_expr="icontains")
     bank_branch = filters.CharFilter(field_name="bank_branch", lookup_expr="icontains")
     payment_instrument = filters.CharFilter(field_name="payment_instrument", lookup_expr="icontains")
     currency_type = filters.CharFilter(field_name="currency_type", lookup_expr="icontains")
-    terms_of_delivery = filters.CharFilter(field_name="terms_of_delivery", lookup_expr="icontains")
-    means_of_transport = filters.CharFilter(field_name="means_of_transport", lookup_expr="icontains")
-    country_of_origin = filters.CharFilter(field_name="country_of_origin", lookup_expr="icontains")
 
-    partial_shipment = filters.BooleanFilter(field_name="partial_shipment")
     hs_code = filters.CharFilter(method="filter_hscode")
 
     def filter_q(self, queryset, name, value):
@@ -55,15 +49,9 @@ class RegisteredOrderMarketplaceFilter(filters.FilterSet):
     class Meta:
         model = RegisteredOrder
         fields = [
-            "entry_border",
-            "customs",
             "currency_supply",
             "bank_name",
             "bank_branch",
             "payment_instrument",
             "currency_type",
-            "terms_of_delivery",
-            "partial_shipment",
-            "means_of_transport",
-            "country_of_origin",
         ]

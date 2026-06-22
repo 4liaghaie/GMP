@@ -107,7 +107,7 @@ class RegisteredOrderVerifyAPIView(APIView):
 
 
 class MarketplaceRegisteredOrderListAPIView(generics.ListAPIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = PublicRegisteredOrderSerializer
 
     filter_backends = [DjangoFilterBackend]
@@ -130,7 +130,7 @@ class MarketplaceRegisteredOrderListAPIView(generics.ListAPIView):
 
 
 class MarketplaceRegisteredOrderDetailAPIView(generics.RetrieveAPIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = PublicRegisteredOrderSerializer
     lookup_field = "uuid"
     lookup_url_kwarg = "uuid"
@@ -151,6 +151,7 @@ class MarketplaceRegisteredOrderDetailAPIView(generics.RetrieveAPIView):
 
 class GoodsNeedListCreateAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
         if is_admin_user(request.user):
@@ -174,6 +175,7 @@ class GoodsNeedListCreateAPIView(APIView):
 
 class GoodsNeedDetailAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     lookup_field = "uuid"
     lookup_url_kwarg = "uuid"
 
@@ -207,7 +209,7 @@ class GoodsNeedDetailAPIView(APIView):
 
 
 class MarketplaceGoodsNeedListAPIView(generics.ListAPIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = GoodsNeedSerializer
 
     def get_queryset(self):

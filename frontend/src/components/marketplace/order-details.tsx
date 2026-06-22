@@ -154,6 +154,38 @@ function GoodMobileCard({ g }: { g: OrderGood }) {
             {safeText(g.description)}
           </div>
           <Badge variant="secondary" className="rounded-xl">
+            {safeText(g.goods_status)}
+          </Badge>
+        </div>
+
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <Badge variant="outline" className="rounded-xl">
+            HS: {safeText(g.hs_code)}
+          </Badge>
+        </div>
+
+        <Separator />
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">قیمت</span>
+          <span className="font-semibold">
+            {formatNumLike(g.price ?? g.line_total)}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/*
+  return (
+    <Card className="rounded-2xl shadow-sm">
+      <CardContent className="space-y-3 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="text-sm font-semibold leading-6">
+            {safeText(g.description)}
+          </div>
+          <Badge variant="secondary" className="rounded-xl">
             {safeText(g.unit)}
           </Badge>
         </div>
@@ -195,9 +227,67 @@ function GoodMobileCard({ g }: { g: OrderGood }) {
       </CardContent>
     </Card>
   );
-}
+*/
 
 function GoodsTableDesktop({ order }: { order: MarketplaceOrder }) {
+  return (
+    <div className="rounded-2xl border bg-card shadow-sm">
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="text-sm font-semibold">اقلام کالا</div>
+        <div className="text-xs text-muted-foreground">
+          {order.goods?.length ? `${order.goods.length} ردیف` : "بدون کالا"}
+        </div>
+      </div>
+
+      <ScrollArea className="h-[48dvh]">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-right">قیمت</TableHead>
+              <TableHead className="text-right">HS</TableHead>
+              <TableHead className="text-right w-[40%]">شرح</TableHead>
+              <TableHead className="text-right w-[60px]">ردیف</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {order.goods?.length ? (
+              order.goods.map((g, index) => (
+                <TableRow key={g.uuid} className="hover:bg-muted/30">
+                  <TableCell className="text-right font-semibold">
+                    {formatNumLike(g.price ?? g.line_total)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant="outline" className="rounded-xl">
+                      {safeText(g.hs_code)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="font-medium">{safeText(g.description)}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      وضعیت: {safeText(g.goods_status)}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-medium text-muted-foreground">
+                    {index + 1}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell className="text-right" colSpan={4}>
+                  کالایی ثبت نشده است.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </ScrollArea>
+    </div>
+  );
+}
+
+/*
   return (
     <div className="rounded-2xl border bg-card shadow-sm">
       <div className="flex items-center justify-between border-b px-4 py-3">
@@ -224,7 +314,7 @@ function GoodsTableDesktop({ order }: { order: MarketplaceOrder }) {
             {order.goods?.length ? (
               order.goods.map((g, index) => (
                 <TableRow key={g.uuid} className="hover:bg-muted/30">
-                  {/* ✅ Index */}
+                  {/* Index * /}
 
                   <TableCell className="text-right font-semibold">
                     {formatNumLike(g.line_total)}
@@ -269,7 +359,7 @@ function GoodsTableDesktop({ order }: { order: MarketplaceOrder }) {
       </ScrollArea>
     </div>
   );
-}
+*/
 
 function GoodsTable({ order }: { order: MarketplaceOrder }) {
   return (
@@ -338,11 +428,6 @@ function SummaryCard({ order }: { order: MarketplaceOrder }) {
 
         <Separator />
 
-        <div className="grid gap-2">
-          <KeyValue label="وزن خالص" value={formatNumLike(order.total_nw)} />
-          <KeyValue label="وزن ناخالص" value={formatNumLike(order.total_gw)} />
-          <KeyValue label="تعداد کل" value={formatNumLike(order.total_qty)} />
-        </div>
       </CardContent>
     </Card>
   );
@@ -381,7 +466,7 @@ function DetailsMeta({ order }: { order: MarketplaceOrder }) {
         <KeyValue label="مبدا" value={safeText(order.country_of_origin)} />
         <KeyValue
           label="حمل به دفعات"
-          value={order.partial_shipment ? "بله" : "خیر"}
+          value="-"
         />
         <KeyValue label="انقضا" value={formatExpireDate(order.expire_date)} />
       </CardContent>
@@ -393,13 +478,17 @@ function DetailsMeta({ order }: { order: MarketplaceOrder }) {
    Contact UI
 ========================= */
 
-function ContactStripCompact({ order }: { order: MarketplaceOrder }) {
+function ContactStripCompact({
+  order,
+  referenceText,
+}: {
+  order: MarketplaceOrder;
+  referenceText: string;
+}) {
   const waLink = React.useMemo(() => {
-    const msg = `${WHATSAPP_MESSAGE}\nشماره ثبت سفارش: ${safeText(
-      order.order_number,
-    )}`;
+    const msg = `${WHATSAPP_MESSAGE}\nشناسه سفارش: ${referenceText}`;
     return buildWhatsAppLink(WHATSAPP_NUMBER, msg);
-  }, [order.order_number]);
+  }, [referenceText]);
 
   const displayPhone = `+${String(WHATSAPP_NUMBER).replace(/[^\d]/g, "")}`;
 
@@ -448,13 +537,17 @@ function ContactStripCompact({ order }: { order: MarketplaceOrder }) {
   );
 }
 
-function ContactPanelMobile({ order }: { order: MarketplaceOrder }) {
+function ContactPanelMobile({
+  order,
+  referenceText,
+}: {
+  order: MarketplaceOrder;
+  referenceText: string;
+}) {
   const waLink = React.useMemo(() => {
-    const msg = `${WHATSAPP_MESSAGE}\nشماره ثبت سفارش: ${safeText(
-      order.order_number,
-    )}`;
+    const msg = `${WHATSAPP_MESSAGE}\nشناسه سفارش: ${referenceText}`;
     return buildWhatsAppLink(WHATSAPP_NUMBER, msg);
-  }, [order.order_number]);
+  }, [referenceText]);
 
   const displayPhone = `+${String(WHATSAPP_NUMBER).replace(/[^\d]/g, "")}`;
 
@@ -517,10 +610,14 @@ function DesktopLayout({
   order,
   copied,
   onCopy,
+  visibleOrderNumber,
+  referenceText,
 }: {
   order: MarketplaceOrder;
   copied: boolean;
   onCopy: () => void;
+  visibleOrderNumber: string | null;
+  referenceText: string;
 }) {
   return (
     <div className="space-y-4">
@@ -538,9 +635,7 @@ function DesktopLayout({
                 </Badge>
               </div>
               <div>
-                <div className="text-xl font-black">
-                  {safeText(order.order_number)}
-                </div>
+                <div className="text-xl">{safeText(order.uuid)}</div>
                 <div className="mt-1 text-sm text-muted-foreground">
                   فروشنده: {safeText(order.user)} • مرز ورودی:{" "}
                   {safeText(order.entry_border)}
@@ -620,6 +715,13 @@ function DesktopLayout({
                     icon={<User2 className="h-4 w-4" />}
                   />
                 ) : null}
+                {visibleOrderNumber ? (
+                  <KeyValue
+                    label="شماره ثبت سفارش"
+                    value={visibleOrderNumber}
+                    icon={<BadgeCheck className="h-4 w-4" />}
+                  />
+                ) : null}
                 <KeyValue
                   label="مرز ورودی"
                   value={safeText(order.entry_border)}
@@ -641,7 +743,7 @@ function DesktopLayout({
 
         <TabsContent value="contact" className="mt-4">
           <div className="max-w-md">
-            <ContactStripCompact order={order} />
+            <ContactStripCompact order={order} referenceText={referenceText} />
           </div>
         </TabsContent>
       </Tabs>
@@ -653,7 +755,15 @@ function DesktopLayout({
    Mobile body
 ========================= */
 
-function MobileBody({ order }: { order: MarketplaceOrder }) {
+function MobileBody({
+  order,
+  visibleOrderNumber,
+  referenceText,
+}: {
+  order: MarketplaceOrder;
+  visibleOrderNumber: string | null;
+  referenceText: string;
+}) {
   return (
     <div className="space-y-4">
       <Tabs defaultValue="goods" className="w-full">
@@ -685,7 +795,7 @@ function MobileBody({ order }: { order: MarketplaceOrder }) {
         </TabsContent>
 
         <TabsContent value="contact" className="mt-4">
-          <ContactPanelMobile order={order} />
+          <ContactPanelMobile order={order} referenceText={referenceText} />
         </TabsContent>
       </Tabs>
 
@@ -727,10 +837,19 @@ function MobileBody({ order }: { order: MarketplaceOrder }) {
 export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [copied, setCopied] = React.useState(false);
+  const [isAdmin, setIsAdmin] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsAdmin((localStorage.getItem("role") || "") === "admin");
+  }, []);
+
+  const visibleOrderNumber = isAdmin ? safeText(order.order_number) : null;
+  const referenceText = visibleOrderNumber || safeText(order.uuid);
 
   async function copyOrderNumber() {
     try {
-      await navigator.clipboard.writeText(String(order.order_number ?? ""));
+      await navigator.clipboard.writeText(String(referenceText));
       setCopied(true);
       setTimeout(() => setCopied(false), 900);
     } catch {}
@@ -777,6 +896,8 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
                 order={order}
                 copied={copied}
                 onCopy={copyOrderNumber}
+                visibleOrderNumber={visibleOrderNumber}
+                referenceText={referenceText}
               />
             </div>
           </ScrollArea>
@@ -862,7 +983,11 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
         {/* Body (scroll) */}
         <ScrollArea className="h-[calc(92dvh-160px-276px)]">
           <div className="p-4">
-            <MobileBody order={order} />
+            <MobileBody
+              order={order}
+              visibleOrderNumber={visibleOrderNumber}
+              referenceText={referenceText}
+            />
             <div className="h-4" />
           </div>
         </ScrollArea>

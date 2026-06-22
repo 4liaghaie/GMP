@@ -16,10 +16,22 @@ import { authFetch } from "@/lib/auth-api";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 function parseMultiValue(value: unknown) {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
   return String(value ?? "")
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function resolveProformaFileUrl(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  if (!API_BASE) return raw;
+  try {
+    return new URL(raw, API_BASE).toString();
+  } catch {
+    return raw;
+  }
 }
 
 async function fetchNeed(uuid: string, signal?: AbortSignal) {
@@ -41,8 +53,11 @@ function toFormDefaults(data: any): GoodsNeedFormInput {
   const goods = Array.isArray(data?.goods) ? data.goods : [];
   return {
     uuid: String(data?.uuid ?? ""),
+    proforma_file: undefined,
+    proforma_file_url: resolveProformaFileUrl(data?.proforma_file),
     status: String(data?.status ?? "در کشور مبدا"),
     country_of_origin: String(data?.country_of_origin ?? ""),
+    freight_price: Number(data?.freight_price ?? 0),
     currency_type: String(data?.currency_type ?? "USD"),
     fee_type: String(data?.fee_type ?? "فی دریافتی"),
     fee_amount: Number(data?.fee_amount ?? 0),

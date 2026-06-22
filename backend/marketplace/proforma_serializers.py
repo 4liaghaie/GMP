@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 
 from django.db import transaction
@@ -74,8 +75,10 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
             "uuid",
             "user",
             "created_at",
+            "proforma_file",
             "status",
             "country_of_origin",
+            "freight_price",
             "currency_type",
             "fee_type",
             "fee_amount",
@@ -87,8 +90,36 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "uuid", "user", "created_at"]
 
+    def validate_proforma_file(self, value):
+        if not value:
+            return value
+        name = (getattr(value, "name", "") or "").lower()
+        allowed_extensions = (".pdf", ".jpg", ".jpeg")
+        if not name.endswith(allowed_extensions):
+            raise serializers.ValidationError("Only PDF and JPG files are allowed.")
+        content_type = getattr(value, "content_type", "")
+        allowed_content_types = {"application/pdf", "image/jpeg"}
+        if content_type and content_type not in allowed_content_types:
+            raise serializers.ValidationError("Uploaded file must be a PDF or JPG.")
+        return value
+
+    def to_internal_value(self, data):
+        if hasattr(data, "dict"):
+            data = data.dict()
+        elif hasattr(data, "copy"):
+            data = data.copy()
+        goods_raw = data.get("goods")
+        if isinstance(goods_raw, str):
+            try:
+                data["goods"] = json.loads(goods_raw)
+            except json.JSONDecodeError as exc:
+                raise serializers.ValidationError({"goods": f"Invalid goods payload: {exc.msg}"})
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        if self.instance is None and not attrs.get("proforma_file"):
+            raise serializers.ValidationError({"proforma_file": "PDF or JPG file is required."})
         status_value = attrs.get("status", getattr(self.instance, "status", GoodsNeed.STATUS_AT_ORIGIN))
         customs_value = attrs.get("customs", getattr(self.instance, "customs", ""))
         entry_border_value = attrs.get("entry_border", getattr(self.instance, "entry_border", ""))

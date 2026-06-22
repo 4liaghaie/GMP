@@ -43,12 +43,7 @@ class OrderGoodWriteSerializer(serializers.ModelSerializer):
             "description",
             "hs_code_id",
             "goods_status",
-            "quantity",
-            "origin",
-            "unit_price",
-            "unit",
-            "nw_kg",
-            "gw_kg",
+            "price",
         ]
 
 
@@ -65,17 +60,12 @@ class OrderGoodReadSerializer(serializers.ModelSerializer):
             "hs_code",
             "hs_code_id",
             "goods_status",
-            "quantity",
-            "origin",
-            "unit_price",
-            "unit",
-            "nw_kg",
-            "gw_kg",
+            "price",
             "line_total",
         ]
 
     def get_line_total(self, obj):
-        return (obj.quantity or Decimal("0")) * (obj.unit_price or Decimal("0"))
+        return obj.price or Decimal("0")
 
 
 class GoodsNeedGoodWriteSerializer(serializers.ModelSerializer):
@@ -142,33 +132,20 @@ class RegisteredOrderCreateUpdateSerializer(serializers.ModelSerializer):
             "fee_type",
             "fee_amount",
             "applicant_name",
-            "national_code",
-            "entry_border",
-            "customs",
             "currency_supply",
             "bank_name",
             "bank_branch",
             "payment_instrument",
             "expire_date",
-            "terms_of_delivery",
-            "partial_shipment",
-            "means_of_transport",
-            "country_of_origin",
-            "total_gw",
-            "total_nw",
-            "total_qty",
             "goods",
         ]
         read_only_fields = [
             "uuid",
             "total_value",
             "sub_total",
-            "total_gw",
-            "total_nw",
-            "total_qty",
         ]
         extra_kwargs = {
-            "national_code": {"required": False, "allow_blank": True},
+            "payment_instrument": {"required": False, "allow_blank": True},
         }
 
     def validate_order_number(self, value):
@@ -182,13 +159,15 @@ class RegisteredOrderCreateUpdateSerializer(serializers.ModelSerializer):
 
     def validate_order_pdf(self, value):
         if not value:
-            raise serializers.ValidationError("PDF file is required.")
+            raise serializers.ValidationError("PDF or JPG file is required.")
         name = (getattr(value, "name", "") or "").lower()
-        if not name.endswith(".pdf"):
-            raise serializers.ValidationError("Only PDF files are allowed.")
+        allowed_extensions = (".pdf", ".jpg", ".jpeg")
+        if not name.endswith(allowed_extensions):
+            raise serializers.ValidationError("Only PDF and JPG files are allowed.")
         content_type = getattr(value, "content_type", "")
-        if content_type and content_type != "application/pdf":
-            raise serializers.ValidationError("Uploaded file must be a PDF.")
+        allowed_content_types = {"application/pdf", "image/jpeg"}
+        if content_type and content_type not in allowed_content_types:
+            raise serializers.ValidationError("Uploaded file must be a PDF or JPG.")
         return value
 
     def to_internal_value(self, data):
@@ -207,28 +186,17 @@ class RegisteredOrderCreateUpdateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         attrs = super().validate(attrs)
         if not self.instance and not attrs.get("order_pdf"):
-            raise serializers.ValidationError({"order_pdf": "PDF file is required."})
+            raise serializers.ValidationError({"order_pdf": "PDF or JPG file is required."})
         return attrs
 
     def _recalc_totals(self, order: RegisteredOrder) -> None:
         total_value = Decimal("0")
-        total_qty = Decimal("0")
-        total_nw = Decimal("0")
-        total_gw = Decimal("0")
 
         for g in order.goods.all():
-            qty = g.quantity or Decimal("0")
-            unit_price = g.unit_price or Decimal("0")
-            total_value += qty * unit_price
-            total_qty += qty
-            total_nw += g.nw_kg or Decimal("0")
-            total_gw += g.gw_kg or Decimal("0")
+            total_value += g.price or Decimal("0")
 
         order.total_value = total_value
         order.sub_total = total_value + (order.freight_price or Decimal("0"))
-        order.total_qty = total_qty
-        order.total_nw = total_nw
-        order.total_gw = total_gw
 
     @transaction.atomic
     def create(self, validated_data):
@@ -239,7 +207,7 @@ class RegisteredOrderCreateUpdateSerializer(serializers.ModelSerializer):
         OrderGood.objects.bulk_create([OrderGood(order=order, **item) for item in goods_data])
 
         self._recalc_totals(order)
-        order.save(update_fields=["total_value", "sub_total", "total_qty", "total_nw", "total_gw"])
+        order.save(update_fields=["total_value", "sub_total"])
         return order
 
     @transaction.atomic
@@ -255,7 +223,7 @@ class RegisteredOrderCreateUpdateSerializer(serializers.ModelSerializer):
             OrderGood.objects.bulk_create([OrderGood(order=instance, **item) for item in goods_data])
 
         self._recalc_totals(instance)
-        instance.save(update_fields=["total_value", "sub_total", "total_qty", "total_nw", "total_gw"])
+        instance.save(update_fields=["total_value", "sub_total"])
         return instance
 
 
@@ -263,8 +231,8 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
     user_email = serializers.SerializerMethodField()
     user_phone = serializers.SerializerMethodField()
+    order_number = serializers.SerializerMethodField()
     applicant_name = serializers.SerializerMethodField()
-    national_code = serializers.SerializerMethodField()
     goods = OrderGoodReadSerializer(many=True)
 
     class Meta:
@@ -285,21 +253,11 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
             "fee_type",
             "fee_amount",
             "applicant_name",
-            "national_code",
-            "entry_border",
-            "customs",
             "currency_supply",
             "bank_name",
             "bank_branch",
             "payment_instrument",
             "expire_date",
-            "terms_of_delivery",
-            "partial_shipment",
-            "means_of_transport",
-            "country_of_origin",
-            "total_gw",
-            "total_nw",
-            "total_qty",
             "goods",
         ]
 
@@ -307,6 +265,12 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
         if getattr(obj.user, "username", None):
             return obj.user.username
         return f"user-{obj.user_id}"
+
+    def get_order_number(self, obj):
+        request = self.context.get("request")
+        if request and is_admin_user(request.user):
+            return obj.order_number
+        return None
 
     def get_user_email(self, obj):
         request = self.context.get("request")
@@ -325,13 +289,6 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
         if can_view_private_order_fields(request, obj):
             return obj.applicant_name
         return None
-
-    def get_national_code(self, obj):
-        request = self.context.get("request")
-        if can_view_private_order_fields(request, obj):
-            return obj.national_code
-        return None
-
 
 class GoodsNeedSerializer(serializers.ModelSerializer):
     goods = GoodsNeedGoodWriteSerializer(many=True, write_only=True)
@@ -496,13 +453,6 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
         if can_view_private_order_fields(request, obj):
             return obj.applicant_name
         return None
-
-    def get_national_code(self, obj):
-        request = self.context.get("request")
-        if can_view_private_order_fields(request, obj):
-            return obj.national_code
-        return None
-
 
 class GoodsNeedGoodWriteSerializer(serializers.ModelSerializer):
     hs_code_id = serializers.PrimaryKeyRelatedField(
@@ -716,17 +666,10 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
             return obj.applicant_name
         return None
 
-    def get_national_code(self, obj):
-        request = self.context.get("request")
-        if can_view_private_order_fields(request, obj):
-            return obj.national_code
-        return None
-
-
 class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
+    order_number = serializers.SerializerMethodField()
     applicant_name = serializers.SerializerMethodField()
-    national_code = serializers.SerializerMethodField()
     goods = OrderGoodReadSerializer(many=True, read_only=True)
 
     class Meta:
@@ -744,21 +687,11 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
             "fee_type",
             "fee_amount",
             "applicant_name",
-            "national_code",
-            "entry_border",
-            "customs",
             "currency_supply",
             "bank_name",
             "bank_branch",
             "payment_instrument",
             "expire_date",
-            "terms_of_delivery",
-            "partial_shipment",
-            "means_of_transport",
-            "country_of_origin",
-            "total_gw",
-            "total_nw",
-            "total_qty",
             "goods",
         ]
 
@@ -767,18 +700,17 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
             return obj.user.username
         return f"user-{obj.user_id}"
 
+    def get_order_number(self, obj):
+        request = self.context.get("request")
+        if request and is_admin_user(request.user):
+            return obj.order_number
+        return None
+
     def get_applicant_name(self, obj):
         request = self.context.get("request")
         if request and is_admin_user(request.user):
             return obj.applicant_name
         return None
-
-    def get_national_code(self, obj):
-        request = self.context.get("request")
-        if request and is_admin_user(request.user):
-            return obj.national_code
-        return None
-
 
 class GoodsNeedSerializer(serializers.ModelSerializer):
     hs_code_id = serializers.PrimaryKeyRelatedField(

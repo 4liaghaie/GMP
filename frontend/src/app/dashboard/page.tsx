@@ -132,7 +132,7 @@ function FeatureGroup({
           {icon}
         </div>
 
-        <CardTitle className="text-2xl font-black text-slate-950 dark:text-slate-100">
+        <CardTitle className="text-2xl  text-slate-950 dark:text-slate-100">
           {title}
         </CardTitle>
 
@@ -192,20 +192,20 @@ export default function DashboardPage() {
 
   const proformaLinks: DashboardLink[] = [
     {
-      title: "ایجاد پروفرما",
-      description: "ثبت پروفرمای جدید برای بازار",
+      title: "ایجاد بار",
+      description: "ثبت باری جدید برای بازار",
       href: "/add-need",
       icon: <PackageSearch className="h-5 w-5" />,
     },
     {
-      title: "پروفرماهای من",
-      description: "مدیریت و ویرایش پروفرماهای ثبت‌شده",
+      title: "بارهای من",
+      description: "مدیریت و ویرایش بارهای ثبت‌شده",
       href: "/my-needs",
       icon: <FileText className="h-5 w-5" />,
     },
     {
-      title: "مارکت‌پلیس پروفرما",
-      description: "مشاهده بارها و پروفرماهای موجود",
+      title: "مارکت‌پلیس بار",
+      description: "مشاهده بارها و بارهای موجود",
       href: "/marketplace/needs",
       icon: <Compass className="h-5 w-5" />,
     },
@@ -248,13 +248,13 @@ export default function DashboardPage() {
               داشبورد مدیریت
             </div>
 
-            <h1 className="mt-6 text-4xl font-black sm:text-5xl">
-              مدیریت ثبت سفارش و پروفرما
+            <h1 className="mt-6 text-4xl  sm:text-5xl">
+              مدیریت ثبت سفارش و بار
             </h1>
 
             <p className="mt-5 max-w-2xl text-base leading-8 text-white/70">
-              ایجاد، مدیریت و جستجوی ثبت سفارش‌ها و پروفرماها در یک داشبورد ساده
-              و متمرکز.
+              ایجاد، مدیریت و جستجوی ثبت سفارش‌ها و بارها در یک داشبورد ساده و
+              متمرکز.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
@@ -292,7 +292,7 @@ export default function DashboardPage() {
                   dark:hover:bg-slate-800
                 "
               >
-                <Link href="/add-need">ایجاد پروفرما</Link>
+                <Link href="/add-need">ایجاد بار</Link>
               </Button>
             </div>
           </div>
@@ -309,8 +309,8 @@ export default function DashboardPage() {
           />
 
           <FeatureGroup
-            title="پروفرما"
-            description="مدیریت پروفرماها و مشاهده بارهای موجود بازار"
+            title="بار"
+            description="مدیریت بارها و مشاهده بارهای موجود بازار"
             icon={<FileText className="h-8 w-8 text-amber-500" />}
             accent="bg-amber-500"
             links={proformaLinks}

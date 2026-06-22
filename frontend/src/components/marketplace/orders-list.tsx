@@ -70,12 +70,13 @@ export type OrderGood = {
   description: string;
   hs_code: string;
   goods_status: string;
-  quantity: string;
-  origin: string;
-  unit_price: string;
-  unit: string;
-  nw_kg: string;
-  gw_kg: string;
+  price: string;
+  quantity?: string | null;
+  origin?: string | null;
+  unit_price?: string | null;
+  unit?: string | null;
+  nw_kg?: string | null;
+  gw_kg?: string | null;
   line_total: string;
 };
 
@@ -93,23 +94,21 @@ export type MarketplaceOrder = {
   fee_amount: string;
   applicant_name?: string | null;
   national_code?: string | null;
-  entry_border: string;
-  customs?: string;
+  entry_border?: string | null;
+  customs?: string | null;
   currency_supply: string;
   bank_name: string;
   bank_branch: string;
   payment_instrument: string;
   expire_date: string;
 
-  terms_of_delivery: string;
-  partial_shipment: boolean;
-  means_of_transport: string;
+  terms_of_delivery?: string | null;
+  means_of_transport?: string | null;
+  country_of_origin?: string | null;
 
-  country_of_origin: string;
-
-  total_gw: string;
-  total_nw: string;
-  total_qty: string;
+  total_gw?: string | null;
+  total_nw?: string | null;
+  total_qty?: string | null;
 
   goods: OrderGood[];
 };
@@ -599,12 +598,6 @@ async function fetchMarketplaceOrders(args: {
   applicant_name: string;
   currency_type: string;
 
-  terms_of_delivery: string;
-  partial_shipment: string; // any/true/false
-  means_of_transport: string;
-
-  country_of_origin: string;
-
   ordering: SortKey;
   page: number;
   page_size: number;
@@ -617,10 +610,6 @@ async function fetchMarketplaceOrders(args: {
     total_value_range,
     applicant_name,
     currency_type,
-    terms_of_delivery,
-    partial_shipment,
-    means_of_transport,
-    country_of_origin,
     ordering,
     page,
     page_size,
@@ -628,11 +617,6 @@ async function fetchMarketplaceOrders(args: {
   } = args;
 
   const r = parseRange(total_value_range);
-  const partial =
-    partial_shipment === "any" || !partial_shipment
-      ? undefined
-      : partial_shipment === "true";
-
   const qs = buildQuery({
     q: q || undefined,
 
@@ -642,11 +626,6 @@ async function fetchMarketplaceOrders(args: {
 
     applicant_name: applicant_name || undefined,
     currency_type: currency_type || undefined,
-
-    terms_of_delivery: terms_of_delivery || undefined,
-    partial_shipment: partial ?? undefined,
-    means_of_transport: means_of_transport || undefined,
-    country_of_origin: country_of_origin || undefined,
 
     ordering: ordering === "newest" ? "-created_at" : "created_at",
     page,
@@ -729,7 +708,7 @@ function OrderCard({ order }: { order: MarketplaceOrder }) {
           <div className="space-y-1">
             <CardTitle className="text-base leading-7">
               ثبت سفارش{" "}
-              <span className="font-bold">{safeText(order.order_number)}</span>
+              <span className="font-bold">{safeText(order.uuid)}</span>
             </CardTitle>
             <CardDescription className="leading-6">
               فروشنده: {safeText(order.user)}
@@ -843,10 +822,6 @@ export default function OrdersList() {
     totalValueRange,
     applicantName,
     currencyType,
-    termsDelivery,
-    partialShipment,
-    transport,
-    originCountry,
     ordering,
     pageSize,
   ]);
@@ -865,11 +840,6 @@ export default function OrdersList() {
 
       applicant_name: applicantName.trim(),
       currency_type: currencyType.trim(),
-
-      terms_of_delivery: termsDelivery.trim(),
-      partial_shipment: partialShipment,
-      means_of_transport: transport.trim(),
-      country_of_origin: originCountry.trim(),
 
       ordering,
       page,
@@ -896,10 +866,6 @@ export default function OrdersList() {
     totalValueRange,
     applicantName,
     currencyType,
-    termsDelivery,
-    partialShipment,
-    transport,
-    originCountry,
     ordering,
     page,
     pageSize,
@@ -921,10 +887,6 @@ export default function OrdersList() {
       totalValueRange,
       applicantName,
       currencyType,
-      termsDelivery,
-      partialShipment,
-      transport,
-      originCountry,
       q: qDebounced,
       ordering,
       pageSize,
@@ -934,10 +896,6 @@ export default function OrdersList() {
     totalValueRange,
     applicantName,
     currencyType,
-    termsDelivery,
-    partialShipment,
-    transport,
-    originCountry,
     qDebounced,
     ordering,
     pageSize,
@@ -954,11 +912,7 @@ export default function OrdersList() {
     setApplicantName("");
     setCurrencyType("");
 
-    setTermsDelivery("");
     setPartialShipment("any");
-    setTransport("");
-
-    setOriginCountry("");
 
     setOrdering("newest");
     setPageSize(12);

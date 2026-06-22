@@ -572,7 +572,7 @@ async function fetchNeeds(args: {
   if (args.meansOfTransport?.trim())
     url.searchParams.set("means_of_transport", args.meansOfTransport.trim());
 
-  const res = await fetch(url.toString(), {
+  const res = await authFetch(url.toString(), {
     method: "GET",
     cache: "no-store",
     signal: args.signal,
@@ -694,6 +694,9 @@ function ProformaCard({ need }: { need: GoodsNeed }) {
           <CardDescription className="mt-2">
             بار #{safeText(need.id)} توسط {safeText(need.user)}
           </CardDescription>
+          <CardDescription className="mt-2 leading-7">
+            ID: {safeText(need.uuid)}
+          </CardDescription>
         </div>
       </CardHeader>
 
@@ -791,6 +794,18 @@ export default function NeedsMarketplaceList() {
   const [filterOpen, setFilterOpen] = React.useState(false);
 
   const load = React.useCallback(() => {
+    const hasTokens =
+      typeof window !== "undefined" &&
+      Boolean(
+        localStorage.getItem("access") && localStorage.getItem("refresh"),
+      );
+    if (!hasTokens) {
+      setItems([]);
+      setLoading(false);
+      setError("");
+      return;
+    }
+
     const ac = new AbortController();
     setLoading(true);
     setError("");

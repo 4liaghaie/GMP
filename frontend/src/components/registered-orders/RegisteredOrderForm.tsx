@@ -1,23 +1,33 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import * as React from "react";
-import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  CalendarIcon,
+  Check,
+  ChevronsUpDown,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import {
   Controller,
   useFieldArray,
   useForm,
-  type SubmitHandler,
   useWatch,
+  type SubmitHandler,
 } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarIcon, Check, ChevronsUpDown, X } from "lucide-react";
 import {
   Calendar as JalaliCalendar,
   DateObject,
 } from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
+import { z } from "zod";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,15 +36,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -42,13 +43,24 @@ import {
   CommandInput,
   CommandItem,
 } from "@/components/ui/command";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { authFetch } from "@/lib/auth-api";
 import { bankOptions as rawBankOptions } from "@/lib/bankList";
 import { bankList as banksWithBranches } from "@/lib/branchList";
-import { borders } from "@/lib/borderList";
-import { countries } from "@/lib/countryList";
-import { iranCustoms } from "@/lib/customsList";
 import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
@@ -60,43 +72,19 @@ type HSCodeOption = {
   goods_name_en?: string | null;
 };
 
-type Country = { name: string; code: string; persianName: string };
-
 const currencyOptions = [
   { value: "USD", label: "دلار (USD)" },
   { value: "EUR", label: "یورو (EUR)" },
   { value: "AED", label: "درهم (AED)" },
   { value: "CNY", label: "یوان چین (CNY)" },
   { value: "TRY", label: "لیر ترکیه (TRY)" },
-] as const;
-
-const unitOptions = [
-  { value: "KG", label: "کیلوگرم (KG)" },
-  { value: "PCS", label: "عدد (PCS)" },
-  { value: "TON", label: "تن (TON)" },
-  { value: "L", label: "لیتر (L)" },
-  { value: "M", label: "متر (M)" },
-] as const;
+];
 
 const goodsStatusOptions = [
   { value: "نو", label: "نو" },
   { value: "مستعمل", label: "مستعمل" },
   { value: "بازسازی شده", label: "بازسازی شده" },
-] as const;
-
-const deliveryTerms = [
-  { value: "EXW", label: "EXW (تحویل در محل کارخانه)" },
-  { value: "FOB", label: "FOB (تحویل روی عرشه کشتی)" },
-  { value: "CFR", label: "CFR (هزینه و کرایه حمل)" },
-  { value: "CIF", label: "CIF (هزینه، بیمه و کرایه حمل)" },
-  { value: "DAP", label: "DAP (تحویل در محل مقصد)" },
-  { value: "CPT", label: "CPT (کرایه حمل پرداخت‌شده تا مقصد)" },
-  { value: "CIP", label: "CIP (کرایه و بیمه پرداخت‌شده تا مقصد)" },
-  { value: "FCA", label: "FCA (تحویل به حمل‌کننده)" },
-  { value: "FAS", label: "FAS (تحویل کنار کشتی)" },
-  { value: "DDP", label: "DDP (تحویل در مقصد با پرداخت حقوق و عوارض گمرکی)" },
-  { value: "DPU", label: "DPU (تحویل در محل تخلیه‌شده)" },
-] as const;
+];
 
 const currencySupplyOptions = [
   { value: "خرید ارز از سیستم بانکی", label: "خرید ارز از سیستم بانکی" },
@@ -106,29 +94,12 @@ const currencySupplyOptions = [
   { value: "از محل صادرات دیگران", label: "از محل صادرات دیگران" },
   { value: "از محل ارز دیگران", label: "از محل ارز دیگران" },
   { value: "از محل صادرات", label: "از محل صادرات" },
-] as const;
+];
 
 const feeTypeOptions = [
   { value: "فی دریافتی", label: "فی دریافتی" },
   { value: "فی پرداختی", label: "فی پرداختی" },
-] as const;
-
-const transportMeans = [
-  { value: "SEA", label: "دریایی" },
-  { value: "AIR", label: "هوایی" },
-  { value: "ROAD", label: "زمینی" },
-  { value: "RAIL", label: "ریلی" },
-] as const;
-
-const borderOptions = borders.map((border) => ({
-  value: border,
-  label: border,
-}));
-
-const customsOptions = iranCustoms.map((customs) => ({
-  value: String(customs.ctmVCodeInt),
-  label: `${customs.ctmNameStr} (${customs.ctmVCodeInt})`,
-}));
+];
 
 const bankOptions = rawBankOptions.map((bank) => ({
   value: String(bank.value),
@@ -161,17 +132,12 @@ function getBranchOptions(bankValue: string) {
 }
 
 const goodSchema = z.object({
+  uuid: z.string().optional(),
   description: z.string().min(1, "شرح کالا الزامی است"),
   hs_code: z.string().optional(),
   hs_code_id: z.coerce.number().int().positive("کد HS الزامی است"),
   goods_status: z.string().min(1, "وضعیت کالا الزامی است"),
-  quantity: z.coerce.number().positive("مقدار باید بیشتر از ۰ باشد"),
-  origin: z.array(z.string()).min(1, "مبدا الزامی است"),
-  unit_price: z.coerce.number().nonnegative("قیمت واحد باید >= ۰ باشد"),
-  line_subtotal: z.coerce.number().nonnegative("ارزش کالا باید >= ۰ باشد"),
-  unit: z.string().min(1, "واحد الزامی است"),
-  nw_kg: z.coerce.number().nonnegative("وزن خالص باید >= ۰ باشد"),
-  gw_kg: z.coerce.number().nonnegative("وزن ناخالص باید >= ۰ باشد"),
+  price: z.coerce.number().nonnegative("قیمت باید صفر یا بیشتر باشد"),
 });
 
 const orderSchema = z.object({
@@ -179,110 +145,40 @@ const orderSchema = z.object({
   order_number: z.string().optional(),
   order_pdf: z.any().optional(),
   order_pdf_url: z.string().optional(),
-  id: z.string().min(1, "شناسه ثبت سفارش الزامی است"),
-  freight_price: z.coerce.number().nonnegative("کرایه حمل باید >= ۰ باشد"),
+  id: z.string().min(1, "شماره ثبت سفارش الزامی است"),
+  freight_price: z.coerce
+    .number()
+    .nonnegative("کرایه حمل باید صفر یا بیشتر باشد"),
   currency_type: z.string().min(1, "نوع ارز الزامی است"),
   fee_type: z.string().min(1, "نوع فی الزامی است"),
-  fee_amount: z.coerce.number().nonnegative("مبلغ فی باید >= ۰ باشد"),
-  applicant_name: z.string().min(1, "نام درخواست‌دهنده الزامی است"),
-  national_code: z.string().optional().default(""),
-  entry_border: z.array(z.string()).min(1, "مرز ورودی الزامی است"),
-  customs: z.array(z.string()).min(1, "گمرک الزامی است"),
+  fee_amount: z.coerce.number().nonnegative("مبلغ فی باید صفر یا بیشتر باشد"),
+  applicant_name: z.string().min(1, "نام متقاضیالزامی است"),
   currency_supply: z.string().min(1, "تامین ارز الزامی است"),
   bank_name: z.string().min(1, "نام بانک الزامی است"),
   bank_branch: z.string().min(1, "شعبه بانک الزامی است"),
-  payment_instrument: z.string().min(1, "ابزار پرداخت الزامی است"),
+  payment_instrument: z.string().optional().default(""),
   expire_date: z.string().min(1, "تاریخ انقضا الزامی است"),
-  terms_of_delivery: z.string().min(1, "شرایط تحویل الزامی است"),
-  partial_shipment: z.boolean().default(false),
-  means_of_transport: z.array(z.string()).min(1, "روش حمل الزامی است"),
-  country_of_origin: z.array(z.string()).min(1, "کشور مبدا الزامی است"),
   goods: z.array(goodSchema).min(1, "حداقل یک کالا اضافه کنید"),
 });
 
 export type RegisteredOrderFormInput = z.input<typeof orderSchema>;
-type RegisteredOrderForm = z.output<typeof orderSchema>;
+type RegisteredOrderFormValues = z.output<typeof orderSchema>;
+type GoodDraft = z.input<typeof goodSchema>;
 
-function fmt(n: number) {
-  const x = Number.isFinite(n) ? n : 0;
-  return x.toLocaleString("fa-IR", { maximumFractionDigits: 2 });
-}
-
-function calcUnitPrice(quantity: unknown, lineSubtotal: unknown) {
-  const qty = Number(quantity ?? 0);
-  const subtotal = Number(lineSubtotal ?? 0);
-  if (!Number.isFinite(qty) || qty <= 0) return 0;
-  if (!Number.isFinite(subtotal) || subtotal <= 0) return 0;
-  return subtotal / qty;
-}
-
-function safeTrim(v: unknown) {
-  return typeof v === "string" ? v.trim() : "";
-}
-
-function normalizeFa(s: string) {
-  return (s || "")
-    .toLowerCase()
-    .replace(/ي/g, "ی")
-    .replace(/ك/g, "ک")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function truncateText(s: string, max = 30) {
-  const t = (s ?? "").trim();
-  if (!t) return "";
-  return t.length > max ? t.slice(0, max) + "..." : t;
-}
-
-function joinMultiValue(values: string[]) {
-  return values
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .join(", ");
-}
-
-function formatGregorianAsJalali(date: Date) {
-  const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian-nu-latn", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const year = parts.find((part) => part.type === "year")?.value ?? "";
-  const month = parts.find((part) => part.type === "month")?.value ?? "";
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-  return `${year}/${month}/${day}`;
-}
-
-function parseGregorianDateValue(value: string) {
-  const match = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(value || "");
-  if (!match) return undefined;
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(year, month - 1, day);
-
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  ) {
-    return undefined;
-  }
-
-  return date;
+function fmt(n: unknown) {
+  const x = Number(n ?? 0);
+  return Number.isFinite(x)
+    ? x.toLocaleString("fa-IR", { maximumFractionDigits: 2 })
+    : "۰";
 }
 
 function normalizeExpireDateValue(value: string) {
-  const raw = (value || "").trim();
-  if (!raw) return "";
-  const year = Number(raw.slice(0, 4));
-  if (Number.isFinite(year) && year >= 1700) {
-    const gregorianDate = parseGregorianDateValue(raw);
-    return gregorianDate ? formatGregorianAsJalali(gregorianDate) : raw;
-  }
-  return raw;
+  return String(value || "").trim();
+}
+
+function selectedFile(value: unknown): File | null {
+  if (value instanceof FileList) return value.item(0);
+  return value instanceof File ? value : null;
 }
 
 function useDebouncedValue<T>(value: T, delay = 250) {
@@ -295,13 +191,12 @@ function useDebouncedValue<T>(value: T, delay = 250) {
 }
 
 async function fetchHSCodes(
-  query: string = "",
+  query = "",
   signal?: AbortSignal,
 ): Promise<HSCodeOption[]> {
-  if (!API_BASE) throw new Error("متغیر NEXT_PUBLIC_API_BASE تنظیم نشده است");
-
+  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
   const url = new URL(`${API_BASE}/hs-codes/`);
-  const q = (query ?? "").trim();
+  const q = query.trim();
   if (q) url.searchParams.set("search", q);
 
   const res = await authFetch(url.toString(), {
@@ -309,23 +204,79 @@ async function fetchHSCodes(
     cache: "no-store",
     signal,
   });
-
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) {
-    throw new Error(data?.detail || "خطا در دریافت HS Code ها");
-  }
+  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت کدهای HS");
 
-  const items = Array.isArray(data)
+  const rows = Array.isArray(data)
     ? data
     : Array.isArray(data?.results)
       ? data.results
       : [];
-  return items.map((x: any) => ({
+  return rows.map((x: any) => ({
     id: Number(x.id),
     code: String(x.code ?? ""),
     goods_name_fa: x.goods_name_fa ?? null,
     goods_name_en: x.goods_name_en ?? null,
   }));
+}
+
+async function createOrder(payload: FormData) {
+  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
+  const res = await authFetch(`${API_BASE}/registered-orders/`, {
+    method: "POST",
+    body: payload,
+  });
+  const data = (await res.json().catch(() => ({}))) as any;
+  if (!res.ok)
+    throw new Error(data?.detail || JSON.stringify(data) || "خطا در ثبت سفارش");
+  return data;
+}
+
+async function updateOrder(uuid: string, payload: FormData) {
+  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
+  const res = await authFetch(
+    `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/`,
+    {
+      method: "PATCH",
+      body: payload,
+    },
+  );
+  const data = (await res.json().catch(() => ({}))) as any;
+  if (!res.ok)
+    throw new Error(
+      data?.detail || JSON.stringify(data) || "خطا در ویرایش سفارش",
+    );
+  return data;
+}
+
+function buildOrderFormData(values: RegisteredOrderFormValues) {
+  const formData = new FormData();
+  formData.append("order_number", values.id);
+  formData.append("freight_price", String(values.freight_price ?? 0));
+  formData.append("currency_type", values.currency_type);
+  formData.append("fee_type", values.fee_type);
+  formData.append("fee_amount", String(values.fee_amount ?? 0));
+  formData.append("applicant_name", values.applicant_name);
+  formData.append("currency_supply", values.currency_supply);
+  formData.append("bank_name", values.bank_name);
+  formData.append("bank_branch", values.bank_branch);
+  formData.append("payment_instrument", values.payment_instrument);
+  formData.append("expire_date", normalizeExpireDateValue(values.expire_date));
+  formData.append(
+    "goods",
+    JSON.stringify(
+      values.goods.map((g) => ({
+        description: g.description,
+        hs_code_id: Number(g.hs_code_id),
+        goods_status: g.goods_status,
+        price: String(g.price ?? 0),
+      })),
+    ),
+  );
+
+  const file = selectedFile(values.order_pdf);
+  if (file) formData.append("order_pdf", file);
+  return formData;
 }
 
 function Field(props: {
@@ -338,555 +289,219 @@ function Field(props: {
       <Label className="text-sm">{props.label}</Label>
       {props.children}
       {props.error ? (
-        <p className="text-sm text-destructive">{props.error}</p>
+        <p className="text-xs text-destructive">{props.error}</p>
       ) : null}
     </div>
   );
 }
 
-function DatePickerField(props: {
-  label: string;
-  value: string;
+function Combobox(props: {
+  items: Array<{ value: string; label: string }>;
+  value?: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  searchPlaceholder?: string;
+  error?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const selected = props.items.find((item) => item.value === props.value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(
+            "h-11 w-full justify-between bg-background text-right font-normal",
+            !selected && "text-muted-foreground",
+            props.error && "border-destructive",
+          )}
+        >
+          <span className="truncate">
+            {selected?.label || props.placeholder}
+          </span>
+          <ChevronsUpDown className="h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+      >
+        <Command>
+          <CommandInput placeholder={props.searchPlaceholder || "جستجو..."} />
+          <CommandEmpty>نتیجه‌ای پیدا نشد.</CommandEmpty>
+          <CommandGroup className="max-h-72 overflow-auto">
+            {props.items.map((item) => (
+              <CommandItem
+                key={item.value}
+                value={`${item.label} ${item.value}`}
+                onSelect={() => {
+                  props.onChange(item.value);
+                  setOpen(false);
+                }}
+              >
+                <Check
+                  className={cn(
+                    "ml-2 h-4 w-4",
+                    item.value === props.value ? "opacity-100" : "opacity-0",
+                  )}
+                />
+                <span>{item.label}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function HSCodePicker(props: {
+  value?: number;
+  selectedLabel?: string;
+  onChange: (id: number, option?: HSCodeOption) => void;
+  error?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const debouncedQuery = useDebouncedValue(query);
+  const [items, setItems] = React.useState<HSCodeOption[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [selected, setSelected] = React.useState<HSCodeOption | null>(null);
+
+  React.useEffect(() => {
+    const ac = new AbortController();
+    setLoading(true);
+    fetchHSCodes(debouncedQuery, ac.signal)
+      .then(setItems)
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+    return () => ac.abort();
+  }, [debouncedQuery]);
+
+  React.useEffect(() => {
+    if (!props.value) setSelected(null);
+  }, [props.value]);
+
+  const label = selected
+    ? `${selected.code} - ${selected.goods_name_fa || selected.goods_name_en || ""}`
+    : props.selectedLabel || "";
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(
+            "h-11 w-full justify-between bg-background text-right font-normal",
+            !props.value && "text-muted-foreground",
+            props.error && "border-destructive",
+          )}
+        >
+          <span className="truncate">
+            {props.value ? label || String(props.value) : "انتخاب HS Code"}
+          </span>
+          <ChevronsUpDown className="h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+      >
+        <Command shouldFilter={false}>
+          <CommandInput
+            value={query}
+            onValueChange={setQuery}
+            placeholder="کد یا نام کالا..."
+          />
+          <CommandEmpty>
+            {loading ? "در حال جستجو..." : "نتیجه‌ای پیدا نشد."}
+          </CommandEmpty>
+          <CommandGroup className="max-h-72 overflow-auto">
+            {items.map((item) => (
+              <CommandItem
+                key={item.id}
+                value={`${item.code} ${item.goods_name_fa || ""} ${item.goods_name_en || ""}`}
+                onSelect={() => {
+                  setSelected(item);
+                  props.onChange(item.id, item);
+                  setOpen(false);
+                }}
+              >
+                <Check
+                  className={cn(
+                    "ml-2 h-4 w-4",
+                    item.id === props.value ? "opacity-100" : "opacity-0",
+                  )}
+                />
+                <span className="truncate">
+                  {item.code} -{" "}
+                  {item.goods_name_fa || item.goods_name_en || "بدون نام"}
+                </span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function JalaliDateField(props: {
+  value?: string;
   onChange: (value: string) => void;
   error?: string;
 }) {
   const [open, setOpen] = React.useState(false);
-  const normalizedValue = React.useMemo(
-    () => normalizeExpireDateValue(props.value),
-    [props.value],
-  );
-
   return (
-    <div className="space-y-2">
-      <Label className="text-sm">{props.label}</Label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            className={cn(
-              "w-full justify-between text-right font-normal",
-              !props.value && "text-muted-foreground",
-            )}
-          >
-            <span>{normalizedValue || "انتخاب تاریخ"}</span>
-            <CalendarIcon className="ms-2 h-4 w-4 opacity-60" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <JalaliCalendar
-            value={normalizedValue || undefined}
-            calendar={persian}
-            locale={persian_fa}
-            format="YYYY/MM/DD"
-            onChange={(value) => {
-              if (!value) return;
-              props.onChange(
-                value instanceof DateObject
-                  ? value.format("YYYY/MM/DD")
-                  : String(value),
-              );
-              setOpen(false);
-            }}
-            className="shadow-none"
-          />
-        </PopoverContent>
-      </Popover>
-      {props.error ? (
-        <p className="text-sm text-destructive">{props.error}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function SearchableCombobox<T extends { value: string; label: string }>(props: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  items: readonly T[];
-  placeholder?: string;
-  error?: string;
-  searchPlaceholder?: string;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const [q, setQ] = React.useState("");
-  const selected = React.useMemo(
-    () => props.items.find((x) => x.value === props.value),
-    [props.items, props.value],
-  );
-  const filtered = React.useMemo(() => {
-    const qq = normalizeFa(q);
-    if (!qq) return props.items;
-    return props.items.filter((it) =>
-      normalizeFa(`${it.label} ${it.value}`).includes(qq),
-    );
-  }, [props.items, q]);
-
-  return (
-    <div className="space-y-2">
-      <Label className="text-sm">{props.label}</Label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            <span
-              className={cn("truncate", !selected && "text-muted-foreground")}
-            >
-              {selected?.label || props.placeholder || "انتخاب..."}
-            </span>
-            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0"
-          align="start"
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(
+            "h-11 w-full justify-between bg-background text-right font-normal",
+            !props.value && "text-muted-foreground",
+            props.error && "border-destructive",
+          )}
         >
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder={props.searchPlaceholder || "جستجو..."}
-              value={q}
-              onValueChange={setQ}
-            />
-            <CommandEmpty>موردی پیدا نشد.</CommandEmpty>
-            <CommandGroup className="max-h-[320px] overflow-auto">
-              {filtered.map((it) => {
-                const isSelected = it.value === props.value;
-                return (
-                  <CommandItem
-                    key={it.value}
-                    value={it.value}
-                    onSelect={() => {
-                      props.onChange(it.value);
-                      setOpen(false);
-                      setQ("");
-                    }}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <span className="truncate">{it.label}</span>
-                    <Check
-                      className={cn(
-                        "h-4 w-4",
-                        isSelected ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
-      {props.error ? (
-        <p className="text-sm text-destructive">{props.error}</p>
-      ) : null}
-    </div>
+          <span>{props.value || "انتخاب تاریخ"}</span>
+          <CalendarIcon className="h-4 w-4 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3" align="start">
+        <JalaliCalendar
+          calendar={persian}
+          locale={persian_fa}
+          value={
+            props.value
+              ? new DateObject({
+                  date: props.value,
+                  calendar: persian,
+                  locale: persian_fa,
+                })
+              : undefined
+          }
+          onChange={(date) => {
+            props.onChange(date ? date.format("YYYY/MM/DD") : "");
+            setOpen(false);
+          }}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 
-function MultiSelectCombobox<
-  T extends { value: string; label: string },
->(props: {
-  label: string;
-  values: string[];
-  onChange: (values: string[]) => void;
-  items: readonly T[];
-  placeholder?: string;
-  error?: string;
-  searchPlaceholder?: string;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const [q, setQ] = React.useState("");
-  const filtered = React.useMemo(() => {
-    const qq = normalizeFa(q);
-    if (!qq) return props.items;
-    return props.items.filter((it) =>
-      normalizeFa(`${it.label} ${it.value}`).includes(qq),
-    );
-  }, [props.items, q]);
-  const selectedItems = React.useMemo(
-    () => props.items.filter((item) => props.values.includes(item.value)),
-    [props.items, props.values],
-  );
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <Label className="text-sm">{props.label}</Label>
-        {selectedItems.length ? (
-          <button
-            type="button"
-            className="text-xs text-muted-foreground transition hover:text-foreground"
-            onClick={() => props.onChange([])}
-          >
-            پاک کردن همه
-          </button>
-        ) : null}
-      </div>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            <span
-              className={cn(
-                "truncate",
-                selectedItems.length === 0 && "text-muted-foreground",
-              )}
-            >
-              {selectedItems.length
-                ? `${selectedItems.length} مورد انتخاب شده`
-                : props.placeholder || "انتخاب..."}
-            </span>
-            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0"
-          align="start"
-        >
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder={props.searchPlaceholder || "جستجو..."}
-              value={q}
-              onValueChange={setQ}
-            />
-            <CommandEmpty>موردی پیدا نشد.</CommandEmpty>
-            <CommandGroup className="max-h-[320px] overflow-auto">
-              {filtered.map((it) => {
-                const isSelected = props.values.includes(it.value);
-                return (
-                  <CommandItem
-                    key={it.value}
-                    value={it.value}
-                    onSelect={() => {
-                      props.onChange(
-                        isSelected
-                          ? props.values.filter((value) => value !== it.value)
-                          : [...props.values, it.value],
-                      );
-                    }}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <span className="truncate">{it.label}</span>
-                    <Check
-                      className={cn(
-                        "h-4 w-4",
-                        isSelected ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
-      {selectedItems.length ? (
-        <div className="flex flex-wrap gap-2">
-          {selectedItems.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              onClick={() =>
-                props.onChange(
-                  props.values.filter((value) => value !== item.value),
-                )
-              }
-              className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-3 py-1 text-xs transition hover:bg-muted"
-            >
-              <span>{item.label}</span>
-              <X className="h-3.5 w-3.5 opacity-70" />
-            </button>
-          ))}
-        </div>
-      ) : null}
-      {props.error ? (
-        <p className="text-sm text-destructive">{props.error}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function CountryCombobox(props: {
-  label: string;
-  value: string;
-  onChange: (code: string) => void;
-  error?: string;
-  placeholder?: string;
-}) {
-  const items = React.useMemo(
-    () =>
-      countries.map((c: Country) => ({
-        value: c.code,
-        label: `${c.persianName} (${c.code})`,
-      })),
-    [],
-  );
-
-  return (
-    <SearchableCombobox
-      label={props.label}
-      value={props.value}
-      onChange={props.onChange}
-      items={items}
-      placeholder={props.placeholder || "انتخاب کشور..."}
-      error={props.error}
-      searchPlaceholder="جستجو: نام فارسی / انگلیسی / کد..."
-    />
-  );
-}
-
-function CountryMultiSelectCombobox(props: {
-  label: string;
-  values: string[];
-  onChange: (codes: string[]) => void;
-  error?: string;
-  placeholder?: string;
-}) {
-  const items = React.useMemo(
-    () =>
-      countries.map((c: Country) => ({
-        value: c.code,
-        label: `${c.persianName} (${c.code})`,
-      })),
-    [],
-  );
-
-  return (
-    <MultiSelectCombobox
-      label={props.label}
-      values={props.values}
-      onChange={props.onChange}
-      items={items}
-      placeholder={props.placeholder || "انتخاب کشور..."}
-      error={props.error}
-      searchPlaceholder="جستجو: نام فارسی / انگلیسی / کد..."
-    />
-  );
-}
-
-function HSCodeCombobox(props: {
-  value: number;
-  onChange: (id: number) => void;
-  selectedCache: Map<number, HSCodeOption>;
-  error?: string;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const [q, setQ] = React.useState("");
-  const debouncedQ = useDebouncedValue(q, 250);
-  const [items, setItems] = React.useState<HSCodeOption[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [loadError, setLoadError] = React.useState("");
-
-  const selected =
-    items.find((x) => x.id === props.value) ||
-    props.selectedCache.get(props.value);
-  const selectedLabel = React.useMemo(() => {
-    if (!selected) return "";
-    const fa = safeTrim(selected.goods_name_fa);
-    const en = safeTrim(selected.goods_name_en);
-    const name = fa || en;
-    const shortName = truncateText(name, 30);
-    return shortName ? `${selected.code} — ${shortName}` : selected.code;
-  }, [selected]);
-
-  React.useEffect(() => {
-    if (!open) return;
-    const ac = new AbortController();
-    setLoading(true);
-    setLoadError("");
-    fetchHSCodes(debouncedQ, ac.signal)
-      .then((res) => {
-        setItems(res);
-        res.forEach((x) => props.selectedCache.set(x.id, x));
-      })
-      .catch((e: any) => {
-        if (e?.name === "AbortError") return;
-        setLoadError(e?.message || "خطا در جستجوی HS Code");
-        setItems([]);
-      })
-      .finally(() => setLoading(false));
-    return () => ac.abort();
-  }, [open, debouncedQ, props.selectedCache]);
-
-  const mergedItems = React.useMemo(() => {
-    if (!props.value) return items;
-    if (items.some((x) => x.id === props.value)) return items;
-    const cached = props.selectedCache.get(props.value);
-    return cached ? [cached, ...items] : items;
-  }, [items, props.value, props.selectedCache]);
-
-  return (
-    <div className="space-y-2">
-      <Label className="text-sm">کد HS</Label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
-            <span
-              className={cn(
-                "truncate",
-                !selectedLabel && "text-muted-foreground",
-              )}
-              title={selectedLabel || undefined}
-            >
-              {selectedLabel || "جستجو و انتخاب HS Code..."}
-            </span>
-            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0"
-          align="start"
-        >
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder="جستجو در سرور (کد یا نام)..."
-              value={q}
-              onValueChange={setQ}
-            />
-            {loading ? (
-              <div className="p-3 text-sm text-muted-foreground">
-                در حال جستجو...
-              </div>
-            ) : loadError ? (
-              <div className="p-3 text-sm text-destructive">{loadError}</div>
-            ) : null}
-            <CommandEmpty>موردی پیدا نشد.</CommandEmpty>
-            <CommandGroup className="max-h-[320px] overflow-auto">
-              {mergedItems.map((h) => {
-                const fa = safeTrim(h.goods_name_fa);
-                const en = safeTrim(h.goods_name_en);
-                const name = fa || en;
-                const shortName = truncateText(name, 30);
-                const label = shortName ? `${h.code} — ${shortName}` : h.code;
-                const isSelected = h.id === props.value;
-                return (
-                  <CommandItem
-                    key={h.id}
-                    value={String(h.id)}
-                    onSelect={() => {
-                      props.onChange(h.id);
-                      setOpen(false);
-                      setQ("");
-                    }}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <span className="truncate" title={fa || en || h.code}>
-                      {label}
-                    </span>
-                    <Check
-                      className={cn(
-                        "h-4 w-4",
-                        isSelected ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      </Popover>
-      {props.error ? (
-        <p className="text-sm text-destructive">{props.error}</p>
-      ) : null}
-    </div>
-  );
-}
-
-async function createOrder(payload: any) {
-  if (!API_BASE) throw new Error("متغیر NEXT_PUBLIC_API_BASE تنظیم نشده است");
-  const res = await authFetch(`${API_BASE}/registered-orders/`, {
-    method: "POST",
-    body: payload,
-  });
-  const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || JSON.stringify(data) || "خطا");
-  return data;
-}
-
-async function updateOrderByUuid(uuid: string, payload: any) {
-  if (!API_BASE) throw new Error("متغیر NEXT_PUBLIC_API_BASE تنظیم نشده است");
-  const res = await authFetch(
-    `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/`,
-    {
-      method: "PATCH",
-      body: payload,
-    },
-  );
-  const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || JSON.stringify(data) || "خطا");
-  return data;
-}
-
-function buildOrderFormData(values: RegisteredOrderForm) {
-  const formData = new FormData();
-  formData.append("order_number", values.id);
-  formData.append("freight_price", String(values.freight_price ?? 0));
-  formData.append("currency_type", values.currency_type);
-  formData.append("fee_type", values.fee_type);
-  formData.append("fee_amount", String(values.fee_amount ?? 0));
-  formData.append("applicant_name", values.applicant_name);
-  formData.append("national_code", values.national_code || "");
-  formData.append("entry_border", joinMultiValue(values.entry_border));
-  formData.append("customs", joinMultiValue(values.customs));
-  formData.append("currency_supply", values.currency_supply);
-  formData.append("bank_name", values.bank_name);
-  formData.append("bank_branch", values.bank_branch);
-  formData.append("payment_instrument", values.payment_instrument);
-  formData.append("expire_date", normalizeExpireDateValue(values.expire_date));
-  formData.append("terms_of_delivery", values.terms_of_delivery);
-  formData.append(
-    "partial_shipment",
-    values.partial_shipment ? "true" : "false",
-  );
-  formData.append(
-    "means_of_transport",
-    joinMultiValue(values.means_of_transport),
-  );
-  formData.append(
-    "country_of_origin",
-    joinMultiValue(values.country_of_origin),
-  );
-  formData.append(
-    "goods",
-    JSON.stringify(
-      values.goods.map((g) => ({
-        description: g.description,
-        hs_code_id: Number(g.hs_code_id),
-        goods_status: g.goods_status,
-        quantity: String(g.quantity ?? 0),
-        origin: joinMultiValue(g.origin),
-        unit_price: String(calcUnitPrice(g.quantity, g.line_subtotal)),
-        unit: g.unit,
-        nw_kg: String(g.nw_kg ?? 0),
-        gw_kg: String(g.gw_kg ?? 0),
-      })),
-    ),
-  );
-  const file =
-    values.order_pdf instanceof FileList
-      ? values.order_pdf.item(0)
-      : values.order_pdf;
-  if (file instanceof File) {
-    formData.append("order_pdf", file);
-  }
-  return formData;
+function emptyGood(): GoodDraft {
+  return {
+    description: "",
+    hs_code: "",
+    hs_code_id: 0,
+    goods_status: "نو",
+    price: 0,
+  };
 }
 
 export function RegisteredOrderForm(props: {
@@ -894,10 +509,18 @@ export function RegisteredOrderForm(props: {
   initialValues: RegisteredOrderFormInput;
   onDone?: (idOrUuid: string) => void;
 }) {
-  const hsSelectedCacheRef = React.useRef<Map<number, HSCodeOption>>(new Map());
+  const [step, setStep] = React.useState(0);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState("");
   const [success, setSuccess] = React.useState("");
+  const [goodDialogOpen, setGoodDialogOpen] = React.useState(false);
+  const [editingGoodIndex, setEditingGoodIndex] = React.useState<number | null>(
+    null,
+  );
+  const [goodDraft, setGoodDraft] = React.useState<GoodDraft>(emptyGood());
+  const [goodErrors, setGoodErrors] = React.useState<Record<string, string>>(
+    {},
+  );
 
   const form = useForm<RegisteredOrderFormInput>({
     resolver: zodResolver(orderSchema),
@@ -905,564 +528,528 @@ export function RegisteredOrderForm(props: {
     mode: "onChange",
   });
 
-  React.useEffect(() => {
-    props.initialValues.goods?.forEach((g: any) => {
-      const id = Number(g?.hs_code_id ?? 0);
-      const code = safeTrim(g?.hs_code);
-      if (id > 0 && code) {
-        hsSelectedCacheRef.current.set(id, {
-          id,
-          code,
-          goods_name_fa: null,
-          goods_name_en: null,
-        });
-      }
-    });
-    form.reset(props.initialValues);
-  }, [props.initialValues]); // eslint-disable-line react-hooks/exhaustive-deps
+  const {
+    control,
+    formState: { errors },
+    handleSubmit,
+    register,
+    setValue,
+    trigger,
+    watch,
+  } = form;
 
-  const { control, register, handleSubmit, formState, setValue } = form;
-  const { errors } = formState;
   const goodsFA = useFieldArray({ control, name: "goods" });
   const goods = useWatch({ control, name: "goods" }) || [];
-  const freight = useWatch({ control, name: "freight_price" }) ?? 0;
-  const selectedBank = useWatch({ control, name: "bank_name" }) || "";
+  const selectedBank = watch("bank_name");
   const branchOptions = React.useMemo(
-    () => getBranchOptions(String(selectedBank || "")),
+    () => getBranchOptions(selectedBank || ""),
     [selectedBank],
   );
 
-  const goodsTotal = React.useMemo(
-    () =>
-      (goods || []).reduce((sum, g) => {
-        const lineSubtotal = Number(g?.line_subtotal ?? 0);
-        return sum + (Number.isFinite(lineSubtotal) ? lineSubtotal : 0);
-      }, 0),
-    [goods],
-  );
+  const steps = [
+    {
+      title: "اطلاعات کلی",
+      description: "شماره ثبت، فایل PDF/JPG و تاریخ انقضا",
+    },
+    { title: "اطلاعات مالی", description: "بانک، تامین ارز، کرایه و فی" },
+    { title: "کالاها", description: "مدیریت کالاها در جدول" },
+  ];
 
-  const subTotal = React.useMemo(
-    () => goodsTotal + Number(freight ?? 0),
-    [goodsTotal, freight],
-  );
-  const uuidForEdit = String(form.getValues("uuid") || "");
+  async function goNext() {
+    const fields =
+      step === 0
+        ? (["id", "applicant_name", "expire_date"] as const)
+        : step === 1
+          ? ([
+              "freight_price",
+              "currency_type",
+              "fee_type",
+              "fee_amount",
+              "currency_supply",
+              "bank_name",
+              "bank_branch",
+            ] as const)
+          : (["goods"] as const);
+    const ok = await trigger(fields as any);
+    if (ok) setStep((current) => Math.min(current + 1, steps.length - 1));
+  }
 
-  const onSubmit: SubmitHandler<RegisteredOrderFormInput> = async (raw) => {
+  function openAddGood() {
+    setEditingGoodIndex(null);
+    setGoodDraft(emptyGood());
+    setGoodErrors({});
+    setGoodDialogOpen(true);
+  }
+
+  function openEditGood(index: number) {
+    const current = goods[index] as any;
+    setEditingGoodIndex(index);
+    setGoodDraft({
+      uuid: current?.uuid,
+      description: current?.description || "",
+      hs_code: current?.hs_code || "",
+      hs_code_id: Number(current?.hs_code_id || 0),
+      goods_status: current?.goods_status || "نو",
+      price: Number(current?.price || current?.line_total || 0),
+    });
+    setGoodErrors({});
+    setGoodDialogOpen(true);
+  }
+
+  function saveGoodDraft() {
+    const parsed = goodSchema.safeParse({
+      ...goodDraft,
+      hs_code_id: Number(goodDraft.hs_code_id || 0),
+      price: Number(goodDraft.price || 0),
+    });
+
+    if (!parsed.success) {
+      const nextErrors: Record<string, string> = {};
+      parsed.error.issues.forEach((issue) => {
+        const key = String(issue.path[0] || "goods");
+        nextErrors[key] = issue.message;
+      });
+      setGoodErrors(nextErrors);
+      return;
+    }
+
+    if (editingGoodIndex === null) {
+      goodsFA.append(parsed.data);
+    } else {
+      goodsFA.update(editingGoodIndex, parsed.data);
+    }
+    setGoodDialogOpen(false);
+    setGoodDraft(emptyGood());
+    setGoodErrors({});
+    trigger("goods");
+  }
+
+  const onSubmit: SubmitHandler<RegisteredOrderFormInput> = async (
+    rawValues,
+  ) => {
+    setSubmitting(true);
     setError("");
     setSuccess("");
-    setSubmitting(true);
-
     try {
-      const values: RegisteredOrderForm = orderSchema.parse(raw);
-      const file =
-        values.order_pdf instanceof FileList
-          ? values.order_pdf.item(0)
-          : values.order_pdf;
-
-      if (props.mode === "create" && !(file instanceof File)) {
-        throw new Error("فایل PDF سفارش الزامی است.");
-      }
-
-      if (file instanceof File && !file.name.toLowerCase().endsWith(".pdf")) {
-        throw new Error("فقط فایل PDF قابل آپلود است.");
+      const values = orderSchema.parse(rawValues);
+      const file = selectedFile(values.order_pdf);
+      if (props.mode === "create" && !file) {
+        setError("فایل PDF یا JPG ثبت سفارش الزامی است.");
+        setStep(0);
+        return;
       }
 
       const payload = buildOrderFormData(values);
+      const data =
+        props.mode === "edit" && values.uuid
+          ? await updateOrder(values.uuid, payload)
+          : await createOrder(payload);
 
-      const res =
-        props.mode === "create"
-          ? await createOrder(payload)
-          : await updateOrderByUuid(uuidForEdit, payload);
-
-      const outUuid = String(res?.uuid ?? uuidForEdit ?? "");
-      const outId = String(res?.order_number ?? values.id ?? "");
       setSuccess(
-        props.mode === "create" ? `ایجاد شد: ${outId}` : `ویرایش شد: ${outId}`,
+        props.mode === "edit" ? "ثبت سفارش ویرایش شد." : "ثبت سفارش ایجاد شد.",
       );
-      props.onDone?.(outUuid || outId);
-    } catch (e: any) {
-      setError(e?.message || "خطا");
+      props.onDone?.(data?.uuid || values.uuid || values.id);
+    } catch (err: any) {
+      setError(err?.message || "خطا در ذخیره ثبت سفارش");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {(error || success) && (
-        <Alert variant={error ? "destructive" : "default"}>
-          <AlertTitle>{error ? "خطا" : "موفق"}</AlertTitle>
-          <AlertDescription>{error || success}</AlertDescription>
-        </Alert>
-      )}
-
-      {props.mode === "edit" && !uuidForEdit ? (
-        <Alert variant="destructive">
-          <AlertTitle>خطا</AlertTitle>
-          <AlertDescription>UUID برای ویرایش موجود نیست.</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <Card className="overflow-hidden shadow-sm before:h-1 before:bg-sky-600 before:content-['']">
-        <CardHeader>
-          <CardTitle className="text-base">
-            {props.mode === "create" ? "ایجاد ثبت سفارش" : "ویرایش ثبت سفارش"}
-          </CardTitle>
-          <CardDescription>اطلاعات اصلی</CardDescription>
+    <form dir="rtl" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <Card className="overflow-hidden border-border/80">
+        <CardHeader className="space-y-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle>
+                {props.mode === "edit" ? "ویرایش ثبت سفارش" : "ثبت سفارش جدید"}
+              </CardTitle>
+              <CardDescription>
+                فرم در سه مرحله تکمیل می‌شود؛ کالاها در مرحله آخر اضافه می‌شوند.
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {steps.map((item, index) => (
+                <button
+                  key={item.title}
+                  type="button"
+                  onClick={() => setStep(index)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-sm transition",
+                    index === step
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "bg-background hover:bg-muted",
+                  )}
+                >
+                  {index + 1}. {item.title}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="font-medium">{steps[step].title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {steps[step].description}
+            </p>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid gap-4 md:grid-cols-2">
-            {props.mode === "edit" ? (
-              <Field label="شماره سفارش (Order Number)">
-                <Input
-                  value={String(form.getValues("order_number") || "-")}
-                  readOnly
-                  disabled
+
+        <CardContent className="space-y-6 p-4 sm:p-6">
+          {error ? (
+            <Alert variant="destructive">
+              <AlertTitle>خطا</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          {success ? (
+            <Alert>
+              <AlertTitle>انجام شد</AlertTitle>
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          {step === 0 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="شماره ثبت سفارش" error={errors.id?.message}>
+                <Input className="h-11" {...register("id")} />
+              </Field>
+              <Field
+                label="نام متقاضی در ثبت سفارش"
+                error={errors.applicant_name?.message}
+              >
+                <Input className="h-11" {...register("applicant_name")} />
+              </Field>
+              <Field label="تاریخ انقضا" error={errors.expire_date?.message}>
+                <Controller
+                  control={control}
+                  name="expire_date"
+                  render={({ field }) => (
+                    <JalaliDateField
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={errors.expire_date?.message}
+                    />
+                  )}
                 />
               </Field>
-            ) : null}
-
-            <Field label="شماره ثبت سفارش" error={errors.id?.message}>
-              <Input
-                placeholder="12345678"
-                {...register("id")}
-                disabled={props.mode === "edit"}
-              />
-            </Field>
-
-            <Field label="فایل PDF سفارش">
-              <div className="space-y-2">
+              <Field
+                label="فایل PDF یا JPG ثبت سفارش"
+                error={(errors.order_pdf as any)?.message}
+              >
                 <Input
+                  className="h-11"
                   type="file"
-                  accept="application/pdf,.pdf"
+                  accept="application/pdf,image/jpeg,.pdf,.jpg,.jpeg"
                   {...register("order_pdf")}
                 />
-                {props.mode === "edit" && form.getValues("order_pdf_url") ? (
+                {props.initialValues.order_pdf_url ? (
                   <a
-                    href={String(form.getValues("order_pdf_url"))}
+                    href={props.initialValues.order_pdf_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-sm text-primary underline underline-offset-4"
+                    className="text-xs text-primary underline-offset-4 hover:underline"
                   >
                     مشاهده فایل فعلی
                   </a>
                 ) : null}
-                <p className="text-xs text-muted-foreground">
-                  {props.mode === "create"
-                    ? "آپلود فایل PDF الزامی است."
-                    : "برای نگه‌داشتن فایل فعلی، این فیلد را خالی بگذارید."}
+              </Field>
+            </div>
+          ) : null}
+
+          {step === 1 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="نوع ارز" error={errors.currency_type?.message}>
+                <Controller
+                  control={control}
+                  name="currency_type"
+                  render={({ field }) => (
+                    <Combobox
+                      items={currencyOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="انتخاب ارز"
+                    />
+                  )}
+                />
+              </Field>
+              <Field
+                label="مانده کرایه حمل"
+                error={errors.freight_price?.message}
+              >
+                <Input
+                  className="h-11"
+                  type="number"
+                  step="0.01"
+                  {...register("freight_price")}
+                />
+              </Field>
+              <Field label="نوع فی" error={errors.fee_type?.message}>
+                <Controller
+                  control={control}
+                  name="fee_type"
+                  render={({ field }) => (
+                    <Combobox
+                      items={feeTypeOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="انتخاب نوع فی"
+                    />
+                  )}
+                />
+              </Field>
+              <Field label="مبلغ فی" error={errors.fee_amount?.message}>
+                <Input
+                  className="h-11"
+                  type="number"
+                  step="0.01"
+                  {...register("fee_amount")}
+                />
+              </Field>
+              <Field label="تامین ارز" error={errors.currency_supply?.message}>
+                <Controller
+                  control={control}
+                  name="currency_supply"
+                  render={({ field }) => (
+                    <Combobox
+                      items={currencySupplyOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="انتخاب تامین ارز"
+                    />
+                  )}
+                />
+              </Field>
+              <Field label="بانک" error={errors.bank_name?.message}>
+                <Controller
+                  control={control}
+                  name="bank_name"
+                  render={({ field }) => (
+                    <Combobox
+                      items={bankOptions}
+                      value={field.value}
+                      onChange={(value) => {
+                        field.onChange(value);
+                        setValue("bank_branch", "");
+                      }}
+                      placeholder="انتخاب بانک"
+                    />
+                  )}
+                />
+              </Field>
+              <Field label="شعبه بانک" error={errors.bank_branch?.message}>
+                <Controller
+                  control={control}
+                  name="bank_branch"
+                  render={({ field }) => (
+                    <Combobox
+                      items={branchOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="انتخاب شعبه"
+                    />
+                  )}
+                />
+              </Field>
+              <Field label="ابزار پرداخت">
+                <Input className="h-11" {...register("payment_instrument")} />
+              </Field>
+            </div>
+          ) : null}
+
+          {step === 2 ? (
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-semibold">کالاها</h3>
+                  <p className="text-sm text-muted-foreground">
+                    کالاها را به جدول اضافه کنید و در صورت نیاز ویرایش کنید.
+                  </p>
+                </div>
+                <Button type="button" onClick={openAddGood} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  افزودن کالا
+                </Button>
+              </div>
+
+              {errors.goods?.message ? (
+                <p className="text-sm text-destructive">
+                  {errors.goods.message}
                 </p>
-              </div>
-            </Field>
+              ) : null}
 
-            <Field label="کرایه حمل" error={errors.freight_price?.message}>
-              <Input type="number" step="0.01" {...register("freight_price")} />
-            </Field>
-
-            <Controller
-              control={control}
-              name="currency_type"
-              render={({ field }) => (
-                <SearchableCombobox
-                  label="نوع ارز"
-                  value={field.value}
-                  onChange={field.onChange}
-                  items={currencyOptions}
-                  placeholder="انتخاب نوع ارز"
-                  searchPlaceholder="جستجو در ارزها..."
-                  error={errors.currency_type?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="fee_type"
-              render={({ field }) => (
-                <SearchableCombobox
-                  label="نوع فی"
-                  value={field.value}
-                  onChange={field.onChange}
-                  items={feeTypeOptions}
-                  placeholder="انتخاب نوع فی"
-                  searchPlaceholder="جستجو..."
-                  error={errors.fee_type?.message}
-                />
-              )}
-            />
-
-            <Field
-              label="مبلغ(تومان) فی برای هر واحد ارز ثبت سفارش"
-              error={errors.fee_amount?.message}
-            >
-              <Input type="number" step="0.01" {...register("fee_amount")} />
-            </Field>
-
-            <Field label="نام متقاضی" error={errors.applicant_name?.message}>
-              <Input {...register("applicant_name")} />
-            </Field>
-
-            <Field label="کد/شناسه ملی" error={errors.national_code?.message}>
-              <Input {...register("national_code")} />
-            </Field>
-
-            <Controller
-              control={control}
-              name="entry_border"
-              render={({ field }) => (
-                <MultiSelectCombobox
-                  label="مرز ورودی"
-                  values={field.value}
-                  onChange={field.onChange}
-                  items={borderOptions}
-                  placeholder="انتخاب مرز ورودی"
-                  searchPlaceholder="جستجو در مرزها..."
-                  error={errors.entry_border?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="customs"
-              render={({ field }) => (
-                <MultiSelectCombobox
-                  label="گمرک"
-                  values={field.value}
-                  onChange={field.onChange}
-                  items={customsOptions}
-                  placeholder="انتخاب گمرک"
-                  searchPlaceholder="جستجو در گمرک‌ها..."
-                  error={errors.customs?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="currency_supply"
-              render={({ field }) => (
-                <SearchableCombobox
-                  label="تامین ارز"
-                  value={field.value}
-                  onChange={field.onChange}
-                  items={currencySupplyOptions}
-                  placeholder="انتخاب تامین ارز"
-                  searchPlaceholder="جستجو..."
-                  error={errors.currency_supply?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="bank_name"
-              render={({ field }) => (
-                <SearchableCombobox
-                  label="نام بانک"
-                  value={field.value}
-                  onChange={(value) => {
-                    field.onChange(value);
-                    setValue("bank_branch", "", { shouldValidate: true });
-                  }}
-                  items={bankOptions}
-                  placeholder="انتخاب بانک"
-                  searchPlaceholder="جستجو در بانک‌ها..."
-                  error={errors.bank_name?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="bank_branch"
-              render={({ field }) => (
-                <SearchableCombobox
-                  label="شعبه بانک"
-                  value={field.value}
-                  onChange={field.onChange}
-                  items={branchOptions}
-                  placeholder={
-                    selectedBank
-                      ? "انتخاب شعبه بانک"
-                      : "ابتدا بانک را انتخاب کنید"
-                  }
-                  searchPlaceholder="جستجو در شعب..."
-                  error={errors.bank_branch?.message}
-                />
-              )}
-            />
-
-            <Field
-              label="ابزار پرداخت"
-              error={errors.payment_instrument?.message}
-            >
-              <Input {...register("payment_instrument")} />
-            </Field>
-
-            <Controller
-              control={control}
-              name="country_of_origin"
-              render={({ field }) => (
-                <CountryMultiSelectCombobox
-                  label="کشور مبدا"
-                  values={field.value}
-                  onChange={field.onChange}
-                  error={errors.country_of_origin?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="expire_date"
-              render={({ field }) => (
-                <DatePickerField
-                  label="تاریخ انقضا"
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={errors.expire_date?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="terms_of_delivery"
-              render={({ field }) => (
-                <SearchableCombobox
-                  label="شرایط تحویل"
-                  value={field.value}
-                  onChange={field.onChange}
-                  items={deliveryTerms}
-                  placeholder="انتخاب..."
-                  searchPlaceholder="جستجو..."
-                  error={(errors as any)?.terms_of_delivery?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="means_of_transport"
-              render={({ field }) => (
-                <MultiSelectCombobox
-                  label="روش حمل"
-                  values={field.value}
-                  onChange={field.onChange}
-                  items={transportMeans}
-                  placeholder="انتخاب..."
-                  searchPlaceholder="جستجو..."
-                  error={(errors as any)?.means_of_transport?.message}
-                />
-              )}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="overflow-hidden shadow-sm before:h-1 before:bg-emerald-600 before:content-['']">
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div>
-            <CardTitle className="text-base">کالاها</CardTitle>
-            <CardDescription>لیست کالاهای این ثبت سفارش</CardDescription>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              goodsFA.append({
-                description: "",
-                hs_code_id: 0,
-                goods_status: "نو",
-                quantity: 1,
-                origin: ["CN"],
-                unit_price: 0,
-                line_subtotal: 0,
-                unit: "KG",
-                nw_kg: 0,
-                gw_kg: 0,
-              })
-            }
-          >
-            + افزودن کالا
-          </Button>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          {goodsFA.fields.map((f, idx) => {
-            const rowErr: any = (errors as any)?.goods?.[idx];
-            const row = goods?.[idx];
-            const calculatedUnitPrice = calcUnitPrice(
-              row?.quantity,
-              row?.line_subtotal,
-            );
-            return (
-              <div key={f.id} className="space-y-4 rounded-xl border p-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium">کالا #{idx + 1}</div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => goodsFA.remove(idx)}
-                    disabled={goodsFA.fields.length <= 1}
-                  >
-                    حذف
-                  </Button>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="شرح کالا" error={rowErr?.description?.message}>
-                    <Input {...register(`goods.${idx}.description` as const)} />
-                  </Field>
-
-                  <Controller
-                    control={control}
-                    name={`goods.${idx}.hs_code_id` as const}
-                    render={({ field }) => (
-                      <HSCodeCombobox
-                        value={Number(field.value || 0)}
-                        onChange={(id) => field.onChange(id)}
-                        selectedCache={hsSelectedCacheRef.current}
-                        error={rowErr?.hs_code_id?.message}
-                      />
-                    )}
-                  />
-
-                  <Controller
-                    control={control}
-                    name={`goods.${idx}.goods_status` as const}
-                    render={({ field }) => (
-                      <SearchableCombobox
-                        label="وضعیت کالا"
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        items={goodsStatusOptions}
-                        placeholder="انتخاب وضعیت کالا"
-                        searchPlaceholder="جستجو..."
-                        error={rowErr?.goods_status?.message}
-                      />
-                    )}
-                  />
-
-                  <Field label="مقدار" error={rowErr?.quantity?.message}>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...register(`goods.${idx}.quantity` as const)}
-                    />
-                  </Field>
-
-                  <Controller
-                    control={control}
-                    name={`goods.${idx}.unit` as const}
-                    render={({ field }) => (
-                      <SearchableCombobox
-                        label="واحد"
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        items={unitOptions}
-                        placeholder="انتخاب واحد"
-                        searchPlaceholder="جستجو..."
-                        error={rowErr?.unit?.message}
-                      />
-                    )}
-                  />
-
-                  <Field
-                    label="ارزش کالا"
-                    error={rowErr?.line_subtotal?.message}
-                  >
-                    <Input
-                      type="number"
-                      step="0.0001"
-                      {...register(`goods.${idx}.line_subtotal` as const)}
-                    />
-                  </Field>
-
-                  <Field label="قیمت واحد (محاسبه‌ای)">
-                    <Input
-                      type="number"
-                      step="0.0001"
-                      value={
-                        Number.isFinite(calculatedUnitPrice)
-                          ? calculatedUnitPrice
-                          : 0
-                      }
-                      readOnly
-                      disabled
-                    />
-                  </Field>
-
-                  <Controller
-                    control={control}
-                    name={`goods.${idx}.origin` as const}
-                    render={({ field }) => (
-                      <CountryMultiSelectCombobox
-                        label="کشور سازنده"
-                        values={field.value || []}
-                        onChange={field.onChange}
-                        error={rowErr?.origin?.message}
-                      />
-                    )}
-                  />
-
-                  <Field label="وزن خالص (kg)" error={rowErr?.nw_kg?.message}>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...register(`goods.${idx}.nw_kg` as const)}
-                    />
-                  </Field>
-
-                  <Field label="وزن ناخالص (kg)" error={rowErr?.gw_kg?.message}>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...register(`goods.${idx}.gw_kg` as const)}
-                    />
-                  </Field>
+              <div className="overflow-hidden rounded-xl border">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[560px] text-sm">
+                    <thead className="bg-muted/60">
+                      <tr className="text-right">
+                        <th className="p-3 font-medium">شرح کالا</th>
+                        <th className="p-3 font-medium">HS Code</th>
+                        <th className="p-3 font-medium">وضعیت</th>
+                        <th className="p-3 font-medium">قیمت</th>
+                        <th className="p-3 font-medium">عملیات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {goods.length ? (
+                        goods.map((good: any, index) => (
+                          <tr
+                            key={goodsFA.fields[index]?.id || index}
+                            className="border-t"
+                          >
+                            <td className="p-3">{good.description || "-"}</td>
+                            <td className="p-3">
+                              {good.hs_code || good.hs_code_id || "-"}
+                            </td>
+                            <td className="p-3">{good.goods_status || "-"}</td>
+                            <td className="p-3">{fmt(good.price || good.line_total)}</td>
+                            <td className="p-3">
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openEditGood(index)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => goodsFA.remove(index)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="p-8 text-center text-muted-foreground"
+                          >
+                            هنوز کالایی اضافه نشده است.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+            </div>
+          ) : null}
 
-      <Card className="overflow-hidden shadow-sm before:h-1 before:bg-slate-900 before:content-['']">
-        <CardHeader>
-          <CardTitle className="text-base">خلاصه</CardTitle>
-          <CardDescription>جمع‌های سمت کلاینت</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">جمع کالاها</span>
-            <span>{fmt(goodsTotal)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">کرایه حمل</span>
-            <span>{fmt(Number(freight || 0))}</span>
-          </div>
           <Separator />
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">جمع کل</span>
-            <span className="font-semibold">{fmt(subTotal)}</span>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={step === 0 || submitting}
+              onClick={() => setStep((s) => s - 1)}
+            >
+              مرحله قبل
+            </Button>
+            <div className="flex gap-3">
+              {step < steps.length - 1 ? (
+                <Button type="button" onClick={goNext}>
+                  مرحله بعد
+                </Button>
+              ) : (
+                <Button type="submit" disabled={submitting}>
+                  {submitting
+                    ? "در حال ذخیره..."
+                    : props.mode === "edit"
+                      ? "ذخیره تغییرات"
+                      : "ثبت سفارش"}
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          type="submit"
-          disabled={submitting || (props.mode === "edit" && !uuidForEdit)}
+      <Dialog open={goodDialogOpen} onOpenChange={setGoodDialogOpen}>
+        <DialogContent
+          className="max-h-[90dvh] overflow-y-auto text-right sm:max-w-2xl"
+          dir="rtl"
         >
-          {submitting
-            ? "در حال ذخیره..."
-            : props.mode === "create"
-              ? "ایجاد"
-              : "ذخیره تغییرات"}
-        </Button>
-      </div>
+          <DialogHeader>
+            <DialogTitle>
+              {editingGoodIndex === null ? "افزودن کالا" : "ویرایش کالا"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="شرح کالا" error={goodErrors.description}>
+              <Input
+                className="h-11"
+                value={goodDraft.description || ""}
+                onChange={(event) =>
+                  setGoodDraft((draft) => ({
+                    ...draft,
+                    description: event.target.value,
+                  }))
+                }
+              />
+            </Field>
+            <Field label="HS Code" error={goodErrors.hs_code_id}>
+              <HSCodePicker
+                value={Number(goodDraft.hs_code_id || 0)}
+                selectedLabel={goodDraft.hs_code}
+                onChange={(id, option) =>
+                  setGoodDraft((draft) => ({
+                    ...draft,
+                    hs_code_id: id,
+                    hs_code: option
+                      ? `${option.code} - ${option.goods_name_fa || option.goods_name_en || ""}`
+                      : draft.hs_code,
+                  }))
+                }
+              />
+            </Field>
+            <Field label="وضعیت کالا" error={goodErrors.goods_status}>
+              <Combobox
+                items={goodsStatusOptions}
+                value={String(goodDraft.goods_status || "")}
+                onChange={(value) =>
+                  setGoodDraft((draft) => ({ ...draft, goods_status: value }))
+                }
+                placeholder="انتخاب وضعیت"
+              />
+            </Field>
+            <Field label="قیمت کل" error={goodErrors.price}>
+              <Input
+                className="h-11"
+                type="number"
+                step="0.01"
+                value={Number(goodDraft.price || 0)}
+                onChange={(event) =>
+                  setGoodDraft((draft) => ({
+                    ...draft,
+                    price: Number(event.target.value),
+                  }))
+                }
+              />
+            </Field>
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-start">
+            <Button type="button" onClick={saveGoodDraft}>
+              {editingGoodIndex === null ? "افزودن به جدول" : "ذخیره کالا"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setGoodDialogOpen(false)}
+            >
+              انصراف
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

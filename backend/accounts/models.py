@@ -1,9 +1,15 @@
+import random
+import re
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-import secrets
 
 
 class User(AbstractUser):
+    USERNAME_PREFIX = "U"
+    USERNAME_MIN = 10001
+    USERNAME_MAX = 99999
+
     class Role(models.TextChoices):
         ADMIN = "admin", "Admin"
         STAFF = "staff", "Staff"
@@ -16,10 +22,20 @@ class User(AbstractUser):
 
     @classmethod
     def generate_username(cls) -> str:
+        rng = random.SystemRandom()
         while True:
-            candidate = f"user_{secrets.token_hex(4)}"
+            candidate = f"{cls.USERNAME_PREFIX}{rng.randint(cls.USERNAME_MIN, cls.USERNAME_MAX):05d}"
             if not cls.objects.filter(username=candidate).exists():
                 return candidate
+
+    @classmethod
+    def username_is_formatted(cls, value: str) -> bool:
+        return bool(re.fullmatch(r"U\d{5}", value or ""))
+
+    def save(self, *args, **kwargs):
+        if not self.username:
+            self.username = self.generate_username()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.username

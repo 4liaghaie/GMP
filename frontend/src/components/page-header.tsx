@@ -40,9 +40,7 @@ export function PageHeader({
                 {eyebrow}
               </Badge>
             ) : null}
-            <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
-              {title}
-            </h1>
+            <h1 className="text-2xl  tracking-tight sm:text-3xl">{title}</h1>
             {description ? (
               <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
                 {description}

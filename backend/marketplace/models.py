@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from django.db import models
@@ -7,6 +8,7 @@ from customs.models import HSCode
 
 
 class RegisteredOrder(models.Model):
+    UUID_PREFIX = "S"
     FEE_RECEIVED = "فی دریافتی"
     FEE_PAID = "فی پرداختی"
     FEE_TYPE_CHOICES = [
@@ -14,7 +16,7 @@ class RegisteredOrder(models.Model):
         (FEE_PAID, FEE_PAID),
     ]
 
-    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    uuid = models.CharField(max_length=32, unique=True, editable=False, db_index=True, blank=True)
     verified = models.BooleanField(default=False, db_index=True)
     order_number = models.CharField(max_length=55)
     order_pdf = models.FileField(upload_to="registered_orders/pdfs/")
@@ -27,25 +29,43 @@ class RegisteredOrder(models.Model):
     fee_type = models.CharField(max_length=20, choices=FEE_TYPE_CHOICES, default=FEE_RECEIVED)
     fee_amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     applicant_name = models.CharField(max_length=255, default="")
-    national_code = models.CharField(max_length=64, blank=True, default="")
-    entry_border = models.CharField(max_length=255, blank=True, default="")
-    customs = models.CharField(max_length=255, default="")
     currency_supply = models.CharField(max_length=255, default="")
     bank_name = models.CharField(max_length=255, default="")
     bank_branch = models.CharField(max_length=255, default="")
-    payment_instrument = models.CharField(max_length=255, default="")
+    payment_instrument = models.CharField(max_length=255, blank=True, default="")
     expire_date = models.CharField(max_length=20, default="1406/10/11")
-    terms_of_delivery = models.CharField(max_length=50)
-    # Deprecated legacy columns kept temporarily until DB cleanup migration is applied.
-    terms_of_payment = models.CharField(max_length=50, blank=True, default="")
-    partial_shipment = models.BooleanField(default=False)
-    means_of_transport = models.CharField(max_length=50)
-    country_of_origin = models.CharField(max_length=555, blank=True, default="")
     # Deprecated legacy column kept temporarily until DB cleanup migration is applied.
     standard = models.CharField(max_length=50, blank=True, default="")
-    total_gw = models.DecimalField(default=0, max_digits=20, decimal_places=2)
-    total_nw = models.DecimalField(default=0, max_digits=20, decimal_places=2)
-    total_qty = models.DecimalField(default=0, max_digits=20, decimal_places=2)
+
+    @classmethod
+    def build_uuid(cls, user_code: str, sequence: int) -> str:
+        return f"{user_code}-{cls.UUID_PREFIX}{sequence:04d}"
+
+    @classmethod
+    def uuid_is_formatted(cls, value: str) -> bool:
+        return bool(re.fullmatch(r"U\d{5}-S\d{4,}", value or ""))
+
+    @classmethod
+    def next_uuid_for_user(cls, user: User) -> str:
+        prefix = f"{user.username}-{cls.UUID_PREFIX}"
+        max_sequence = 1000
+        for value in cls.objects.filter(
+            user=user,
+            uuid__startswith=prefix,
+        ).values_list("uuid", flat=True):
+            try:
+                max_sequence = max(
+                    max_sequence,
+                    int(str(value).split(f"-{cls.UUID_PREFIX}", 1)[1]),
+                )
+            except (IndexError, ValueError):
+                continue
+        return cls.build_uuid(user.username, max_sequence + 1)
+
+    def save(self, *args, **kwargs):
+        if not self.uuid:
+            self.uuid = self.next_uuid_for_user(self.user)
+        super().save(*args, **kwargs)
 
 
 class OrderGood(models.Model):
@@ -63,19 +83,15 @@ class OrderGood(models.Model):
     hs_code = models.ForeignKey(HSCode, on_delete=models.CASCADE)
     order = models.ForeignKey(RegisteredOrder, related_name="goods", on_delete=models.CASCADE)
     goods_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW)
-    quantity = models.DecimalField(default=1, max_digits=18, decimal_places=2)
-    origin = models.CharField(max_length=255)
-    unit_price = models.DecimalField(max_digits=40, decimal_places=20, default=0)
-    unit = models.CharField(max_length=55, default="U")
-    nw_kg = models.DecimalField(default=1, max_digits=12, decimal_places=2)
-    gw_kg = models.DecimalField(default=1, max_digits=12, decimal_places=2)
+    price = models.DecimalField(max_digits=40, decimal_places=20, default=0)
 
     @property
     def line_total(self):
-        return self.quantity * self.unit_price
+        return self.price
 
 
 class GoodsNeed(models.Model):
+    UUID_PREFIX = "B"
     STATUS_AT_ORIGIN = "در کشور مبدا"
     STATUS_HAS_WAREHOUSE_RECEIPT = "قبض انبار دارد"
     STATUS_BILL_OF_LADING = "بارنامه شده"
@@ -85,9 +101,10 @@ class GoodsNeed(models.Model):
         (STATUS_BILL_OF_LADING, STATUS_BILL_OF_LADING),
     ]
 
-    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
+    uuid = models.CharField(max_length=32, unique=True, editable=False, db_index=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    proforma_file = models.FileField(upload_to="goods_needs/files/", blank=True, default="")
     description = models.CharField(max_length=255)
     hs_code = models.ForeignKey(HSCode, on_delete=models.CASCADE)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=STATUS_AT_ORIGIN)
@@ -101,6 +118,7 @@ class GoodsNeed(models.Model):
     manufacturer_country = models.CharField(max_length=55)
     country_of_origin = models.CharField(max_length=555)
     price = models.DecimalField(max_digits=40, decimal_places=20, default=0)
+    freight_price = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     currency_type = models.CharField(max_length=55, default="دلار")
     fee_type = models.CharField(
         max_length=20,
@@ -116,6 +134,36 @@ class GoodsNeed(models.Model):
     means_of_transport = models.CharField(max_length=50)
     nw_kg = models.DecimalField(default=0, max_digits=12, decimal_places=2)
     gw_kg = models.DecimalField(default=0, max_digits=12, decimal_places=2)
+
+    @classmethod
+    def build_uuid(cls, user_code: str, sequence: int) -> str:
+        return f"{user_code}-{cls.UUID_PREFIX}{sequence:04d}"
+
+    @classmethod
+    def uuid_is_formatted(cls, value: str) -> bool:
+        return bool(re.fullmatch(r"U\d{5}-B\d{4,}", value or ""))
+
+    @classmethod
+    def next_uuid_for_user(cls, user: User) -> str:
+        prefix = f"{user.username}-{cls.UUID_PREFIX}"
+        max_sequence = 1000
+        for value in cls.objects.filter(
+            user=user,
+            uuid__startswith=prefix,
+        ).values_list("uuid", flat=True):
+            try:
+                max_sequence = max(
+                    max_sequence,
+                    int(str(value).split(f"-{cls.UUID_PREFIX}", 1)[1]),
+                )
+            except (IndexError, ValueError):
+                continue
+        return cls.build_uuid(user.username, max_sequence + 1)
+
+    def save(self, *args, **kwargs):
+        if not self.uuid:
+            self.uuid = self.next_uuid_for_user(self.user)
+        super().save(*args, **kwargs)
 
 
 class GoodsNeedGood(models.Model):
