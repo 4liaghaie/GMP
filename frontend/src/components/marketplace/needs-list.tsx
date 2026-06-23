@@ -63,10 +63,12 @@ import { borders } from "@/lib/borderList";
 import { countries } from "@/lib/countryList";
 import { iranCustoms } from "@/lib/customsList";
 import { cn } from "@/lib/utils";
+import ProformaDetails from "@/components/marketplace/proforma-details";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
-type ProformaGood = {
+export type ProformaGood = {
+  uuid?: string;
   description: string;
   hs_code: string;
   hs_code_id: number;
@@ -79,16 +81,18 @@ type ProformaGood = {
   gw_kg: string | number;
 };
 
-type GoodsNeed = {
+export type GoodsNeed = {
   uuid: string;
   id: number;
   user: string;
   created_at: string;
+  proforma_file?: string | null;
   status: string;
   country_of_origin: string;
   currency_type: string;
   fee_type: string;
   fee_amount: string | number;
+  freight_price?: string | number;
   entry_border: string;
   customs: string;
   terms_of_delivery?: string;
@@ -747,14 +751,17 @@ function ProformaCard({ need }: { need: GoodsNeed }) {
 
         <Separator />
 
-        <Button asChild variant="outline" className="w-full">
-          <Link
-            href={`/marketplace?hs_code=${encodeURIComponent(firstHsCode)}`}
-          >
-            جستجوی ثبت سفارش مشابه
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <ProformaDetails need={need} />
+          <Button asChild variant="outline" className="w-full rounded-xl">
+            <Link
+              href={`/marketplace?hs_code=${encodeURIComponent(firstHsCode)}`}
+            >
+              جستجوی مشابه
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

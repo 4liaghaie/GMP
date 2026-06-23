@@ -6,14 +6,17 @@ import {
   Check,
   Copy,
   ExternalLink,
+  FileText,
   MessageCircle,
+  PackageSearch,
+  Route,
   User2,
 } from "lucide-react";
 
 import type {
-  MarketplaceOrder,
-  OrderGood,
-} from "@/components/marketplace/orders-list";
+  GoodsNeed,
+  ProformaGood,
+} from "@/components/marketplace/needs-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -45,17 +48,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatBankBranch } from "@/lib/bankBranch";
 import { cn } from "@/lib/utils";
 
 const WHATSAPP_NUMBER = "00989307878446";
-const WHATSAPP_MESSAGE = "سلام، درباره همین ثبت سفارش پیام می‌دهم.";
+const WHATSAPP_MESSAGE = "سلام، درباره همین پروفرما پیام می‌دهم.";
 
 function formatNumLike(x: string | number | null | undefined) {
   if (x === null || x === undefined || x === "") return "—";
+
   const n = Number(x);
   if (!Number.isFinite(n)) return String(x);
-  return new Intl.NumberFormat("fa-IR").format(n);
+
+  return new Intl.NumberFormat("fa-IR", {
+    maximumFractionDigits: 2,
+  }).format(n);
 }
 
 function safeText(x: unknown) {
@@ -63,30 +69,24 @@ function safeText(x: unknown) {
   return String(x);
 }
 
-function formatExpireDate(value: unknown) {
-  const raw = String(value ?? "").trim();
-  if (!raw) return "—";
+function lineTotal(good: ProformaGood) {
+  const quantity = Number(good.quantity ?? 0);
+  const price = Number(good.price ?? 0);
 
-  const match = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(raw);
-  if (!match) return raw;
+  if (!Number.isFinite(quantity) || !Number.isFinite(price)) return 0;
 
-  const year = Number(match[1]);
-  if (year < 1700) return raw;
+  return quantity * price;
+}
 
-  const date = new Date(year, Number(match[2]) - 1, Number(match[3]));
-  if (Number.isNaN(date.getTime())) return raw;
+function goodsTotal(need: GoodsNeed) {
+  return (need.goods || []).reduce((sum, good) => sum + lineTotal(good), 0);
+}
 
-  const parts = new Intl.DateTimeFormat("fa-IR-u-ca-persian-nu-latn", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
+function buildWhatsAppLink(phone: string, text?: string) {
+  const clean = String(phone || "").replace(/[^\d]/g, "");
+  const msg = text ? `?text=${encodeURIComponent(text)}` : "";
 
-  const jy = parts.find((part) => part.type === "year")?.value ?? "";
-  const jm = parts.find((part) => part.type === "month")?.value ?? "";
-  const jd = parts.find((part) => part.type === "day")?.value ?? "";
-
-  return `${jy}/${jm}/${jd}`;
+  return `https://wa.me/${clean}${msg}`;
 }
 
 function useMediaQuery(query: string) {
@@ -103,12 +103,6 @@ function useMediaQuery(query: string) {
   }, [query]);
 
   return matches;
-}
-
-function buildWhatsAppLink(phone: string, text?: string) {
-  const clean = String(phone || "").replace(/[^\d]/g, "");
-  const msg = text ? `?text=${encodeURIComponent(text)}` : "";
-  return `https://wa.me/${clean}${msg}`;
 }
 
 function KeyValue({
@@ -128,6 +122,7 @@ function KeyValue({
             {icon}
           </span>
         ) : null}
+
         <span>{label}</span>
       </div>
 
@@ -138,7 +133,7 @@ function KeyValue({
   );
 }
 
-function GoodMobileCard({ good }: { good: OrderGood }) {
+function GoodMobileCard({ good }: { good: ProformaGood }) {
   return (
     <Card className="rounded-2xl shadow-sm">
       <CardContent className="space-y-3 p-4 text-right">
@@ -151,6 +146,11 @@ function GoodMobileCard({ good }: { good: OrderGood }) {
             <Badge variant="outline" className="rounded-xl tabular-nums">
               HS: {safeText(good.hs_code)}
             </Badge>
+
+            <Badge variant="outline" className="rounded-xl">
+              {safeText(good.manufacturer_country)}
+            </Badge>
+
             <Badge variant="secondary" className="rounded-xl">
               {safeText(good.goods_status)}
             </Badge>
@@ -159,10 +159,24 @@ function GoodMobileCard({ good }: { good: OrderGood }) {
 
         <Separator />
 
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="text-muted-foreground">قیمت</span>
-          <span className="font-semibold tabular-nums">
-            {formatNumLike(good.price ?? good.line_total)}
+        <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+          <KeyValue
+            label="مقدار"
+            value={`${formatNumLike(good.quantity)} ${safeText(good.unit)}`}
+          />
+
+          <KeyValue label="قیمت" value={formatNumLike(good.price)} />
+
+          <KeyValue label="NW" value={formatNumLike(good.nw_kg)} />
+
+          <KeyValue label="GW" value={formatNumLike(good.gw_kg)} />
+        </div>
+
+        <div className="flex flex-col gap-1 rounded-2xl border bg-muted/40 px-3 py-2 text-right text-sm sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-muted-foreground">جمع ردیف</span>
+
+          <span className="font-bold tabular-nums">
+            {formatNumLike(lineTotal(good))}
           </span>
         </div>
       </CardContent>
@@ -170,13 +184,13 @@ function GoodMobileCard({ good }: { good: OrderGood }) {
   );
 }
 
-function GoodsTable({ order }: { order: MarketplaceOrder }) {
+function GoodsTable({ need }: { need: GoodsNeed }) {
   return (
     <>
       <div className="space-y-3 md:hidden">
-        {order.goods?.length ? (
-          order.goods.map((good) => (
-            <GoodMobileCard key={good.uuid} good={good} />
+        {need.goods?.length ? (
+          need.goods.map((good, index) => (
+            <GoodMobileCard key={good.uuid || index} good={good} />
           ))
         ) : (
           <div className="rounded-2xl border bg-muted/30 p-4 text-right text-sm text-muted-foreground">
@@ -187,10 +201,11 @@ function GoodsTable({ order }: { order: MarketplaceOrder }) {
 
       <div className="hidden rounded-2xl border bg-card shadow-sm md:block">
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <div className="text-sm font-semibold">اقلام کالا</div>
+          <div className="text-sm font-semibold">اقلام پروفرما</div>
+
           <div className="text-xs text-muted-foreground tabular-nums">
-            {order.goods?.length
-              ? `${formatNumLike(order.goods.length)} ردیف`
+            {need.goods?.length
+              ? `${formatNumLike(need.goods.length)} ردیف`
               : "بدون کالا"}
           </div>
         </div>
@@ -200,23 +215,35 @@ function GoodsTable({ order }: { order: MarketplaceOrder }) {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[70px] text-right">ردیف</TableHead>
-                <TableHead className="w-[45%] text-right">شرح</TableHead>
+                <TableHead className="w-[32%] text-right">شرح</TableHead>
                 <TableHead className="text-right">HS</TableHead>
-                <TableHead className="text-right">وضعیت</TableHead>
+                <TableHead className="text-right">کشور سازنده</TableHead>
+                <TableHead className="text-right">مقدار</TableHead>
                 <TableHead className="text-left">قیمت</TableHead>
+                <TableHead className="text-left">جمع</TableHead>
               </TableRow>
             </TableHeader>
 
             <TableBody>
-              {order.goods?.length ? (
-                order.goods.map((good, index) => (
-                  <TableRow key={good.uuid}>
+              {need.goods?.length ? (
+                need.goods.map((good, index) => (
+                  <TableRow key={good.uuid || index}>
                     <TableCell className="text-right text-muted-foreground tabular-nums">
                       {formatNumLike(index + 1)}
                     </TableCell>
 
-                    <TableCell className="text-right leading-6">
-                      {safeText(good.description)}
+                    <TableCell className="text-right">
+                      <div className="font-medium leading-6">
+                        {safeText(good.description)}
+                      </div>
+
+                      <div className="mt-1 text-xs leading-5 text-muted-foreground">
+                        <span>وضعیت: {safeText(good.goods_status)}</span>
+                        <span className="mx-1">•</span>
+                        <span>NW: {formatNumLike(good.nw_kg)}</span>
+                        <span className="mx-1">•</span>
+                        <span>GW: {formatNumLike(good.gw_kg)}</span>
+                      </div>
                     </TableCell>
 
                     <TableCell className="text-right">
@@ -229,17 +256,25 @@ function GoodsTable({ order }: { order: MarketplaceOrder }) {
                     </TableCell>
 
                     <TableCell className="text-right">
-                      {safeText(good.goods_status)}
+                      {safeText(good.manufacturer_country)}
+                    </TableCell>
+
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumLike(good.quantity)} {safeText(good.unit)}
+                    </TableCell>
+
+                    <TableCell className="text-left tabular-nums">
+                      {formatNumLike(good.price)}
                     </TableCell>
 
                     <TableCell className="text-left font-semibold tabular-nums">
-                      {formatNumLike(good.price ?? good.line_total)}
+                      {formatNumLike(lineTotal(good))}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell className="text-right" colSpan={5}>
+                  <TableCell className="text-right" colSpan={7}>
                     کالایی ثبت نشده است.
                   </TableCell>
                 </TableRow>
@@ -252,7 +287,11 @@ function GoodsTable({ order }: { order: MarketplaceOrder }) {
   );
 }
 
-function SummaryCard({ order }: { order: MarketplaceOrder }) {
+function SummaryCard({ need }: { need: GoodsNeed }) {
+  const total = goodsTotal(need);
+  const freight = Number(need.freight_price ?? 0);
+  const subtotal = total + (Number.isFinite(freight) ? freight : 0);
+
   return (
     <Card className="rounded-2xl shadow-sm">
       <CardHeader className="pb-2">
@@ -263,32 +302,31 @@ function SummaryCard({ order }: { order: MarketplaceOrder }) {
 
           <div>
             <div className="text-sm font-semibold">خلاصه مالی</div>
+
             <div className="text-xs text-muted-foreground">
-              ارقام به {safeText(order.currency_type)}
+              ارقام به {safeText(need.currency_type)}
             </div>
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-3 text-sm">
-        <KeyValue label="ارزش کالا" value={formatNumLike(order.total_value)} />
-        <KeyValue
-          label="کرایه حمل"
-          value={formatNumLike(order.freight_price)}
-        />
-        <KeyValue label="نوع فی" value={safeText(order.fee_type)} />
-        <KeyValue
-          label="مبلغ فی (تومان)"
-          value={formatNumLike(order.fee_amount)}
-        />
+        <KeyValue label="ارزش کالا" value={formatNumLike(total)} />
+
+        <KeyValue label="کرایه حمل" value={formatNumLike(need.freight_price)} />
+
+        <KeyValue label="نوع فی" value={safeText(need.fee_type)} />
+
+        <KeyValue label="مبلغ فی" value={formatNumLike(need.fee_amount)} />
 
         <Separator />
 
         <div className="rounded-2xl border bg-muted/40 p-3">
           <div className="flex flex-col gap-1 text-right sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm text-muted-foreground">جمع کل</span>
+
             <span className="text-base font-bold tabular-nums">
-              {formatNumLike(order.sub_total)}
+              {formatNumLike(subtotal)}
             </span>
           </div>
         </div>
@@ -297,77 +335,95 @@ function SummaryCard({ order }: { order: MarketplaceOrder }) {
   );
 }
 
-function MetaCard({
-  order,
-  visibleOrderNumber,
-}: {
-  order: MarketplaceOrder;
-  visibleOrderNumber: string | null;
-}) {
+function MetaCard({ need }: { need: GoodsNeed }) {
   return (
     <Card className="rounded-2xl shadow-sm">
       <CardHeader className="pb-2 text-right">
-        <div className="text-sm font-semibold">اطلاعات سفارش</div>
+        <div className="text-sm font-semibold">اطلاعات پروفرما</div>
+
         <div className="text-xs text-muted-foreground">
-          فقط فیلدهای فعال ثبت سفارش نمایش داده می‌شوند.
+          اطلاعات مبدا، مرز، گمرک و حمل
         </div>
       </CardHeader>
 
       <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
         <KeyValue
           label="فروشنده"
-          value={safeText(order.user)}
+          value={safeText(need.user)}
           icon={<User2 className="h-4 w-4" />}
         />
 
-        {order.applicant_name ? (
+        <KeyValue label="شناسه" value={safeText(need.uuid)} />
+
+        <KeyValue label="وضعیت پروفرما" value={safeText(need.status)} />
+
+        <KeyValue label="کشور مبدا" value={safeText(need.country_of_origin)} />
+
+        <KeyValue label="مرز ورودی" value={safeText(need.entry_border)} />
+
+        <KeyValue label="گمرک" value={safeText(need.customs)} />
+
+        <KeyValue
+          label="روش حمل"
+          value={safeText(need.means_of_transport)}
+          icon={<Route className="h-4 w-4" />}
+        />
+
+        <KeyValue
+          label="حمل به دفعات"
+          value={need.partial_shipment ? "بله" : "خیر"}
+        />
+
+        {need.terms_of_delivery ? (
           <KeyValue
-            label="متقاضی"
-            value={safeText(order.applicant_name)}
-            icon={<User2 className="h-4 w-4" />}
+            label="شرایط تحویل"
+            value={safeText(need.terms_of_delivery)}
           />
         ) : null}
 
-        {visibleOrderNumber ? (
+        {need.terms_of_payment ? (
           <KeyValue
-            label="شماره ثبت سفارش"
-            value={visibleOrderNumber}
-            icon={<BadgeCheck className="h-4 w-4" />}
+            label="شرایط پرداخت"
+            value={safeText(need.terms_of_payment)}
           />
         ) : null}
 
-        <KeyValue label="شناسه" value={safeText(order.uuid)} />
-        <KeyValue label="تامین ارز" value={safeText(order.currency_supply)} />
-        <KeyValue label="بانک" value={safeText(order.bank_name)} />
-        <KeyValue
-          label="شعبه بانک"
-          value={safeText(
-            order.bank_branch_display || formatBankBranch(order.bank_branch),
-          )}
-        />
-        <KeyValue
-          label="ابزار پرداخت"
-          value={safeText(order.payment_instrument)}
-        />
-        <KeyValue label="انقضا" value={formatExpireDate(order.expire_date)} />
+        {need.proforma_file ? (
+          <Button
+            asChild
+            variant="outline"
+            className="rounded-2xl sm:col-span-2"
+          >
+            <a
+              href={need.proforma_file}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex flex-row-reverse items-center justify-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              <span>مشاهده فایل پروفرما</span>
+              <ExternalLink className="h-4 w-4 opacity-70" />
+            </a>
+          </Button>
+        ) : null}
       </CardContent>
     </Card>
   );
 }
 
 function ContactCard({ referenceText }: { referenceText: string }) {
-  const displayPhone = WHATSAPP_NUMBER;
   const waLink = buildWhatsAppLink(
     WHATSAPP_NUMBER,
-    `${WHATSAPP_MESSAGE}\nشناسه سفارش: ${referenceText}`,
+    `${WHATSAPP_MESSAGE}\nشناسه پروفرما: ${referenceText}`,
   );
 
   return (
     <Card className="rounded-2xl shadow-sm">
       <CardHeader className="pb-2 text-right">
         <div className="text-sm font-semibold">ارتباط سریع</div>
+
         <div className="text-xs text-muted-foreground tabular-nums">
-          واتساپ: {displayPhone}
+          واتساپ: {WHATSAPP_NUMBER}
         </div>
       </CardHeader>
 
@@ -400,47 +456,45 @@ function ContactCard({ referenceText }: { referenceText: string }) {
 }
 
 function DetailsContent({
-  order,
+  need,
   copied,
   onCopy,
-  visibleOrderNumber,
   referenceText,
 }: {
-  order: MarketplaceOrder;
+  need: GoodsNeed;
   copied: boolean;
   onCopy: () => void;
-  visibleOrderNumber: string | null;
   referenceText: string;
 }) {
   return (
     <div dir="rtl" className="space-y-4 text-right">
-      <Card className="overflow-hidden rounded-2xl shadow-sm before:block before:h-1 before:bg-slate-900 before:content-['']">
+      <Card className="overflow-hidden rounded-2xl shadow-sm before:block before:h-1 before:bg-amber-600 before:content-['']">
         <CardContent className="p-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center justify-start gap-2">
-                <Badge variant="secondary">ثبت سفارش</Badge>
-                <Badge variant="outline">{safeText(order.currency_type)}</Badge>
+                <Badge variant="secondary">پروفرما</Badge>
+
+                <Badge variant="outline">{safeText(need.status)}</Badge>
+
+                <Badge variant="outline">{safeText(need.currency_type)}</Badge>
+
                 <Badge variant="outline" className="tabular-nums">
-                  {order.goods?.length
-                    ? `${formatNumLike(order.goods.length)} ردیف کالا`
+                  {need.goods?.length
+                    ? `${formatNumLike(need.goods.length)} ردیف کالا`
                     : "بدون کالا"}
                 </Badge>
               </div>
 
               <div className="space-y-1">
                 <div className="break-all text-lg font-bold tabular-nums sm:text-xl">
-                  {safeText(order.uuid)}
+                  {safeText(need.uuid)}
                 </div>
 
                 <div className="text-sm leading-6 text-muted-foreground">
-                  <span>فروشنده: {safeText(order.user)}</span>
-                  {order.applicant_name ? (
-                    <>
-                      <span className="mx-2">•</span>
-                      <span>متقاضی: {safeText(order.applicant_name)}</span>
-                    </>
-                  ) : null}
+                  <span>فروشنده: {safeText(need.user)}</span>
+                  <span className="mx-2">•</span>
+                  <span>مرز: {safeText(need.entry_border)}</span>
                 </div>
               </div>
             </div>
@@ -448,13 +502,19 @@ function DetailsContent({
             <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
               <KeyValue
                 label="ارزش کالا"
-                value={formatNumLike(order.total_value)}
+                value={formatNumLike(goodsTotal(need))}
               />
+
               <KeyValue
                 label="کرایه حمل"
-                value={formatNumLike(order.freight_price)}
+                value={formatNumLike(need.freight_price)}
               />
-              <KeyValue label="جمع کل" value={formatNumLike(order.sub_total)} />
+
+              <KeyValue
+                label="کالاها"
+                value={formatNumLike(need.goods?.length || 0)}
+                icon={<PackageSearch className="h-4 w-4" />}
+              />
             </div>
 
             <Button
@@ -480,12 +540,15 @@ function DetailsContent({
             <TabsTrigger className="rounded-2xl px-5" value="goods">
               کالاها
             </TabsTrigger>
+
             <TabsTrigger className="rounded-2xl px-5" value="summary">
               مالی
             </TabsTrigger>
+
             <TabsTrigger className="rounded-2xl px-5" value="meta">
               اطلاعات
             </TabsTrigger>
+
             <TabsTrigger className="rounded-2xl px-5" value="contact">
               ارتباط
             </TabsTrigger>
@@ -493,15 +556,15 @@ function DetailsContent({
         </div>
 
         <TabsContent value="goods" className="mt-4">
-          <GoodsTable order={order} />
+          <GoodsTable need={need} />
         </TabsContent>
 
         <TabsContent value="summary" className="mt-4">
-          <SummaryCard order={order} />
+          <SummaryCard need={need} />
         </TabsContent>
 
         <TabsContent value="meta" className="mt-4">
-          <MetaCard order={order} visibleOrderNumber={visibleOrderNumber} />
+          <MetaCard need={need} />
         </TabsContent>
 
         <TabsContent value="contact" className="mt-4 max-w-md">
@@ -512,18 +575,10 @@ function DetailsContent({
   );
 }
 
-export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
+export default function ProformaDetails({ need }: { need: GoodsNeed }) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [copied, setCopied] = React.useState(false);
-  const [isAdmin, setIsAdmin] = React.useState(false);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    setIsAdmin((localStorage.getItem("role") || "") === "admin");
-  }, []);
-
-  const visibleOrderNumber = isAdmin ? safeText(order.order_number) : null;
-  const referenceText = visibleOrderNumber || safeText(order.uuid);
+  const referenceText = safeText(need.uuid);
 
   async function copyReference() {
     try {
@@ -537,10 +592,9 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
 
   const content = (
     <DetailsContent
-      order={order}
+      need={need}
       copied={copied}
       onCopy={copyReference}
-      visibleOrderNumber={visibleOrderNumber}
       referenceText={referenceText}
     />
   );
@@ -564,10 +618,11 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
           <div className="border-b bg-background">
             <DialogHeader className="p-5 text-right">
               <DialogTitle className="text-right text-lg">
-                جزئیات ثبت سفارش
+                جزئیات پروفرما
               </DialogTitle>
+
               <DialogDescription className="text-right">
-                کالاها، خلاصه مالی و اطلاعات فعال سفارش
+                کالاها، خلاصه مالی و اطلاعات حمل پروفرما
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -599,10 +654,11 @@ export default function OrderDetails({ order }: { order: MarketplaceOrder }) {
         <div className="border-b bg-background">
           <SheetHeader className="p-4 text-right">
             <SheetTitle className="break-all text-right text-lg tabular-nums">
-              ثبت سفارش {safeText(order.uuid)}
+              پروفرما {safeText(need.uuid)}
             </SheetTitle>
+
             <SheetDescription className="text-right">
-              کالاها، خلاصه مالی و اطلاعات فعال سفارش
+              کالاها، خلاصه مالی و اطلاعات حمل پروفرما
             </SheetDescription>
           </SheetHeader>
         </div>

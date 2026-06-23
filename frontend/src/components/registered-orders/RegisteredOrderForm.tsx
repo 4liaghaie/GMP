@@ -137,7 +137,7 @@ const goodSchema = z.object({
   hs_code: z.string().optional(),
   hs_code_id: z.coerce.number().int().positive("کد HS الزامی است"),
   goods_status: z.string().min(1, "وضعیت کالا الزامی است"),
-  price: z.coerce.number().nonnegative("قیمت باید صفر یا بیشتر باشد"),
+  price: z.coerce.number().nonnegative("ارزش باید صفر یا بیشتر باشد"),
 });
 
 const orderSchema = z.object({
@@ -151,7 +151,9 @@ const orderSchema = z.object({
     .nonnegative("کرایه حمل باید صفر یا بیشتر باشد"),
   currency_type: z.string().min(1, "نوع ارز الزامی است"),
   fee_type: z.string().min(1, "نوع فی الزامی است"),
-  fee_amount: z.coerce.number().nonnegative("مبلغ فی باید صفر یا بیشتر باشد"),
+  fee_amount: z.coerce
+    .number()
+    .nonnegative("مبلف فی (تومان)باید صفر یا بیشتر باشد"),
   applicant_name: z.string().min(1, "نام متقاضیالزامی است"),
   currency_supply: z.string().min(1, "تامین ارز الزامی است"),
   bank_name: z.string().min(1, "نام بانک الزامی است"),
@@ -798,7 +800,7 @@ export function RegisteredOrderForm(props: {
                   )}
                 />
               </Field>
-              <Field label="مبلغ فی" error={errors.fee_amount?.message}>
+              <Field label="مبلف فی (تومان)" error={errors.fee_amount?.message}>
                 <Input
                   className="h-11"
                   type="number"
@@ -886,7 +888,7 @@ export function RegisteredOrderForm(props: {
                         <th className="p-3 font-medium">شرح کالا</th>
                         <th className="p-3 font-medium">HS Code</th>
                         <th className="p-3 font-medium">وضعیت</th>
-                        <th className="p-3 font-medium">قیمت</th>
+                        <th className="p-3 font-medium">ارزش</th>
                         <th className="p-3 font-medium">عملیات</th>
                       </tr>
                     </thead>
@@ -902,7 +904,9 @@ export function RegisteredOrderForm(props: {
                               {good.hs_code || good.hs_code_id || "-"}
                             </td>
                             <td className="p-3">{good.goods_status || "-"}</td>
-                            <td className="p-3">{fmt(good.price || good.line_total)}</td>
+                            <td className="p-3">
+                              {fmt(good.price || good.line_total)}
+                            </td>
                             <td className="p-3">
                               <div className="flex gap-2">
                                 <Button
@@ -1020,7 +1024,7 @@ export function RegisteredOrderForm(props: {
                 placeholder="انتخاب وضعیت"
               />
             </Field>
-            <Field label="قیمت کل" error={goodErrors.price}>
+            <Field label="ارزش کل" error={goodErrors.price}>
               <Input
                 className="h-11"
                 type="number"

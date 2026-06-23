@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { authFetch } from "@/lib/auth-api";
 import { cn } from "@/lib/utils";
-import { countries } from "@/lib/countryList";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,12 +70,6 @@ export type OrderGood = {
   hs_code: string;
   goods_status: string;
   price: string;
-  quantity?: string | null;
-  origin?: string | null;
-  unit_price?: string | null;
-  unit?: string | null;
-  nw_kg?: string | null;
-  gw_kg?: string | null;
   line_total: string;
 };
 
@@ -93,50 +86,19 @@ export type MarketplaceOrder = {
   fee_type: string;
   fee_amount: string;
   applicant_name?: string | null;
-  national_code?: string | null;
-  entry_border?: string | null;
-  customs?: string | null;
   currency_supply: string;
   bank_name: string;
   bank_branch: string;
+  bank_branch_display?: string | null;
   payment_instrument: string;
   expire_date: string;
-
-  terms_of_delivery?: string | null;
-  means_of_transport?: string | null;
-  country_of_origin?: string | null;
-
-  total_gw?: string | null;
-  total_nw?: string | null;
-  total_qty?: string | null;
 
   goods: OrderGood[];
 };
 
 type SortKey = "newest" | "oldest";
 
-/* ---------------- Options (same style as AddRegisteredOrderPage) ---------------- */
-
-const deliveryTerms = [
-  { value: "EXW", label: "EXW (تحویل درب کارخانه)" },
-  { value: "FOB", label: "FOB (تحویل روی عرشه)" },
-  { value: "CFR", label: "CFR (هزینه و کرایه)" },
-  { value: "CIF", label: "CIF (هزینه، بیمه و کرایه)" },
-  { value: "DAP", label: "DAP (تحویل در محل)" },
-  { value: "CPT", label: "CPT (تحویل در محل)" },
-  { value: "CIP", label: "CIP (تحویل در محل)" },
-  { value: "FCA", label: "FCA (تحویل در محل)" },
-  { value: "FAS", label: "FAS (تحویل در محل)" },
-  { value: "DDP", label: "DDP (تحویل در محل)" },
-  { value: "DPU", label: "DPU (تحویل در محل)" },
-] as const;
-
-const transportMeans = [
-  { value: "SEA", label: "دریایی" },
-  { value: "AIR", label: "هوایی" },
-  { value: "ROAD", label: "زمینی" },
-  { value: "RAIL", label: "ریلی" },
-] as const;
+/* ---------------- Options ---------------- */
 
 const currencyOptions = [
   { value: "USD", label: "دلار (USD)" },
@@ -144,12 +106,6 @@ const currencyOptions = [
   { value: "AED", label: "درهم (AED)" },
   { value: "CNY", label: "یوان چین (CNY)" },
   { value: "TRY", label: "لیر ترکیه (TRY)" },
-] as const;
-
-const partialShipmentOptions = [
-  { value: "any", label: "همه" },
-  { value: "true", label: "بله" },
-  { value: "false", label: "خیر" },
 ] as const;
 
 /**
@@ -376,36 +332,6 @@ function SearchableCombobox<T extends { value: string; label: string }>(props: {
         </PopoverContent>
       </Popover>
     </div>
-  );
-}
-
-function CountryCombobox(props: {
-  label: string;
-  value: string;
-  onChange: (code: string) => void;
-  rightAction?: React.ReactNode;
-}) {
-  const items = React.useMemo(
-    () =>
-      (
-        countries as Array<{ name: string; code: string; persianName: string }>
-      ).map((c) => ({
-        value: c.code,
-        label: `${c.persianName} (${c.code})`,
-      })),
-    [],
-  );
-
-  return (
-    <SearchableCombobox
-      label={props.label}
-      value={props.value}
-      onChange={props.onChange}
-      items={items}
-      placeholder="انتخاب کشور..."
-      searchPlaceholder="جستجو: نام فارسی / انگلیسی / کد..."
-      rightAction={props.rightAction}
-    />
   );
 }
 
@@ -725,14 +651,13 @@ function OrderCard({ order }: { order: MarketplaceOrder }) {
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-3 gap-2">
-          <StatPill label="مرز ورودی" value={safeText(order.entry_border)} />
-          <StatPill label="گمرک" value={safeText(order.customs)} />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <StatPill
             label="ارزش کالا"
             value={formatNumLike(order.total_value)}
           />
           <StatPill label="جمع کل" value={formatNumLike(order.sub_total)} />
+          <StatPill label="تعداد کالا" value={formatNumLike(goodsCount)} />
         </div>
 
         <div className="flex items-center justify-between gap-3">
@@ -785,12 +710,6 @@ export default function OrdersList() {
 
   const [applicantName, setApplicantName] = React.useState<string>("");
   const [currencyType, setCurrencyType] = React.useState<string>("");
-
-  const [termsDelivery, setTermsDelivery] = React.useState<string>("");
-  const [partialShipment, setPartialShipment] = React.useState<string>("any");
-  const [transport, setTransport] = React.useState<string>("");
-
-  const [originCountry, setOriginCountry] = React.useState<string>("");
 
   // UI controls
   const [ordering, setOrdering] = React.useState<SortKey>("newest");
@@ -911,8 +830,6 @@ export default function OrdersList() {
 
     setApplicantName("");
     setCurrencyType("");
-
-    setPartialShipment("any");
 
     setOrdering("newest");
     setPageSize(12);
@@ -1038,8 +955,6 @@ export default function OrdersList() {
                           defaultValue={[
                             "goods",
                             "trade",
-                            "terms",
-                            "logistics",
                             "view",
                           ]}
                         >
@@ -1142,90 +1057,6 @@ export default function OrdersList() {
                                 }
                               />
 
-                              <CountryCombobox
-                                label="کشور مبدا"
-                                value={originCountry}
-                                onChange={setOriginCountry}
-                                rightAction={
-                                  originCountry ? (
-                                    <button
-                                      type="button"
-                                      className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                                      onClick={() => setOriginCountry("")}
-                                      aria-label="پاک کردن کشور مبدا"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </button>
-                                  ) : null
-                                }
-                              />
-                            </AccordionContent>
-                          </AccordionItem>
-
-                          {/* Terms */}
-                          <AccordionItem value="terms">
-                            <AccordionTrigger className="text-right">
-                              شرایط معامله
-                            </AccordionTrigger>
-                            <AccordionContent className="space-y-4">
-                              <SearchableCombobox
-                                label="شرایط تحویل (Incoterms)"
-                                value={termsDelivery}
-                                onChange={setTermsDelivery}
-                                items={deliveryTerms}
-                                placeholder="انتخاب شرایط تحویل..."
-                                searchPlaceholder="جستجو..."
-                                rightAction={
-                                  termsDelivery ? (
-                                    <button
-                                      type="button"
-                                      className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                                      onClick={() => setTermsDelivery("")}
-                                      aria-label="پاک کردن تحویل"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </button>
-                                  ) : null
-                                }
-                              />
-
-                              <SearchableCombobox
-                                label="حمل به دفعات"
-                                value={partialShipment}
-                                onChange={setPartialShipment}
-                                items={partialShipmentOptions}
-                                placeholder="انتخاب..."
-                                searchPlaceholder="جستجو..."
-                              />
-                            </AccordionContent>
-                          </AccordionItem>
-
-                          {/* Logistics */}
-                          <AccordionItem value="logistics">
-                            <AccordionTrigger className="text-right">
-                              حمل و استاندارد
-                            </AccordionTrigger>
-                            <AccordionContent className="space-y-4">
-                              <SearchableCombobox
-                                label="روش حمل"
-                                value={transport}
-                                onChange={setTransport}
-                                items={transportMeans}
-                                placeholder="انتخاب روش حمل..."
-                                searchPlaceholder="جستجو..."
-                                rightAction={
-                                  transport ? (
-                                    <button
-                                      type="button"
-                                      className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                                      onClick={() => setTransport("")}
-                                      aria-label="پاک کردن حمل"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </button>
-                                  ) : null
-                                }
-                              />
                             </AccordionContent>
                           </AccordionItem>
 

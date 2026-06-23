@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from customs.models import HSCode
 
+from .bank_branches import format_bank_branch
 from .models import GoodsNeed, GoodsNeedGood, OrderGood, RegisteredOrder
 
 
@@ -233,6 +234,7 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
     user_phone = serializers.SerializerMethodField()
     order_number = serializers.SerializerMethodField()
     applicant_name = serializers.SerializerMethodField()
+    bank_branch_display = serializers.SerializerMethodField()
     goods = OrderGoodReadSerializer(many=True)
 
     class Meta:
@@ -256,6 +258,7 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
             "currency_supply",
             "bank_name",
             "bank_branch",
+            "bank_branch_display",
             "payment_instrument",
             "expire_date",
             "goods",
@@ -289,6 +292,9 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
         if can_view_private_order_fields(request, obj):
             return obj.applicant_name
         return None
+
+    def get_bank_branch_display(self, obj):
+        return format_bank_branch(obj.bank_branch)
 
 class GoodsNeedSerializer(serializers.ModelSerializer):
     goods = GoodsNeedGoodWriteSerializer(many=True, write_only=True)
@@ -670,6 +676,7 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
     order_number = serializers.SerializerMethodField()
     applicant_name = serializers.SerializerMethodField()
+    bank_branch_display = serializers.SerializerMethodField()
     goods = OrderGoodReadSerializer(many=True, read_only=True)
 
     class Meta:
@@ -690,6 +697,7 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
             "currency_supply",
             "bank_name",
             "bank_branch",
+            "bank_branch_display",
             "payment_instrument",
             "expire_date",
             "goods",
@@ -711,6 +719,9 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
         if request and is_admin_user(request.user):
             return obj.applicant_name
         return None
+
+    def get_bank_branch_display(self, obj):
+        return format_bank_branch(obj.bank_branch)
 
 class GoodsNeedSerializer(serializers.ModelSerializer):
     hs_code_id = serializers.PrimaryKeyRelatedField(

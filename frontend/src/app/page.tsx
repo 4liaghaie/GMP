@@ -33,13 +33,12 @@ type LatestOrder = {
   total_value: string | number;
   sub_total: string | number;
   currency_type: string;
-  entry_border: string;
-  country_of_origin: string;
   goods?: Array<{
     description?: string;
     hs_code?: string;
-    quantity?: string | number;
-    unit?: string;
+    goods_status?: string;
+    price?: string | number;
+    line_total?: string | number;
   }>;
 };
 
@@ -102,6 +101,7 @@ function safeText(value: unknown) {
 
 function OrderCard({ order }: { order: LatestOrder }) {
   const firstGood = order.goods?.[0];
+  const goodsCount = order.goods?.length ?? 0;
   const title = order.order_number
     ? `ثبت سفارش ${safeText(order.order_number)}`
     : "ثبت سفارش";
@@ -132,8 +132,14 @@ function OrderCard({ order }: { order: LatestOrder }) {
             <span className="font-medium">{safeText(firstGood?.hs_code)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">مرز ورودی</span>
-            <span className="font-medium">{safeText(order.entry_border)}</span>
+            <span className="text-muted-foreground">قیمت کالا</span>
+            <span className="font-medium">
+              {fmt(firstGood?.price ?? firstGood?.line_total)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">تعداد کالا</span>
+            <span className="font-medium">{fmt(goodsCount)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">جمع کل</span>
@@ -193,7 +199,7 @@ function NeedCard({ need }: { need: LatestNeed }) {
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">قیمت</span>
+            <span className="text-muted-foreground">ارزش</span>
             <span className="font-semibold">
               {fmt(firstGood?.price)} {safeText(need.currency_type)}
             </span>

@@ -10,7 +10,13 @@ import { ClipboardList, PlusCircle, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { authFetch } from "@/lib/auth-api";
@@ -74,12 +80,21 @@ async function fetchMyOrders(signal?: AbortSignal) {
   });
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) throw new Error(data?.detail || "Failed to fetch orders.");
-  return (Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : []) as RegisteredOrderListItem[];
+  return (
+    Array.isArray(data)
+      ? data
+      : Array.isArray(data?.results)
+        ? data.results
+        : []
+  ) as RegisteredOrderListItem[];
 }
 
 async function deleteOrder(uuid: string) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
-  const res = await authFetch(`${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/`, { method: "DELETE" });
+  const res = await authFetch(
+    `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/`,
+    { method: "DELETE" },
+  );
   if (res.status === 204) return;
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) throw new Error(data?.detail || "Failed to delete order.");
@@ -87,12 +102,16 @@ async function deleteOrder(uuid: string) {
 
 async function setOrderVerified(uuid: string, verified: boolean) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
-  const res = await authFetch(`${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/verify/`, {
-    method: "PATCH",
-    body: JSON.stringify({ verified }),
-  });
+  const res = await authFetch(
+    `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/verify/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ verified }),
+    },
+  );
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "Failed to update verification state.");
+  if (!res.ok)
+    throw new Error(data?.detail || "Failed to update verification state.");
   return data as RegisteredOrderListItem;
 }
 
@@ -139,7 +158,11 @@ export default function MyOrdersPage() {
   const filtered = React.useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return items;
-    return items.filter((o) => `${o.order_number ?? ""} ${o.id ?? ""} ${o.uuid ?? ""}`.toLowerCase().includes(s));
+    return items.filter((o) =>
+      `${o.order_number ?? ""} ${o.id ?? ""} ${o.uuid ?? ""}`
+        .toLowerCase()
+        .includes(s),
+    );
   }, [items, q]);
 
   async function onDelete(uuid: string) {
@@ -158,12 +181,19 @@ export default function MyOrdersPage() {
 
   async function onToggleVerify(item: RegisteredOrderListItem) {
     const next = !Boolean(item.verified);
-    if (!window.confirm(next ? "Verify this order?" : "Remove verification?")) return;
+    if (!window.confirm(next ? "Verify this order?" : "Remove verification?"))
+      return;
     setVerifyingUuid(item.uuid);
     setErr("");
     try {
       const updated = await setOrderVerified(item.uuid, next);
-      setItems((prev) => prev.map((x) => (x.uuid === item.uuid ? { ...x, verified: Boolean(updated.verified) } : x)));
+      setItems((prev) =>
+        prev.map((x) =>
+          x.uuid === item.uuid
+            ? { ...x, verified: Boolean(updated.verified) }
+            : x,
+        ),
+      );
     } catch (e: any) {
       setErr(e?.message || "Verification update failed.");
     } finally {
@@ -184,7 +214,10 @@ export default function MyOrdersPage() {
           accentClassName="bg-emerald-600"
           actions={
             <>
-              <Button variant="outline" onClick={() => router.push("/add-order")}>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/add-order")}
+              >
                 <PlusCircle className="h-4 w-4" />
                 ایجاد سفارش
               </Button>
@@ -199,7 +232,9 @@ export default function MyOrdersPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-base">لیست</CardTitle>
-            <CardDescription>برای ویرایش روی دکمه ویرایش بزنید.</CardDescription>
+            <CardDescription>
+              برای ویرایش روی دکمه ویرایش بزنید.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {err ? (
@@ -233,7 +268,7 @@ export default function MyOrdersPage() {
                     <th>ارز</th>
                     {isAdmin ? <th>متقاضی</th> : null}
                     <th>نوع فی</th>
-                    <th>مبلغ فی</th>
+                    <th>مبلف فی (تومان)</th>
                     {isAdmin ? <th>کاربر</th> : null}
                     {isAdmin ? <th>Email</th> : null}
                     {isAdmin ? <th>Phone</th> : null}
@@ -246,32 +281,50 @@ export default function MyOrdersPage() {
                 <tbody>
                   {!loading && filtered.length === 0 ? (
                     <tr>
-                      <td className="px-3 py-6 text-center text-muted-foreground" colSpan={isAdmin ? 14 : 8}>
+                      <td
+                        className="px-3 py-6 text-center text-muted-foreground"
+                        colSpan={isAdmin ? 14 : 8}
+                      >
                         موردی یافت نشد.
                       </td>
                     </tr>
                   ) : (
                     filtered.map((o) => {
-                      const goodsCount = Array.isArray(o.goods) ? o.goods.length : 0;
+                      const goodsCount = Array.isArray(o.goods)
+                        ? o.goods.length
+                        : 0;
                       const total = safeNum(o.sub_total);
                       return (
-                        <tr key={o.uuid} className="border-t [&>td]:px-3 [&>td]:py-2">
-                          <td className="font-medium">{o.order_number || "-"}</td>
+                        <tr
+                          key={o.uuid}
+                          className="border-t [&>td]:px-3 [&>td]:py-2"
+                        >
+                          <td className="font-medium">
+                            {o.order_number || "-"}
+                          </td>
                           <td>{o.id || "-"}</td>
                           <td>{formatExpireDate(o.expire_date)}</td>
                           <td>{o.currency_type || "-"}</td>
                           {isAdmin ? <td>{o.applicant_name || "-"}</td> : null}
                           <td>{o.fee_type || "-"}</td>
-                          <td>{safeNum(o.fee_amount) ? fmt(safeNum(o.fee_amount)) : "-"}</td>
+                          <td>
+                            {safeNum(o.fee_amount)
+                              ? fmt(safeNum(o.fee_amount))
+                              : "-"}
+                          </td>
                           {isAdmin ? <td>{o.user || "-"}</td> : null}
                           {isAdmin ? <td>{o.user_email || "-"}</td> : null}
                           {isAdmin ? <td>{o.user_phone || "-"}</td> : null}
                           {isAdmin ? (
                             <td>
                               {o.verified ? (
-                                <span className="text-emerald-700">تایید شده</span>
+                                <span className="text-emerald-700">
+                                  تایید شده
+                                </span>
                               ) : (
-                                <span className="text-amber-700">در انتظار تایید</span>
+                                <span className="text-amber-700">
+                                  در انتظار تایید
+                                </span>
                               )}
                             </td>
                           ) : null}
@@ -280,7 +333,11 @@ export default function MyOrdersPage() {
                           <td>
                             <div className="flex gap-2">
                               <Button asChild size="sm" variant="outline">
-                                <Link href={`/my-orders/${encodeURIComponent(o.uuid)}`}>ویرایش</Link>
+                                <Link
+                                  href={`/my-orders/${encodeURIComponent(o.uuid)}`}
+                                >
+                                  ویرایش
+                                </Link>
                               </Button>
                               <Button
                                 size="sm"
@@ -297,7 +354,11 @@ export default function MyOrdersPage() {
                                   onClick={() => onToggleVerify(o)}
                                   disabled={verifyingUuid === o.uuid}
                                 >
-                                  {verifyingUuid === o.uuid ? "..." : o.verified ? "لغو تایید" : "تایید"}
+                                  {verifyingUuid === o.uuid
+                                    ? "..."
+                                    : o.verified
+                                      ? "لغو تایید"
+                                      : "تایید"}
                                 </Button>
                               ) : null}
                             </div>
