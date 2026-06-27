@@ -150,7 +150,7 @@ const schema = z
     fee_type: z.string().min(1, "نوع فی الزامی است"),
     fee_amount: z.coerce
       .number()
-      .nonnegative("مبلف فی (تومان)باید صفر یا بیشتر باشد"),
+      .nonnegative("مبلغ فی (تومان)باید صفر یا بیشتر باشد"),
     entry_border: z.array(z.string()).optional().default([]),
     customs: z.array(z.string()).min(1, "گمرک الزامی است"),
     means_of_transport: z.array(z.string()).min(1, "روش حمل الزامی است"),
@@ -996,7 +996,7 @@ export function GoodsNeedForm(props: {
                   />
                 )}
               />
-              <Field label="مبلف فی (تومان)" error={errors.fee_amount?.message}>
+              <Field label="مبلغ فی (تومان)" error={errors.fee_amount?.message}>
                 <Input type="number" step="0.01" {...register("fee_amount")} />
               </Field>
             </div>

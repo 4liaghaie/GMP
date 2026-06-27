@@ -33,6 +33,9 @@ type ProformaGood = {
 type GoodsNeed = {
   uuid: string;
   id: number;
+  verified?: boolean;
+  rejected?: boolean;
+  rejection_reason?: string | null;
   created_at: string;
   user: string;
   status: string;
@@ -90,6 +93,24 @@ async function deleteNeed(uuid: string) {
   if (!res.ok) throw new Error(data?.detail || "خطا در حذف بار");
 }
 
+async function setNeedModeration(
+  uuid: string,
+  status: "approved" | "rejected",
+  reason = "",
+) {
+  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
+  const res = await authFetch(
+    `${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/verify/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status, reason }),
+    },
+  );
+  const data = (await res.json().catch(() => ({}))) as any;
+  if (!res.ok) throw new Error(data?.detail || "خطا در تغییر وضعیت بار");
+  return data as GoodsNeed;
+}
+
 export default function MyNeedsPage() {
   const router = useRouter();
   const [ready, setReady] = React.useState(false);
@@ -97,6 +118,10 @@ export default function MyNeedsPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [deletingUuid, setDeletingUuid] = React.useState<string | null>(null);
+  const [moderatingUuid, setModeratingUuid] = React.useState<string | null>(
+    null,
+  );
+  const [role, setRole] = React.useState("user");
 
   React.useEffect(() => {
     const access = localStorage.getItem("access");
@@ -104,8 +129,10 @@ export default function MyNeedsPage() {
       router.replace("/login");
       return;
     }
+    setRole(localStorage.getItem("role") || "user");
     setReady(true);
   }, [router]);
+  const isAdmin = role === "admin";
 
   const load = React.useCallback(() => {
     const ac = new AbortController();
@@ -135,6 +162,27 @@ export default function MyNeedsPage() {
       setError(err?.message || "خطا در حذف");
     } finally {
       setDeletingUuid(null);
+    }
+  }
+
+  async function onModerate(item: GoodsNeed, status: "approved" | "rejected") {
+    const reason =
+      status === "rejected"
+        ? window.prompt(
+            "دلیل رد شدن را وارد کنید:",
+            item.rejection_reason || "",
+          ) || ""
+        : "";
+    if (!window.confirm("وضعیت این پروفرما تغییر کند؟")) return;
+    setModeratingUuid(item.uuid);
+    setError("");
+    try {
+      const updated = await setNeedModeration(item.uuid, status, reason);
+      setItems((prev) => prev.map((x) => (x.uuid === item.uuid ? updated : x)));
+    } catch (err: any) {
+      setError(err?.message || "خطا در تغییر وضعیت");
+    } finally {
+      setModeratingUuid(null);
     }
   }
 
@@ -194,6 +242,7 @@ export default function MyNeedsPage() {
                     <th>فی</th>
                     <th>مرز ورودی</th>
                     <th>گمرک</th>
+                    {isAdmin ? <th>وضعیت تایید</th> : null}
                     <th className="w-[160px]">عملیات</th>
                   </tr>
                 </thead>
@@ -201,7 +250,7 @@ export default function MyNeedsPage() {
                   {!loading && items.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={isAdmin ? 11 : 10}
                         className="px-3 py-6 text-center text-muted-foreground"
                       >
                         موردی یافت نشد.
@@ -215,7 +264,7 @@ export default function MyNeedsPage() {
                           key={item.uuid}
                           className="border-t [&>td]:px-3 [&>td]:py-2"
                         >
-                          <td>{item.id}</td>
+                          <td>{item.uuid}</td>
                           <td className="font-medium">
                             {first?.description || "-"}
                             <div className="text-xs text-muted-foreground">
@@ -232,6 +281,26 @@ export default function MyNeedsPage() {
                           </td>
                           <td>{item.entry_border || "-"}</td>
                           <td>{customsLabel(item.customs)}</td>
+                          {isAdmin ? (
+                            <td>
+                              {item.rejected ? (
+                                <span className="text-red-700">
+                                  رد شده
+                                  {item.rejection_reason
+                                    ? `: ${item.rejection_reason}`
+                                    : ""}
+                                </span>
+                              ) : item.verified ? (
+                                <span className="text-emerald-700">
+                                  تایید شده
+                                </span>
+                              ) : (
+                                <span className="text-amber-700">
+                                  در انتظار تایید
+                                </span>
+                              )}
+                            </td>
+                          ) : null}
                           <td>
                             <div className="flex gap-2">
                               <Button
@@ -253,6 +322,26 @@ export default function MyNeedsPage() {
                               >
                                 {deletingUuid === item.uuid ? "..." : "حذف"}
                               </Button>
+                              {isAdmin ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => onModerate(item, "approved")}
+                                    disabled={moderatingUuid === item.uuid}
+                                  >
+                                    تایید
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => onModerate(item, "rejected")}
+                                    disabled={moderatingUuid === item.uuid}
+                                  >
+                                    رد
+                                  </Button>
+                                </>
+                              ) : null}
                             </div>
                           </td>
                         </tr>

@@ -165,7 +165,7 @@ function GoodMobileCard({ good }: { good: ProformaGood }) {
             value={`${formatNumLike(good.quantity)} ${safeText(good.unit)}`}
           />
 
-          <KeyValue label="قیمت" value={formatNumLike(good.price)} />
+          <KeyValue label="ارزش" value={formatNumLike(good.price)} />
 
           <KeyValue label="NW" value={formatNumLike(good.nw_kg)} />
 
@@ -219,7 +219,7 @@ function GoodsTable({ need }: { need: GoodsNeed }) {
                 <TableHead className="text-right">HS</TableHead>
                 <TableHead className="text-right">کشور سازنده</TableHead>
                 <TableHead className="text-right">مقدار</TableHead>
-                <TableHead className="text-left">قیمت</TableHead>
+                <TableHead className="text-left">ارزش</TableHead>
                 <TableHead className="text-left">جمع</TableHead>
               </TableRow>
             </TableHeader>

@@ -153,7 +153,7 @@ const orderSchema = z.object({
   fee_type: z.string().min(1, "نوع فی الزامی است"),
   fee_amount: z.coerce
     .number()
-    .nonnegative("مبلف فی (تومان)باید صفر یا بیشتر باشد"),
+    .nonnegative("مبلغ فی (تومان)باید صفر یا بیشتر باشد"),
   applicant_name: z.string().min(1, "نام متقاضیالزامی است"),
   currency_supply: z.string().min(1, "تامین ارز الزامی است"),
   bank_name: z.string().min(1, "نام بانک الزامی است"),
@@ -800,7 +800,7 @@ export function RegisteredOrderForm(props: {
                   )}
                 />
               </Field>
-              <Field label="مبلف فی (تومان)" error={errors.fee_amount?.message}>
+              <Field label="مبلغ فی (تومان)" error={errors.fee_amount?.message}>
                 <Input
                   className="h-11"
                   type="number"

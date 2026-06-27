@@ -15,7 +15,7 @@ yarn-error.log*
 .env
 .env.*
 !.env.docker.example
-
+.agents
 # Python / Django (backend)
 backend/.venv/
 backend/venv/

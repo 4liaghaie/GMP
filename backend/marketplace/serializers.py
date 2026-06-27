@@ -7,7 +7,7 @@ from rest_framework import serializers
 from customs.models import HSCode
 
 from .bank_branches import format_bank_branch
-from .models import GoodsNeed, GoodsNeedGood, OrderGood, RegisteredOrder
+from .models import GoodsNeed, GoodsNeedGood, Notification, OrderGood, RegisteredOrder
 
 
 def is_admin_user(user) -> bool:
@@ -243,6 +243,8 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
             "id",
             "uuid",
             "verified",
+            "rejected",
+            "rejection_reason",
             "order_number",
             "order_pdf",
             "user",
@@ -684,6 +686,8 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
         fields = [
             "uuid",
             "verified",
+            "rejected",
+            "rejection_reason",
             "order_number",
             "user",
             "total_value",
@@ -722,6 +726,21 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
 
     def get_bank_branch_display(self, obj):
         return format_bank_branch(obj.bank_branch)
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = [
+            "id",
+            "title",
+            "message",
+            "notification_type",
+            "related_model",
+            "related_uuid",
+            "read",
+            "created_at",
+        ]
 
 class GoodsNeedSerializer(serializers.ModelSerializer):
     hs_code_id = serializers.PrimaryKeyRelatedField(

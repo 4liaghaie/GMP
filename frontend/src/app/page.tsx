@@ -132,7 +132,7 @@ function OrderCard({ order }: { order: LatestOrder }) {
             <span className="font-medium">{safeText(firstGood?.hs_code)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">قیمت کالا</span>
+            <span className="text-muted-foreground">ارزش کالا</span>
             <span className="font-medium">
               {fmt(firstGood?.price ?? firstGood?.line_total)}
             </span>
@@ -249,10 +249,7 @@ export default function HomePage() {
   }, [isLoggedIn]);
 
   return (
-    <div
-      dir="rtl"
-      className="min-h-screen bg-[linear-gradient(180deg,#f7f7f2_0%,#ffffff_34%,#f8fafc_100%)]"
-    >
+    <div dir="rtl" className="min-h-screen]">
       <main className="mx-auto max-w-6xl px-4 py-10 md:py-14">
         <section className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div className="space-y-6">
@@ -377,7 +374,7 @@ export default function HomePage() {
                 <div>
                   <h2 className="text-2xl font-black">آخرین بارها</h2>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                    بارهای جدیدی که می‌توانند با ثبت سفارش‌های مشابه match شوند.
+                    بارهای جدیدی که می‌توانند با ثبت سفارش‌های مشابه مچ شوند.
                   </p>
                 </div>
                 <Button

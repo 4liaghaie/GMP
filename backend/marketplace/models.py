@@ -18,6 +18,8 @@ class RegisteredOrder(models.Model):
 
     uuid = models.CharField(max_length=32, unique=True, editable=False, db_index=True, blank=True)
     verified = models.BooleanField(default=False, db_index=True)
+    rejected = models.BooleanField(default=False, db_index=True)
+    rejection_reason = models.TextField(blank=True, default="")
     order_number = models.CharField(max_length=55)
     order_pdf = models.FileField(upload_to="registered_orders/pdfs/")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -102,6 +104,9 @@ class GoodsNeed(models.Model):
     ]
 
     uuid = models.CharField(max_length=32, unique=True, editable=False, db_index=True, blank=True)
+    verified = models.BooleanField(default=False, db_index=True)
+    rejected = models.BooleanField(default=False, db_index=True)
+    rejection_reason = models.TextField(blank=True, default="")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     proforma_file = models.FileField(upload_to="goods_needs/files/", blank=True, default="")
@@ -186,3 +191,26 @@ class GoodsNeedGood(models.Model):
     @property
     def line_total(self):
         return self.quantity * self.price
+
+
+class Notification(models.Model):
+    TYPE_SUBMITTED = "submitted"
+    TYPE_APPROVED = "approved"
+    TYPE_REJECTED = "rejected"
+    TYPE_CHOICES = [
+        (TYPE_SUBMITTED, "Submitted"),
+        (TYPE_APPROVED, "Approved"),
+        (TYPE_REJECTED, "Rejected"),
+    ]
+
+    user = models.ForeignKey(User, related_name="notifications", on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    related_model = models.CharField(max_length=50, blank=True, default="")
+    related_uuid = models.CharField(max_length=64, blank=True, default="")
+    read = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]

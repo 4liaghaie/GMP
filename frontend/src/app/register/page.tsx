@@ -99,12 +99,12 @@ export default function RegisterPage() {
         phone: values.phone.trim(),
       });
 
-      localStorage.setItem("access", res.access);
-      localStorage.setItem("refresh", res.refresh);
-      localStorage.setItem("role", res.role);
-
-      setOk("حساب کاربری با موفقیت ساخته شد.");
-      router.push("/dashboard");
+      setOk(
+        res.detail ||
+          "درخواست ثبت‌نام شما ثبت شد و بعد از تایید ادمین امکان ورود دارید.",
+      );
+      form.reset();
+      window.setTimeout(() => router.push("/login"), 1800);
     } catch (e: any) {
       setError(e?.message ?? "خطا");
     } finally {

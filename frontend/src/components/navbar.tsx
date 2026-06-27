@@ -13,10 +13,21 @@ import {
   UserPlus,
   LogOut,
   Home,
+  Bell,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  getNotifications,
+  markNotificationRead,
+  type UserNotification,
+} from "@/lib/auth-api";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Accordion,
   AccordionContent,
@@ -56,6 +67,10 @@ export function Navbar() {
 
   const [authed, setAuthed] = React.useState(false);
   const [open, setOpen] = React.useState(false);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+  const [notifications, setNotifications] = React.useState<UserNotification[]>(
+    [],
+  );
 
   // ✅ keep authed in sync in the SAME tab + other tabs
   React.useEffect(() => {
@@ -75,6 +90,33 @@ export function Navbar() {
       window.removeEventListener(AUTH_EVENT, sync as EventListener);
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!authed) {
+      setUnreadCount(0);
+      setNotifications([]);
+      return;
+    }
+
+    let cancelled = false;
+    getNotifications({ unread: true })
+      .then((items) => {
+        if (!cancelled) {
+          setNotifications(items);
+          setUnreadCount(items.filter((item) => !item.read).length);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNotifications([]);
+          setUnreadCount(0);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authed, pathname]);
 
   // close menu on route change
   React.useEffect(() => setOpen(false), [pathname]);
@@ -159,6 +201,12 @@ export function Navbar() {
           icon: <User className="h-4 w-4" />,
           auth: "authed",
         },
+        {
+          href: "/notifications",
+          label: unreadCount ? `اعلان‌ها (${unreadCount})` : "اعلان‌ها",
+          icon: <Bell className="h-4 w-4" />,
+          auth: "authed",
+        },
       ],
     },
   ];
@@ -169,6 +217,18 @@ export function Navbar() {
     if (auth === "guest") return !authed;
     return true;
   };
+
+  const recentNotifications = notifications.slice(0, 5);
+
+  async function markRead(id: number) {
+    try {
+      await markNotificationRead(id);
+      setNotifications((prev) => prev.filter((item) => item.id !== id));
+      setUnreadCount((count) => Math.max(0, count - 1));
+    } catch {
+      // Keep the overlay quiet; the full notifications page can show failures.
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/30 backdrop-blur">
@@ -214,6 +274,72 @@ export function Navbar() {
               <Button asChild variant="ghost" size="sm">
                 <Link href="/profile">پروفایل</Link>
               </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="relative gap-2">
+                    <Bell className="h-4 w-4" />
+                    اعلان‌ها
+                    {unreadCount ? (
+                      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] leading-none text-destructive-foreground">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    ) : null}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-0" dir="rtl">
+                  <div className="border-b p-3">
+                    <div className="font-semibold">اعلان‌ها</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {unreadCount
+                        ? `${unreadCount} اعلان خوانده‌نشده`
+                        : "اعلان خوانده‌نشده ندارید"}
+                    </div>
+                  </div>
+                  <div className="max-h-80 overflow-auto p-2">
+                    {recentNotifications.length ? (
+                      recentNotifications.map((item) => (
+                        <div
+                          key={item.id}
+                          className={[
+                            "rounded-xl border p-3 text-sm",
+                            !item.read ? "bg-muted/60" : "bg-background",
+                          ].join(" ")}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-medium">{item.title}</span>
+                            {!item.read ? (
+                              <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">
+                                جدید
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
+                            {item.message}
+                          </p>
+                          {!item.read ? (
+                            <button
+                              type="button"
+                              onClick={() => markRead(item.id)}
+                              className="mt-2 text-xs font-medium text-primary hover:underline"
+                            >
+                              خواندم
+                            </button>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-8 text-center text-sm text-muted-foreground">
+                        اعلانی وجود ندارد.
+                      </div>
+                    )}
+                  </div>
+                  <div className="border-t p-2">
+                    <Button asChild className="w-full rounded-xl" size="sm">
+                      <Link href="/notifications">مشاهده همه اعلان‌ها</Link>
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Button variant="outline" size="sm" onClick={logout}>
                 خروج
               </Button>
@@ -224,6 +350,78 @@ export function Navbar() {
         {/* Mobile: theme + hamburger */}
         <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
+          {authed ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative"
+                  aria-label="اعلان‌ها"
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadCount ? (
+                    <span className="absolute -left-1 -top-1 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] leading-none text-destructive-foreground">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  ) : null}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0" dir="rtl">
+                <div className="border-b p-3">
+                  <div className="font-semibold">اعلان‌ها</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {unreadCount
+                      ? `${unreadCount} اعلان خوانده‌نشده`
+                      : "اعلان خوانده‌نشده ندارید"}
+                  </div>
+                </div>
+                <div className="max-h-80 overflow-auto p-2">
+                  {recentNotifications.length ? (
+                    recentNotifications.map((item) => (
+                      <div
+                        key={item.id}
+                        className={[
+                          "rounded-xl border p-3 text-sm",
+                          !item.read ? "bg-muted/60" : "bg-background",
+                        ].join(" ")}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-medium">{item.title}</span>
+                          {!item.read ? (
+                            <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">
+                              جدید
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
+                          {item.message}
+                        </p>
+                        {!item.read ? (
+                          <button
+                            type="button"
+                            onClick={() => markRead(item.id)}
+                            className="mt-2 text-xs font-medium text-primary hover:underline"
+                          >
+                            خواندم
+                          </button>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-8 text-center text-sm text-muted-foreground">
+                      اعلانی وجود ندارد.
+                    </div>
+                  )}
+                </div>
+                <div className="border-t p-2">
+                  <Button asChild className="w-full rounded-xl" size="sm">
+                    <Link href="/notifications">مشاهده همه اعلان‌ها</Link>
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : null}
           <Button
             variant="ghost"
             size="icon"

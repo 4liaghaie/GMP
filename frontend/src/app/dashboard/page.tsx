@@ -13,6 +13,7 @@ import {
   Sparkles,
   Store,
   FileText,
+  UsersRound,
 } from "lucide-react";
 
 import {
@@ -155,6 +156,7 @@ function FeatureGroup({
 export default function DashboardPage() {
   const router = useRouter();
   const [ready, setReady] = React.useState(false);
+  const [role, setRole] = React.useState("user");
 
   React.useEffect(() => {
     const access = localStorage.getItem("access");
@@ -164,6 +166,7 @@ export default function DashboardPage() {
       return;
     }
 
+    setRole(localStorage.getItem("role") || "user");
     setReady(true);
   }, [router]);
 
@@ -211,15 +214,22 @@ export default function DashboardPage() {
     },
   ];
 
+  const adminLinks: DashboardLink[] = [
+    {
+      title: "مدیریت کاربران",
+      description: "تایید، رد یا مسدود کردن درخواست‌ها و کاربران",
+      href: "/admin/users",
+      icon: <UsersRound className="h-5 w-5" />,
+    },
+  ];
+
   return (
     <div
       dir="rtl"
       className="
         min-h-screen
 
-        bg-[radial-gradient(circle_at_top_right,#fff7ed_0%,transparent_30%),linear-gradient(180deg,#f8fafc_0%,#ffffff_45%,#f1f5f9_100%)]
 
-        dark:bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.12),transparent_35%),#0B1120]
       "
     >
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -315,6 +325,15 @@ export default function DashboardPage() {
             accent="bg-amber-500"
             links={proformaLinks}
           />
+          {role === "admin" ? (
+            <FeatureGroup
+              title="مدیریت"
+              description="ابزارهای مدیریتی مخصوص ادمین"
+              icon={<UsersRound className="h-8 w-8 text-slate-700" />}
+              accent="bg-slate-900"
+              links={adminLinks}
+            />
+          ) : null}
         </section>
       </main>
     </div>

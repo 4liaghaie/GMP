@@ -36,6 +36,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./backend/media:/app/media
     ports:
       - "8000:8000"
 

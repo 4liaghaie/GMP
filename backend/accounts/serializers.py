@@ -93,8 +93,17 @@ class MeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "username", "phone", "first_name", "last_name", "email", "role")
-        read_only_fields = ("id", "username", "role")
+        fields = (
+            "id",
+            "username",
+            "phone",
+            "first_name",
+            "last_name",
+            "email",
+            "role",
+            "account_status",
+        )
+        read_only_fields = ("id", "username", "role", "account_status")
 
     def get_email(self, obj):
         request = self.context.get("request")
@@ -144,3 +153,43 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This email is already registered.")
 
         return value
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "username",
+            "email",
+            "phone",
+            "first_name",
+            "last_name",
+            "full_name",
+            "role",
+            "account_status",
+            "account_status_note",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "date_joined",
+            "last_login",
+        )
+        read_only_fields = fields
+
+    def get_full_name(self, obj):
+        return obj.get_full_name()
+
+
+class AdminUserStatusSerializer(serializers.Serializer):
+    account_status = serializers.ChoiceField(choices=User.AccountStatus.choices)
+    note = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        user = self.context.get("user")
+        if request and user and request.user.pk == user.pk:
+            raise serializers.ValidationError("Admins cannot change their own account status here.")
+        return attrs

@@ -114,16 +114,9 @@ export async function register(payload: {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(firstErrorMessage(data, "خطا در ثبت‌نام"));
 
-  if (typeof window !== "undefined") {
-    if (data?.access) setTokens(data.access, data.refresh);
-    if (data?.role) localStorage.setItem("role", data.role);
-  }
-
   return data as {
-    access: string;
-    refresh: string;
-    role: string;
     detail?: string;
+    account_status?: string;
   };
 }
 
@@ -223,6 +216,7 @@ export async function getMe() {
     last_name: string;
     email: string;
     role: string;
+    account_status: string;
   };
 }
 
@@ -248,4 +242,79 @@ export async function updateProfile(payload: {
   }
 
   return data;
+}
+
+export type AdminUser = {
+  id: number;
+  username: string;
+  email: string | null;
+  phone: string | null;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  role: string;
+  account_status: "pending" | "verified" | "rejected" | "banned";
+  account_status_note: string;
+  is_active: boolean;
+  is_staff: boolean;
+  is_superuser: boolean;
+  date_joined: string;
+  last_login: string | null;
+};
+
+export async function getAdminUsers(params?: {
+  status?: string;
+  search?: string;
+}) {
+  const url = new URL(`${API}/admin/users/`);
+  if (params?.status) url.searchParams.set("status", params.status);
+  if (params?.search) url.searchParams.set("search", params.search);
+
+  const res = await authFetch(url.toString(), { method: "GET" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(firstErrorMessage(data, "خطا در دریافت کاربران"));
+  return data as AdminUser[];
+}
+
+export async function updateAdminUserStatus(
+  userId: number,
+  payload: { account_status: AdminUser["account_status"]; note?: string },
+) {
+  const res = await authFetch(`${API}/admin/users/${userId}/status/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(firstErrorMessage(data, "خطا در تغییر وضعیت کاربر"));
+  return data as AdminUser;
+}
+
+export type UserNotification = {
+  id: number;
+  title: string;
+  message: string;
+  notification_type: "submitted" | "approved" | "rejected";
+  related_model: string;
+  related_uuid: string;
+  read: boolean;
+  created_at: string;
+};
+
+export async function getNotifications(params?: { unread?: boolean }) {
+  const url = new URL(`${API}/notifications/`);
+  if (params?.unread) url.searchParams.set("unread", "true");
+
+  const res = await authFetch(url.toString(), { method: "GET" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(firstErrorMessage(data, "خطا در دریافت اعلان‌ها"));
+  return data as UserNotification[];
+}
+
+export async function markNotificationRead(id: number) {
+  const res = await authFetch(`${API}/notifications/${id}/read/`, {
+    method: "PATCH",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(firstErrorMessage(data, "خطا در بروزرسانی اعلان"));
+  return data as UserNotification;
 }

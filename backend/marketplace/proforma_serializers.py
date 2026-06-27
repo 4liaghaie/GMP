@@ -75,6 +75,9 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
             "uuid",
             "user",
             "created_at",
+            "verified",
+            "rejected",
+            "rejection_reason",
             "proforma_file",
             "status",
             "country_of_origin",
@@ -88,7 +91,15 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
             "goods",
             "goods_read",
         ]
-        read_only_fields = ["id", "uuid", "user", "created_at"]
+        read_only_fields = [
+            "id",
+            "uuid",
+            "user",
+            "created_at",
+            "verified",
+            "rejected",
+            "rejection_reason",
+        ]
 
     def validate_proforma_file(self, value):
         if not value:

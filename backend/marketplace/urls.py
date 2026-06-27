@@ -7,7 +7,10 @@ from .views import (
     MarketplaceRegisteredOrderDetailAPIView,
     GoodsNeedListCreateAPIView,
     GoodsNeedDetailAPIView,
+    GoodsNeedVerifyAPIView,
     MarketplaceGoodsNeedListAPIView,
+    NotificationListAPIView,
+    NotificationMarkReadAPIView,
 )
 
 urlpatterns = [
@@ -18,5 +21,8 @@ urlpatterns = [
     path("marketplace/orders/<str:uuid>/", MarketplaceRegisteredOrderDetailAPIView.as_view()),
     path("goods-needs/", GoodsNeedListCreateAPIView.as_view(), name="goodsneed-list-create"),
     path("goods-needs/<str:uuid>/", GoodsNeedDetailAPIView.as_view(), name="goodsneed-detail"),
+    path("goods-needs/<str:uuid>/verify/", GoodsNeedVerifyAPIView.as_view(), name="goodsneed-verify"),
     path("marketplace/goods-needs/", MarketplaceGoodsNeedListAPIView.as_view()),
+    path("notifications/", NotificationListAPIView.as_view(), name="notification-list"),
+    path("notifications/<int:pk>/read/", NotificationMarkReadAPIView.as_view(), name="notification-read"),
 ]

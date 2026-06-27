@@ -8,8 +8,10 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .filters import RegisteredOrderMarketplaceFilter
 
-from .models import GoodsNeed, GoodsNeedGood, RegisteredOrder, OrderGood
+from .models import GoodsNeed, GoodsNeedGood, Notification, RegisteredOrder, OrderGood
+from .notifications import notify_admins_of_submission
 from .serializers import (
+    NotificationSerializer,
     RegisteredOrderCreateUpdateSerializer,
     RegisteredOrderReadSerializer,
     PublicRegisteredOrderSerializer,
@@ -29,6 +31,46 @@ def is_admin_user(user):
     )
 
 
+def create_moderation_notification(obj, kind: str, reason: str = ""):
+    is_order = isinstance(obj, RegisteredOrder)
+    title = "ثبت سفارش تایید شد" if is_order else "پروفرما تایید شد"
+    rejected_title = "ثبت سفارش رد شد" if is_order else "پروفرما رد شد"
+    model_name = "registered_order" if is_order else "proforma"
+    if kind == "approved":
+        message = f"{title}: {obj.uuid}"
+        notification_title = title
+    else:
+        notification_title = rejected_title
+        message = f"{rejected_title}: {obj.uuid}"
+        if reason:
+            message = f"{message}\nدلیل: {reason}"
+
+    Notification.objects.create(
+        user=obj.user,
+        title=notification_title,
+        message=message,
+        notification_type=kind,
+        related_model=model_name,
+        related_uuid=obj.uuid,
+    )
+
+
+def parse_moderation_payload(request):
+    raw_status = (request.data.get("status") or "").strip().lower()
+    reason = (request.data.get("reason") or request.data.get("rejection_reason") or "").strip()
+    if raw_status in {"approved", "verified", "approve", "verify"}:
+        return "approved", reason
+    if raw_status in {"rejected", "reject"}:
+        return "rejected", reason
+
+    if "verified" in request.data:
+        raw = request.data.get("verified")
+        if isinstance(raw, bool):
+            return ("approved" if raw else "pending"), reason
+
+    return "", reason
+
+
 class RegisteredOrderListCreateAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -44,6 +86,12 @@ class RegisteredOrderListCreateAPIView(APIView):
         ser = RegisteredOrderCreateUpdateSerializer(data=request.data, context={"request": request})
         ser.is_valid(raise_exception=True)
         order = ser.save()
+        notify_admins_of_submission(
+            title="ثبت سفارش جدید در انتظار تایید",
+            message=f"ثبت سفارش {order.uuid} توسط کاربر {request.user.username} ایجاد شد و منتظر تایید است.",
+            related_model="registered_order",
+            related_uuid=order.uuid,
+        )
         return Response(RegisteredOrderReadSerializer(order, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -93,16 +141,31 @@ class RegisteredOrderVerifyAPIView(APIView):
             )
 
         order = get_object_or_404(RegisteredOrder, uuid=uuid)
-        raw = request.data.get("verified", None)
+        next_status, reason = parse_moderation_payload(request)
 
-        if not isinstance(raw, bool):
+        if next_status not in {"approved", "rejected", "pending"}:
             return Response(
-                {"detail": "Field 'verified' must be boolean."},
+                {"detail": "Send status as 'approved' or 'rejected'."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        order.verified = raw
-        order.save(update_fields=["verified"])
+        if next_status == "approved":
+            order.verified = True
+            order.rejected = False
+            order.rejection_reason = ""
+            order.save(update_fields=["verified", "rejected", "rejection_reason"])
+            create_moderation_notification(order, Notification.TYPE_APPROVED)
+        elif next_status == "rejected":
+            order.verified = False
+            order.rejected = True
+            order.rejection_reason = reason
+            order.save(update_fields=["verified", "rejected", "rejection_reason"])
+            create_moderation_notification(order, Notification.TYPE_REJECTED, reason)
+        else:
+            order.verified = False
+            order.rejected = False
+            order.rejection_reason = ""
+            order.save(update_fields=["verified", "rejected", "rejection_reason"])
         return Response(RegisteredOrderReadSerializer(order, context={"request": request}).data, status=status.HTTP_200_OK)
 
 
@@ -116,7 +179,7 @@ class MarketplaceRegisteredOrderListAPIView(generics.ListAPIView):
     def get_queryset(self):
         return (
             RegisteredOrder.objects
-            .filter(verified=True)
+            .filter(verified=True, rejected=False)
             .select_related("user")
             .prefetch_related(
                 Prefetch(
@@ -138,7 +201,7 @@ class MarketplaceRegisteredOrderDetailAPIView(generics.RetrieveAPIView):
     def get_queryset(self):
         return (
             RegisteredOrder.objects
-            .filter(verified=True)
+            .filter(verified=True, rejected=False)
             .select_related("user")
             .prefetch_related(
                 Prefetch(
@@ -170,6 +233,12 @@ class GoodsNeedListCreateAPIView(APIView):
         ser = GoodsNeedSerializer(data=request.data, context={"request": request})
         ser.is_valid(raise_exception=True)
         need = ser.save(user=request.user)
+        notify_admins_of_submission(
+            title="پروفرمای جدید در انتظار تایید",
+            message=f"پروفرما {need.uuid} توسط کاربر {request.user.username} ایجاد شد و منتظر تایید است.",
+            related_model="proforma",
+            related_uuid=need.uuid,
+        )
         return Response(GoodsNeedSerializer(need, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -208,12 +277,51 @@ class GoodsNeedDetailAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class GoodsNeedVerifyAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, uuid):
+        if not is_admin_user(request.user):
+            return Response(
+                {"detail": "Only admins can change verification state."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        need = get_object_or_404(GoodsNeed, uuid=uuid)
+        next_status, reason = parse_moderation_payload(request)
+        if next_status not in {"approved", "rejected", "pending"}:
+            return Response(
+                {"detail": "Send status as 'approved' or 'rejected'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if next_status == "approved":
+            need.verified = True
+            need.rejected = False
+            need.rejection_reason = ""
+            need.save(update_fields=["verified", "rejected", "rejection_reason"])
+            create_moderation_notification(need, Notification.TYPE_APPROVED)
+        elif next_status == "rejected":
+            need.verified = False
+            need.rejected = True
+            need.rejection_reason = reason
+            need.save(update_fields=["verified", "rejected", "rejection_reason"])
+            create_moderation_notification(need, Notification.TYPE_REJECTED, reason)
+        else:
+            need.verified = False
+            need.rejected = False
+            need.rejection_reason = ""
+            need.save(update_fields=["verified", "rejected", "rejection_reason"])
+
+        return Response(GoodsNeedSerializer(need, context={"request": request}).data, status=status.HTTP_200_OK)
+
+
 class MarketplaceGoodsNeedListAPIView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = GoodsNeedSerializer
 
     def get_queryset(self):
-        qs = GoodsNeed.objects.select_related("user", "hs_code").prefetch_related("goods__hs_code").order_by("-created_at")
+        qs = GoodsNeed.objects.filter(verified=True, rejected=False).select_related("user", "hs_code").prefetch_related("goods__hs_code").order_by("-created_at")
         hs_code = (self.request.query_params.get("hs_code") or "").strip()
         q = (self.request.query_params.get("q") or "").strip()
         status_value = (self.request.query_params.get("status") or "").strip()
@@ -258,3 +366,24 @@ class MarketplaceGoodsNeedListAPIView(generics.ListAPIView):
                 | Q(entry_border__icontains=q)
             )
         return qs.distinct()
+
+
+class NotificationListAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        qs = Notification.objects.filter(user=request.user).order_by("-created_at", "-id")
+        unread = (request.query_params.get("unread") or "").strip().lower()
+        if unread in {"1", "true", "yes"}:
+            qs = qs.filter(read=False)
+        return Response(NotificationSerializer(qs, many=True).data)
+
+
+class NotificationMarkReadAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        notification = get_object_or_404(Notification, pk=pk, user=request.user)
+        notification.read = True
+        notification.save(update_fields=["read"])
+        return Response(NotificationSerializer(notification).data)

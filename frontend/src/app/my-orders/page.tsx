@@ -26,6 +26,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 type RegisteredOrderListItem = {
   uuid: string;
   verified?: boolean;
+  rejected?: boolean;
+  rejection_reason?: string | null;
   user?: string | null;
   user_email?: string | null;
   user_phone?: string | null;
@@ -100,13 +102,17 @@ async function deleteOrder(uuid: string) {
   if (!res.ok) throw new Error(data?.detail || "Failed to delete order.");
 }
 
-async function setOrderVerified(uuid: string, verified: boolean) {
+async function setOrderModeration(
+  uuid: string,
+  status: "approved" | "rejected" | "pending",
+  reason = "",
+) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
   const res = await authFetch(
     `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/verify/`,
     {
       method: "PATCH",
-      body: JSON.stringify({ verified }),
+      body: JSON.stringify({ status, reason }),
     },
   );
   const data = (await res.json().catch(() => ({}))) as any;
@@ -179,18 +185,31 @@ export default function MyOrdersPage() {
     }
   }
 
-  async function onToggleVerify(item: RegisteredOrderListItem) {
-    const next = !Boolean(item.verified);
-    if (!window.confirm(next ? "Verify this order?" : "Remove verification?"))
-      return;
+  async function onModerate(
+    item: RegisteredOrderListItem,
+    nextStatus: "approved" | "rejected" | "pending",
+  ) {
+    const reason =
+      nextStatus === "rejected"
+        ? window.prompt("دلیل رد شدن را وارد کنید:", item.rejection_reason || "") || ""
+        : "";
+    if (!window.confirm("وضعیت این ثبت سفارش تغییر کند؟")) return;
     setVerifyingUuid(item.uuid);
     setErr("");
     try {
-      const updated = await setOrderVerified(item.uuid, next);
+      const updated = await setOrderModeration(item.uuid, nextStatus, reason);
       setItems((prev) =>
         prev.map((x) =>
           x.uuid === item.uuid
             ? { ...x, verified: Boolean(updated.verified) }
+            : x,
+        ).map((x) =>
+          x.uuid === item.uuid
+            ? {
+                ...x,
+                rejected: Boolean(updated.rejected),
+                rejection_reason: updated.rejection_reason,
+              }
             : x,
         ),
       );
@@ -268,7 +287,7 @@ export default function MyOrdersPage() {
                     <th>ارز</th>
                     {isAdmin ? <th>متقاضی</th> : null}
                     <th>نوع فی</th>
-                    <th>مبلف فی (تومان)</th>
+                    <th>مبلغ فی (تومان)</th>
                     {isAdmin ? <th>کاربر</th> : null}
                     {isAdmin ? <th>Email</th> : null}
                     {isAdmin ? <th>Phone</th> : null}
@@ -317,7 +336,12 @@ export default function MyOrdersPage() {
                           {isAdmin ? <td>{o.user_phone || "-"}</td> : null}
                           {isAdmin ? (
                             <td>
-                              {o.verified ? (
+                              {o.rejected ? (
+                                <span className="text-red-700">
+                                  رد شده
+                                  {o.rejection_reason ? `: ${o.rejection_reason}` : ""}
+                                </span>
+                              ) : o.verified ? (
                                 <span className="text-emerald-700">
                                   تایید شده
                                 </span>
@@ -348,18 +372,26 @@ export default function MyOrdersPage() {
                                 {deletingUuid === o.uuid ? "..." : "حذف"}
                               </Button>
                               {isAdmin ? (
-                                <Button
-                                  size="sm"
-                                  variant={o.verified ? "outline" : "secondary"}
-                                  onClick={() => onToggleVerify(o)}
-                                  disabled={verifyingUuid === o.uuid}
-                                >
-                                  {verifyingUuid === o.uuid
-                                    ? "..."
-                                    : o.verified
-                                      ? "لغو تایید"
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => onModerate(o, "approved")}
+                                    disabled={verifyingUuid === o.uuid}
+                                  >
+                                    {verifyingUuid === o.uuid
+                                      ? "..."
                                       : "تایید"}
-                                </Button>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => onModerate(o, "rejected")}
+                                    disabled={verifyingUuid === o.uuid}
+                                  >
+                                    رد
+                                  </Button>
+                                </>
                               ) : null}
                             </div>
                           </td>

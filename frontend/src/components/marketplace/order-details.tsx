@@ -48,7 +48,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBankBranch } from "@/lib/bankBranch";
 import { cn } from "@/lib/utils";
 
-const WHATSAPP_NUMBER = "00989307878446";
+const WHATSAPP_NUMBER = "989307878446";
 const WHATSAPP_MESSAGE = "سلام، درباره همین ثبت سفارش پیام می‌دهم.";
 
 function formatNumLike(x: string | number | null | undefined) {
@@ -160,7 +160,7 @@ function GoodMobileCard({ good }: { good: OrderGood }) {
         <Separator />
 
         <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="text-muted-foreground">قیمت</span>
+          <span className="text-muted-foreground">ارزش</span>
           <span className="font-semibold tabular-nums">
             {formatNumLike(good.price ?? good.line_total)}
           </span>
@@ -203,7 +203,7 @@ function GoodsTable({ order }: { order: MarketplaceOrder }) {
                 <TableHead className="w-[45%] text-right">شرح</TableHead>
                 <TableHead className="text-right">HS</TableHead>
                 <TableHead className="text-right">وضعیت</TableHead>
-                <TableHead className="text-left">قیمت</TableHead>
+                <TableHead className="text-left">ارزش</TableHead>
               </TableRow>
             </TableHeader>
 

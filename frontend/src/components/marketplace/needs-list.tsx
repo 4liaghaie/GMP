@@ -86,6 +86,9 @@ export type GoodsNeed = {
   id: number;
   user: string;
   created_at: string;
+  verified?: boolean;
+  rejected?: boolean;
+  rejection_reason?: string | null;
   proforma_file?: string | null;
   status: string;
   country_of_origin: string;
