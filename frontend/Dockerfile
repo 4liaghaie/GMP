@@ -8,7 +8,8 @@ COPY package*.json ./
 
 RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set strict-ssl false && \
-    npm ci
+    npm ci --include=optional && \
+    npm install --no-save lightningcss-linux-x64-musl@$(node -p "require('./node_modules/lightningcss/package.json').version")
 
 FROM node:22-alpine AS builder
 
