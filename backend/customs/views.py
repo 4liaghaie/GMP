@@ -95,7 +95,7 @@ def _read_rows(file_obj) -> Tuple[List[str], List[Dict[str, Any]]]:
             data_rows.append(row)
         return headers, data_rows
 
-    raise ValueError("Unsupported file type. Upload .csv or .xlsx")
+    raise ValueError("نوع فایل پشتیبانی نمی‌شود. فایل CSV یا XLSX بارگذاری کنید.")
 
 
 @dataclass
@@ -125,7 +125,7 @@ class BaseImportAPIView(APIView):
         """
         upload = request.FILES.get("file")
         if not upload:
-            return Response({"detail": "file is required (csv/xlsx)."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "فایل CSV یا XLSX الزامی است."}, status=status.HTTP_400_BAD_REQUEST)
 
         dry_run = str(request.data.get("dry_run", "false")).lower() in ("1", "true", "yes", "y")
 
@@ -138,7 +138,7 @@ class BaseImportAPIView(APIView):
         if missing:
             return Response(
                 {
-                    "detail": "Missing required columns.",
+                    "detail": "ستون‌های الزامی در فایل وجود ندارند.",
                     "missing": missing,
                     "received": headers,
                 },
@@ -223,7 +223,7 @@ class HeadingImportAPIView(BaseImportAPIView):
             season = season_map.get(season_code)
             if not season:
                 report.errors += 1
-                report.row_errors.append({"row": idx, "code": code, "error": f"season_code '{season_code}' not found"})
+                report.row_errors.append({"row": idx, "code": code, "error": f"کد فصل «{season_code}» پیدا نشد."})
                 continue
 
             defaults = {
@@ -285,14 +285,14 @@ class HSCodeImportAPIView(BaseImportAPIView):
             derived_season_code = derive_season_code_from_hs(code)
             if not derived_season_code:
                 report.errors += 1
-                report.row_errors.append({"row": idx, "code": code, "error": "Invalid HS code for season derivation"})
+                report.row_errors.append({"row": idx, "code": code, "error": "کد HS برای تشخیص فصل معتبر نیست."})
                 continue
 
             season = season_map.get(derived_season_code)
             if not season:
                 report.errors += 1
                 report.row_errors.append(
-                    {"row": idx, "code": code, "error": f"Derived season_code '{derived_season_code}' not found"}
+                    {"row": idx, "code": code, "error": f"کد فصل استخراج‌شده «{derived_season_code}» پیدا نشد."}
                 )
                 continue
 
@@ -308,7 +308,7 @@ class HSCodeImportAPIView(BaseImportAPIView):
                 suq = None
             if suq is not None and suq not in allowed_suq:
                 report.errors += 1
-                report.row_errors.append({"row": idx, "code": code, "error": f"Invalid SUQ '{suq}'. Allowed: {sorted(allowed_suq)}"})
+                report.row_errors.append({"row": idx, "code": code, "error": f"مقدار SUQ «{suq}» معتبر نیست. مقادیر مجاز: {sorted(allowed_suq)}"})
                 continue
 
             defaults = {
@@ -327,7 +327,7 @@ class HSCodeImportAPIView(BaseImportAPIView):
             missing_required = [k for k in ("goods_name_fa", "goods_name_en", "profit") if not defaults.get(k)]
             if missing_required:
                 report.errors += 1
-                report.row_errors.append({"row": idx, "code": code, "error": f"Missing required values: {missing_required}"})
+                report.row_errors.append({"row": idx, "code": code, "error": f"مقادیر الزامی ناقص هستند: {missing_required}"})
                 continue
 
             try:

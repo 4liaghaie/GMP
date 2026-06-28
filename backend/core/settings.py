@@ -149,6 +149,7 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
+    "EXCEPTION_HANDLER": "core.exceptions.persian_exception_handler",
 }
 
 

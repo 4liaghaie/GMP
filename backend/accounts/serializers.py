@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 User = get_user_model()
@@ -41,26 +42,31 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         value = (value or "").strip().lower()
         if not value:
-            raise serializers.ValidationError("Email is required.")
+            raise serializers.ValidationError("ایمیل الزامی است.")
         if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("This email is already registered.")
+            raise serializers.ValidationError("این ایمیل قبلا ثبت شده است.")
         return value
 
     def validate_phone(self, value):
         value = (value or "").strip()
         if not value:
-            raise serializers.ValidationError("Phone number is required.")
+            raise serializers.ValidationError("شماره موبایل الزامی است.")
         if User.objects.filter(phone=value).exists():
-            raise serializers.ValidationError("This phone number is already registered.")
+            raise serializers.ValidationError("این شماره موبایل قبلا ثبت شده است.")
         return value
 
     def validate(self, attrs):
         pw = attrs.get("password")
         pw2 = attrs.get("password2")
         if pw != pw2:
-            raise serializers.ValidationError({"password2": "Passwords do not match."})
+            raise serializers.ValidationError({"password2": "رمز عبور و تکرار آن یکسان نیستند."})
 
-        validate_password(pw)
+        try:
+            validate_password(pw)
+        except DjangoValidationError:
+            raise serializers.ValidationError(
+                {"password": "رمز عبور باید حداقل ۸ کاراکتر باشد و بیش از حد ساده یا رایج نباشد."}
+            )
         return attrs
 
     def create(self, validated_data):
@@ -131,26 +137,26 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
     def validate_phone(self, value):
         value = (value or "").strip()
         if value == "":
-            raise serializers.ValidationError("Phone number is required.")
+            raise serializers.ValidationError("شماره موبایل الزامی است.")
 
         qs = User.objects.filter(phone=value)
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            raise serializers.ValidationError("This phone number is already registered.")
+            raise serializers.ValidationError("این شماره موبایل قبلا ثبت شده است.")
 
         return value
 
     def validate_email(self, value):
         value = (value or "").strip().lower()
         if value == "":
-            raise serializers.ValidationError("Email is required.")
+            raise serializers.ValidationError("ایمیل الزامی است.")
 
         qs = User.objects.filter(email=value)
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            raise serializers.ValidationError("This email is already registered.")
+            raise serializers.ValidationError("این ایمیل قبلا ثبت شده است.")
 
         return value
 
@@ -191,5 +197,5 @@ class AdminUserStatusSerializer(serializers.Serializer):
         request = self.context.get("request")
         user = self.context.get("user")
         if request and user and request.user.pk == user.pk:
-            raise serializers.ValidationError("Admins cannot change their own account status here.")
+            raise serializers.ValidationError("مدیر نمی‌تواند وضعیت حساب خودش را از این بخش تغییر دهد.")
         return attrs

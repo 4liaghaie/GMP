@@ -1,6 +1,8 @@
 from rest_framework.permissions import BasePermission
 
 class IsAdmin(BasePermission):
+    message = "برای انجام این عملیات باید مدیر باشید."
+
     def has_permission(self, request, view):
         return bool(
             request.user
@@ -13,6 +15,8 @@ class IsAdmin(BasePermission):
         )
 
 class IsStaffOrAdmin(BasePermission):
+    message = "برای انجام این عملیات باید مدیر یا کارمند باشید."
+
     def has_permission(self, request, view):
         return bool(
             request.user and request.user.is_authenticated and getattr(request.user, "role", "") in {"staff", "admin"}

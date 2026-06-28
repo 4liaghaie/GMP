@@ -218,7 +218,7 @@ export default function DashboardPage() {
     {
       title: "مدیریت کاربران",
       description: "تایید، رد یا مسدود کردن درخواست‌ها و کاربران",
-      href: "/admin/users",
+      href: "/user-management",
       icon: <UsersRound className="h-5 w-5" />,
     },
   ];

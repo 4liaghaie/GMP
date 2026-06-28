@@ -136,7 +136,7 @@ class RegisteredOrderVerifyAPIView(APIView):
     def patch(self, request, uuid):
         if not is_admin_user(request.user):
             return Response(
-                {"detail": "Only admins can change verification state."},
+                {"detail": "فقط مدیر می‌تواند وضعیت تایید را تغییر دهد."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -145,7 +145,7 @@ class RegisteredOrderVerifyAPIView(APIView):
 
         if next_status not in {"approved", "rejected", "pending"}:
             return Response(
-                {"detail": "Send status as 'approved' or 'rejected'."},
+                {"detail": "وضعیت باید «تایید» یا «رد» باشد."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -283,7 +283,7 @@ class GoodsNeedVerifyAPIView(APIView):
     def patch(self, request, uuid):
         if not is_admin_user(request.user):
             return Response(
-                {"detail": "Only admins can change verification state."},
+                {"detail": "فقط مدیر می‌تواند وضعیت تایید را تغییر دهد."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -291,7 +291,7 @@ class GoodsNeedVerifyAPIView(APIView):
         next_status, reason = parse_moderation_payload(request)
         if next_status not in {"approved", "rejected", "pending"}:
             return Response(
-                {"detail": "Send status as 'approved' or 'rejected'."},
+                {"detail": "وضعیت باید «تایید» یا «رد» باشد."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

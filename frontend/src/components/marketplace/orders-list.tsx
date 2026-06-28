@@ -88,9 +88,9 @@ export type MarketplaceOrder = {
   applicant_name?: string | null;
   currency_supply: string;
   bank_name: string;
-  bank_branch: string;
+  bank_branch?: string | null;
   bank_branch_display?: string | null;
-  payment_instrument: string;
+  payment_instrument?: string | null;
   expire_date: string;
 
   goods: OrderGood[];

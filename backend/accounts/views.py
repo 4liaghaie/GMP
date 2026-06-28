@@ -37,7 +37,7 @@ class RegisterView(APIView):
 
         return Response(
             {
-                "detail": "Registration submitted. An admin must verify your account before login.",
+                "detail": "ثبت‌نام شما ثبت شد. پس از تایید مدیر امکان ورود خواهید داشت.",
                 "account_status": getattr(user, "account_status", "pending"),
             },
             status=status.HTTP_201_CREATED,
@@ -60,30 +60,30 @@ class LoginView(APIView):
         user = authenticate(request, username=auth_username, password=password)
         if not user:
             return Response(
-                {"detail": "Invalid email or password."},
+                {"detail": "ایمیل یا رمز عبور اشتباه است."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
         if not getattr(user, "is_active", True):
             return Response(
-                {"detail": "This account is disabled."},
+                {"detail": "این حساب کاربری غیرفعال است."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         account_status = getattr(user, "account_status", User.AccountStatus.PENDING)
         if account_status == User.AccountStatus.PENDING:
             return Response(
-                {"detail": "Your account is pending admin verification."},
+                {"detail": "حساب شما در انتظار تایید مدیر است."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         if account_status == User.AccountStatus.REJECTED:
             return Response(
-                {"detail": "Your account request was rejected."},
+                {"detail": "درخواست حساب کاربری شما رد شده است."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         if account_status == User.AccountStatus.BANNED:
             return Response(
-                {"detail": "Your account has been banned."},
+                {"detail": "حساب کاربری شما مسدود شده است."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -149,7 +149,7 @@ class AdminUserStatusView(APIView):
             user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return Response(
-                {"detail": "User not found."},
+                {"detail": "کاربر پیدا نشد."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 

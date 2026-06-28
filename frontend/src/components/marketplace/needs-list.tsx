@@ -98,21 +98,8 @@ export type GoodsNeed = {
   freight_price?: string | number;
   entry_border: string;
   customs: string;
-  terms_of_delivery?: string;
-  terms_of_payment?: string;
-  partial_shipment?: boolean;
   means_of_transport: string;
   goods: ProformaGood[];
-  description?: string;
-  hs_code?: string;
-  hs_code_id?: number;
-  goods_status?: string;
-  quantity?: string | number;
-  unit?: string;
-  manufacturer_country?: string;
-  price?: string | number;
-  nw_kg?: string | number;
-  gw_kg?: string | number;
 };
 
 type FilterOption = {
@@ -140,40 +127,12 @@ const currencyOptions: FilterOption[] = [
   { value: "TRY", label: "لیر ترکیه (TRY)" },
 ];
 
-const deliveryTerms: FilterOption[] = [
-  { value: "EXW", label: "EXW" },
-  { value: "FOB", label: "FOB" },
-  { value: "CFR", label: "CFR" },
-  { value: "CIF", label: "CIF" },
-  { value: "DAP", label: "DAP" },
-  { value: "CPT", label: "CPT" },
-  { value: "CIP", label: "CIP" },
-  { value: "FCA", label: "FCA" },
-  { value: "FAS", label: "FAS" },
-  { value: "DDP", label: "DDP" },
-  { value: "DPU", label: "DPU" },
-];
-
-const paymentTerms: FilterOption[] = [
-  { value: "TT", label: "TT" },
-  { value: "LC", label: "LC" },
-  { value: "CAD", label: "CAD" },
-  { value: "DP", label: "D/P" },
-  { value: "DA", label: "D/A" },
-];
-
 const transportMeans: FilterOption[] = [
   { value: "SEA", label: "دریایی" },
   { value: "AIR", label: "هوایی" },
   { value: "ROAD", label: "زمینی" },
   { value: "RAIL", label: "ریلی" },
 ];
-
-const partialShipmentOptions: FilterOption[] = [
-  { value: "true", label: "بله" },
-  { value: "false", label: "خیر" },
-];
-
 const borderOptions: FilterOption[] = borders.map((border) => ({
   value: border,
   label: border,
@@ -549,10 +508,7 @@ async function fetchNeeds(args: {
   customs?: string;
   manufacturerCountry?: string;
   countryOfOrigin?: string;
-  termsOfDelivery?: string;
-  termsOfPayment?: string;
   meansOfTransport?: string;
-  partialShipment?: string;
   signal?: AbortSignal;
 }) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
@@ -587,90 +543,6 @@ async function fetchNeeds(args: {
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) throw new Error(data?.detail || "خطا در دریافت نیازهای کالا");
   return (Array.isArray(data) ? data : data?.results || []) as GoodsNeed[];
-}
-
-function NeedCard({ need }: { need: GoodsNeed }) {
-  return (
-    <Card className="group overflow-hidden shadow-sm before:h-1 before:bg-amber-600 before:content-['']">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-600 text-white shadow-sm">
-            <PackageSearch className="h-6 w-6" />
-          </span>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Badge variant="outline">{safeText(need.status)}</Badge>
-            <Badge variant="secondary">{safeText(need.goods_status)}</Badge>
-            <Badge variant="outline">{safeText(need.currency_type)}</Badge>
-          </div>
-        </div>
-        <div>
-          <CardTitle className="text-lg">
-            {safeText(need.description)}
-          </CardTitle>
-          <CardDescription className="mt-2">
-            نیاز کالا #{safeText(need.id)} توسط {safeText(need.user)}
-          </CardDescription>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4 text-sm">
-        <div className="grid gap-2 rounded-2xl bg-muted/40 p-3">
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <Boxes className="h-4 w-4" />
-              HS
-            </span>
-            <span className="font-semibold">{safeText(need.hs_code)}</span>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">مقدار</span>
-            <span className="font-medium">
-              {fmt(need.quantity)} {safeText(need.unit)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <BadgeDollarSign className="h-4 w-4" />
-              ارزش
-            </span>
-            <span className="font-semibold">
-              {fmt(need.price)} {safeText(need.currency_type)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              مرز ورودی
-            </span>
-            <span className="font-medium">{safeText(need.entry_border)}</span>
-          </div>
-        </div>
-
-        <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-          <div className="rounded-xl border bg-card p-2">
-            کشور سازنده: {safeText(need.manufacturer_country)}
-          </div>
-          <div className="rounded-xl border bg-card p-2">
-            کشور مبدا: {safeText(need.country_of_origin)}
-          </div>
-          <div className="rounded-xl border bg-card p-2">
-            گمرک: {safeText(need.customs)}
-          </div>
-        </div>
-
-        <Separator />
-
-        <Button asChild variant="outline" className="w-full">
-          <Link
-            href={`/marketplace?hs_code=${encodeURIComponent(safeText(need.hs_code))}`}
-          >
-            جستجوی ثبت سفارش مشابه
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
 }
 
 function ProformaCard({ need }: { need: GoodsNeed }) {
@@ -789,14 +661,8 @@ export default function NeedsMarketplaceList() {
     React.useState("");
   const [countryOfOrigin, setCountryOfOrigin] = React.useState("");
   const [draftCountryOfOrigin, setDraftCountryOfOrigin] = React.useState("");
-  const [termsOfDelivery, setTermsOfDelivery] = React.useState("");
-  const [draftTermsOfDelivery, setDraftTermsOfDelivery] = React.useState("");
-  const [termsOfPayment, setTermsOfPayment] = React.useState("");
-  const [draftTermsOfPayment, setDraftTermsOfPayment] = React.useState("");
   const [meansOfTransport, setMeansOfTransport] = React.useState("");
   const [draftMeansOfTransport, setDraftMeansOfTransport] = React.useState("");
-  const [partialShipment, setPartialShipment] = React.useState("");
-  const [draftPartialShipment, setDraftPartialShipment] = React.useState("");
   const hsSelectedCacheRef = React.useRef(new Map<number, HSCodeOption>());
   const [items, setItems] = React.useState<GoodsNeed[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -829,10 +695,7 @@ export default function NeedsMarketplaceList() {
       customs,
       manufacturerCountry,
       countryOfOrigin,
-      termsOfDelivery,
-      termsOfPayment,
       meansOfTransport,
-      partialShipment,
       signal: ac.signal,
     })
       .then(setItems)
@@ -853,10 +716,7 @@ export default function NeedsMarketplaceList() {
     customs,
     manufacturerCountry,
     countryOfOrigin,
-    termsOfDelivery,
-    termsOfPayment,
     meansOfTransport,
-    partialShipment,
   ]);
 
   React.useEffect(() => {
@@ -886,14 +746,8 @@ export default function NeedsMarketplaceList() {
     setDraftManufacturerCountry("");
     setCountryOfOrigin("");
     setDraftCountryOfOrigin("");
-    setTermsOfDelivery("");
-    setDraftTermsOfDelivery("");
-    setTermsOfPayment("");
-    setDraftTermsOfPayment("");
     setMeansOfTransport("");
     setDraftMeansOfTransport("");
-    setPartialShipment("");
-    setDraftPartialShipment("");
   }
 
   function openFilters() {
@@ -905,10 +759,7 @@ export default function NeedsMarketplaceList() {
     setDraftCustoms(customs);
     setDraftManufacturerCountry(manufacturerCountry);
     setDraftCountryOfOrigin(countryOfOrigin);
-    setDraftTermsOfDelivery(termsOfDelivery);
-    setDraftTermsOfPayment(termsOfPayment);
     setDraftMeansOfTransport(meansOfTransport);
-    setDraftPartialShipment(partialShipment);
     setFilterOpen(true);
   }
 
@@ -922,9 +773,6 @@ export default function NeedsMarketplaceList() {
     setManufacturerCountry(draftManufacturerCountry);
     setCountryOfOrigin(draftCountryOfOrigin);
     setMeansOfTransport(draftMeansOfTransport);
-    setTermsOfDelivery("");
-    setTermsOfPayment("");
-    setPartialShipment("");
     setFilterOpen(false);
   }
 
@@ -937,10 +785,7 @@ export default function NeedsMarketplaceList() {
     customs,
     manufacturerCountry,
     countryOfOrigin,
-    termsOfDelivery,
-    termsOfPayment,
     meansOfTransport,
-    partialShipment,
   ].filter(Boolean).length;
   const hasAnyFilter = Boolean(q.trim() || activeFiltersCount);
 
@@ -1261,56 +1106,6 @@ export default function NeedsMarketplaceList() {
                             </AccordionContent>
                           </AccordionItem>
 
-                          <AccordionItem value="terms" className="hidden">
-                            <AccordionTrigger className="text-right">
-                              شرایط معامله
-                            </AccordionTrigger>
-                            <AccordionContent className="space-y-4">
-                              <SearchableCombobox
-                                label="شرایط تحویل"
-                                value={draftTermsOfDelivery}
-                                onChange={setDraftTermsOfDelivery}
-                                items={deliveryTerms}
-                                placeholder="انتخاب شرایط تحویل"
-                                rightAction={
-                                  draftTermsOfDelivery ? (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      className="h-8 rounded-xl px-2 text-xs"
-                                      onClick={() =>
-                                        setDraftTermsOfDelivery("")
-                                      }
-                                    >
-                                      <X className="h-4 w-4" />
-                                      پاک کردن
-                                    </Button>
-                                  ) : null
-                                }
-                              />
-                              <SearchableCombobox
-                                label="شرایط پرداخت"
-                                value={draftTermsOfPayment}
-                                onChange={setDraftTermsOfPayment}
-                                items={paymentTerms}
-                                placeholder="انتخاب شرایط پرداخت"
-                                rightAction={
-                                  draftTermsOfPayment ? (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      className="h-8 rounded-xl px-2 text-xs"
-                                      onClick={() => setDraftTermsOfPayment("")}
-                                    >
-                                      <X className="h-4 w-4" />
-                                      پاک کردن
-                                    </Button>
-                                  ) : null
-                                }
-                              />
-                            </AccordionContent>
-                          </AccordionItem>
-
                           <AccordionItem value="logistics">
                             <AccordionTrigger className="text-right">
                               حمل
@@ -1338,30 +1133,6 @@ export default function NeedsMarketplaceList() {
                                   ) : null
                                 }
                               />
-                              <div className="hidden">
-                                <SearchableCombobox
-                                  label="حمل به دفعات"
-                                  value={draftPartialShipment}
-                                  onChange={setDraftPartialShipment}
-                                  items={partialShipmentOptions}
-                                  placeholder="انتخاب وضعیت"
-                                  rightAction={
-                                    draftPartialShipment ? (
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        className="h-8 rounded-xl px-2 text-xs"
-                                        onClick={() =>
-                                          setDraftPartialShipment("")
-                                        }
-                                      >
-                                        <X className="h-4 w-4" />
-                                        پاک کردن
-                                      </Button>
-                                    ) : null
-                                  }
-                                />
-                              </div>
                             </AccordionContent>
                           </AccordionItem>
                         </Accordion>
@@ -1450,25 +1221,9 @@ export default function NeedsMarketplaceList() {
                     مبدا: {optionLabel(countryOptions, countryOfOrigin)}
                   </Badge>
                 ) : null}
-                {termsOfDelivery ? (
-                  <Badge variant="secondary">
-                    تحویل: {optionLabel(deliveryTerms, termsOfDelivery)}
-                  </Badge>
-                ) : null}
-                {termsOfPayment ? (
-                  <Badge variant="secondary">
-                    پرداخت: {optionLabel(paymentTerms, termsOfPayment)}
-                  </Badge>
-                ) : null}
                 {meansOfTransport ? (
                   <Badge variant="secondary">
                     حمل: {optionLabel(transportMeans, meansOfTransport)}
-                  </Badge>
-                ) : null}
-                {partialShipment ? (
-                  <Badge variant="secondary">
-                    حمل به دفعات:{" "}
-                    {optionLabel(partialShipmentOptions, partialShipment)}
                   </Badge>
                 ) : null}
               </div>

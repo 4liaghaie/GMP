@@ -107,11 +107,11 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
         name = (getattr(value, "name", "") or "").lower()
         allowed_extensions = (".pdf", ".jpg", ".jpeg")
         if not name.endswith(allowed_extensions):
-            raise serializers.ValidationError("Only PDF and JPG files are allowed.")
+            raise serializers.ValidationError("فقط فایل PDF یا JPG مجاز است.")
         content_type = getattr(value, "content_type", "")
         allowed_content_types = {"application/pdf", "image/jpeg"}
         if content_type and content_type not in allowed_content_types:
-            raise serializers.ValidationError("Uploaded file must be a PDF or JPG.")
+            raise serializers.ValidationError("فایل بارگذاری‌شده باید PDF یا JPG باشد.")
         return value
 
     def to_internal_value(self, data):
@@ -130,7 +130,7 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         attrs = super().validate(attrs)
         if self.instance is None and not attrs.get("proforma_file"):
-            raise serializers.ValidationError({"proforma_file": "PDF or JPG file is required."})
+            raise serializers.ValidationError({"proforma_file": "فایل PDF یا JPG الزامی است."})
         status_value = attrs.get("status", getattr(self.instance, "status", GoodsNeed.STATUS_AT_ORIGIN))
         customs_value = attrs.get("customs", getattr(self.instance, "customs", ""))
         entry_border_value = attrs.get("entry_border", getattr(self.instance, "entry_border", ""))
@@ -162,9 +162,24 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
             return obj.user.username
         return f"user-{obj.user_id}"
 
+    def can_view_uploaded_file(self):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        return bool(
+            user
+            and user.is_authenticated
+            and (
+                getattr(user, "role", "") == "admin"
+                or getattr(user, "is_staff", False)
+                or getattr(user, "is_superuser", False)
+            )
+        )
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["goods"] = data.pop("goods_read", [])
+        if not self.can_view_uploaded_file():
+            data["proforma_file"] = None
         return data
 
     def _sync_legacy_fields(self, instance: GoodsNeed) -> None:

@@ -155,20 +155,20 @@ class RegisteredOrderCreateUpdateSerializer(serializers.ModelSerializer):
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            raise serializers.ValidationError("This order number is already registered for this user.")
+            raise serializers.ValidationError("این شماره ثبت سفارش قبلا برای این کاربر ثبت شده است.")
         return value
 
     def validate_order_pdf(self, value):
         if not value:
-            raise serializers.ValidationError("PDF or JPG file is required.")
+            raise serializers.ValidationError("فایل PDF یا JPG الزامی است.")
         name = (getattr(value, "name", "") or "").lower()
         allowed_extensions = (".pdf", ".jpg", ".jpeg")
         if not name.endswith(allowed_extensions):
-            raise serializers.ValidationError("Only PDF and JPG files are allowed.")
+            raise serializers.ValidationError("فقط فایل PDF یا JPG مجاز است.")
         content_type = getattr(value, "content_type", "")
         allowed_content_types = {"application/pdf", "image/jpeg"}
         if content_type and content_type not in allowed_content_types:
-            raise serializers.ValidationError("Uploaded file must be a PDF or JPG.")
+            raise serializers.ValidationError("فایل بارگذاری‌شده باید PDF یا JPG باشد.")
         return value
 
     def to_internal_value(self, data):
@@ -187,7 +187,7 @@ class RegisteredOrderCreateUpdateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         attrs = super().validate(attrs)
         if not self.instance and not attrs.get("order_pdf"):
-            raise serializers.ValidationError({"order_pdf": "PDF or JPG file is required."})
+            raise serializers.ValidationError({"order_pdf": "فایل PDF یا JPG الزامی است."})
         return attrs
 
     def _recalc_totals(self, order: RegisteredOrder) -> None:
@@ -297,6 +297,13 @@ class RegisteredOrderReadSerializer(serializers.ModelSerializer):
 
     def get_bank_branch_display(self, obj):
         return format_bank_branch(obj.bank_branch)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        if not (request and is_admin_user(request.user)):
+            data["order_pdf"] = None
+        return data
 
 class GoodsNeedSerializer(serializers.ModelSerializer):
     goods = GoodsNeedGoodWriteSerializer(many=True, write_only=True)
@@ -678,7 +685,9 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
     order_number = serializers.SerializerMethodField()
     applicant_name = serializers.SerializerMethodField()
+    bank_branch = serializers.SerializerMethodField()
     bank_branch_display = serializers.SerializerMethodField()
+    payment_instrument = serializers.SerializerMethodField()
     goods = OrderGoodReadSerializer(many=True, read_only=True)
 
     class Meta:
@@ -724,8 +733,23 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
             return obj.applicant_name
         return None
 
+    def get_bank_branch(self, obj):
+        request = self.context.get("request")
+        if request and is_admin_user(request.user):
+            return obj.bank_branch
+        return None
+
     def get_bank_branch_display(self, obj):
-        return format_bank_branch(obj.bank_branch)
+        request = self.context.get("request")
+        if request and is_admin_user(request.user):
+            return format_bank_branch(obj.bank_branch)
+        return None
+
+    def get_payment_instrument(self, obj):
+        request = self.context.get("request")
+        if request and is_admin_user(request.user):
+            return obj.payment_instrument
+        return None
 
 
 class NotificationSerializer(serializers.ModelSerializer):

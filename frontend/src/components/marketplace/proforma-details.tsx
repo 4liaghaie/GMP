@@ -50,7 +50,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-const WHATSAPP_NUMBER = "00989307878446";
+const WHATSAPP_NUMBER = "989307878446";
 const WHATSAPP_MESSAGE = "سلام، درباره همین پروفرما پیام می‌دهم.";
 
 function formatNumLike(x: string | number | null | undefined) {
@@ -368,25 +368,6 @@ function MetaCard({ need }: { need: GoodsNeed }) {
           value={safeText(need.means_of_transport)}
           icon={<Route className="h-4 w-4" />}
         />
-
-        <KeyValue
-          label="حمل به دفعات"
-          value={need.partial_shipment ? "بله" : "خیر"}
-        />
-
-        {need.terms_of_delivery ? (
-          <KeyValue
-            label="شرایط تحویل"
-            value={safeText(need.terms_of_delivery)}
-          />
-        ) : null}
-
-        {need.terms_of_payment ? (
-          <KeyValue
-            label="شرایط پرداخت"
-            value={safeText(need.terms_of_payment)}
-          />
-        ) : null}
 
         {need.proforma_file ? (
           <Button

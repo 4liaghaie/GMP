@@ -304,6 +304,10 @@ function MetaCard({
   order: MarketplaceOrder;
   visibleOrderNumber: string | null;
 }) {
+  const bankBranchText =
+    order.bank_branch_display ||
+    (order.bank_branch ? formatBankBranch(order.bank_branch) : "");
+
   return (
     <Card className="rounded-2xl shadow-sm">
       <CardHeader className="pb-2 text-right">
@@ -339,16 +343,15 @@ function MetaCard({
         <KeyValue label="شناسه" value={safeText(order.uuid)} />
         <KeyValue label="تامین ارز" value={safeText(order.currency_supply)} />
         <KeyValue label="بانک" value={safeText(order.bank_name)} />
-        <KeyValue
-          label="شعبه بانک"
-          value={safeText(
-            order.bank_branch_display || formatBankBranch(order.bank_branch),
-          )}
-        />
-        <KeyValue
-          label="ابزار پرداخت"
-          value={safeText(order.payment_instrument)}
-        />
+        {bankBranchText ? (
+          <KeyValue label="شعبه بانک" value={safeText(bankBranchText)} />
+        ) : null}
+        {order.payment_instrument ? (
+          <KeyValue
+            label="ابزار پرداخت"
+            value={safeText(order.payment_instrument)}
+          />
+        ) : null}
         <KeyValue label="انقضا" value={formatExpireDate(order.expire_date)} />
       </CardContent>
     </Card>
