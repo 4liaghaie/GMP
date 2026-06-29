@@ -48,6 +48,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { countries } from "@/lib/countryList";
+import { iranCustoms } from "@/lib/customsList";
 import { cn } from "@/lib/utils";
 
 const WHATSAPP_NUMBER = "989307878446";
@@ -67,6 +69,40 @@ function formatNumLike(x: string | number | null | undefined) {
 function safeText(x: unknown) {
   if (x === null || x === undefined || x === "") return "—";
   return String(x);
+}
+
+function splitMultiValue(value: unknown) {
+  return String(value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function countryLabel(value: unknown) {
+  const values = splitMultiValue(value);
+  if (!values.length) return "—";
+  return values
+    .map((code) => {
+      const country = countries.find(
+        (item) => item.code.toLowerCase() === code.toLowerCase(),
+      );
+      return country ? `${country.persianName} (${country.code})` : code;
+    })
+    .join("، ");
+}
+
+function customsLabel(value: unknown) {
+  const values = splitMultiValue(value);
+  if (!values.length) return "—";
+  return values
+    .map((code) => {
+      if (code === "ALL_CUSTOMS") return "تمام گمرکات";
+      const customs = iranCustoms.find(
+        (item) => String(item.ctmVCodeInt) === code,
+      );
+      return customs ? `${customs.ctmNameStr} (${customs.ctmVCodeInt})` : code;
+    })
+    .join("، ");
 }
 
 function lineTotal(good: ProformaGood) {
@@ -148,7 +184,7 @@ function GoodMobileCard({ good }: { good: ProformaGood }) {
             </Badge>
 
             <Badge variant="outline" className="rounded-xl">
-              {safeText(good.manufacturer_country)}
+              {countryLabel(good.manufacturer_country)}
             </Badge>
 
             <Badge variant="secondary" className="rounded-xl">
@@ -256,7 +292,7 @@ function GoodsTable({ need }: { need: GoodsNeed }) {
                     </TableCell>
 
                     <TableCell className="text-right">
-                      {safeText(good.manufacturer_country)}
+                      {countryLabel(good.manufacturer_country)}
                     </TableCell>
 
                     <TableCell className="text-right tabular-nums">
@@ -317,7 +353,10 @@ function SummaryCard({ need }: { need: GoodsNeed }) {
 
         <KeyValue label="نوع فی" value={safeText(need.fee_type)} />
 
-        <KeyValue label="مبلغ فی" value={formatNumLike(need.fee_amount)} />
+        <KeyValue
+          label="مبلغ فی (تومان)"
+          value={formatNumLike(need.fee_amount)}
+        />
 
         <Separator />
 
@@ -357,11 +396,14 @@ function MetaCard({ need }: { need: GoodsNeed }) {
 
         <KeyValue label="وضعیت پروفرما" value={safeText(need.status)} />
 
-        <KeyValue label="کشور مبدا" value={safeText(need.country_of_origin)} />
+        <KeyValue
+          label="کشور مبدا"
+          value={countryLabel(need.country_of_origin)}
+        />
 
         <KeyValue label="مرز ورودی" value={safeText(need.entry_border)} />
 
-        <KeyValue label="گمرک" value={safeText(need.customs)} />
+        <KeyValue label="گمرک" value={customsLabel(need.customs)} />
 
         <KeyValue
           label="روش حمل"

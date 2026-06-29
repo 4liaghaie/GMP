@@ -28,29 +28,24 @@ type RegisteredOrderListItem = {
   verified?: boolean;
   rejected?: boolean;
   rejection_reason?: string | null;
-  user?: string | null;
-  user_email?: string | null;
-  user_phone?: string | null;
   order_number?: string | null;
-  id?: string | null;
+  id?: string | number | null;
   expire_date?: string | null;
   currency_type?: string | null;
-  applicant_name?: string | null;
   sub_total?: string | number | null;
   fee_type?: string | null;
   fee_amount?: string | number | null;
-  goods?: Array<{
-    price?: string | number | null;
-  }> | null;
+  goods?: Array<{ price?: string | number | null }> | null;
 };
 
-function safeNum(v: unknown) {
-  const n = typeof v === "string" ? Number(v) : (v as number);
+function safeNum(value: unknown) {
+  const n = Number(value);
   return Number.isFinite(n) ? n : 0;
 }
 
-function fmt(n: number) {
-  return n.toLocaleString("fa-IR", { maximumFractionDigits: 2 });
+function fmt(value: unknown) {
+  const n = safeNum(value);
+  return n ? n.toLocaleString("fa-IR", { maximumFractionDigits: 2 }) : "-";
 }
 
 function formatExpireDate(value: unknown) {
@@ -73,84 +68,66 @@ function formatExpireDate(value: unknown) {
   return `${jy}/${jm}/${jd}`;
 }
 
+function statusText(item: RegisteredOrderListItem) {
+  if (item.rejected)
+    return item.rejection_reason
+      ? `رد شده: ${item.rejection_reason}`
+      : "رد شده";
+  if (item.verified) return "تایید شده";
+  return "در انتظار تایید";
+}
+
 async function fetchMyOrders(signal?: AbortSignal) {
-  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
+  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است.");
   const res = await authFetch(`${API_BASE}/registered-orders/`, {
     method: "GET",
     cache: "no-store",
     signal,
   });
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "Failed to fetch orders.");
+  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت ثبت سفارش‌ها");
   return (
-    Array.isArray(data)
-      ? data
-      : Array.isArray(data?.results)
-        ? data.results
-        : []
+    Array.isArray(data) ? data : data?.results || []
   ) as RegisteredOrderListItem[];
 }
 
 async function deleteOrder(uuid: string) {
-  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
+  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است.");
   const res = await authFetch(
     `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/`,
-    { method: "DELETE" },
+    {
+      method: "DELETE",
+    },
   );
   if (res.status === 204) return;
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "Failed to delete order.");
-}
-
-async function setOrderModeration(
-  uuid: string,
-  status: "approved" | "rejected" | "pending",
-  reason = "",
-) {
-  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE is not configured.");
-  const res = await authFetch(
-    `${API_BASE}/registered-orders/${encodeURIComponent(uuid)}/verify/`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ status, reason }),
-    },
-  );
-  const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok)
-    throw new Error(data?.detail || "Failed to update verification state.");
-  return data as RegisteredOrderListItem;
+  if (!res.ok) throw new Error(data?.detail || "خطا در حذف ثبت سفارش");
 }
 
 export default function MyOrdersPage() {
   const router = useRouter();
   const [ready, setReady] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
-  const [err, setErr] = React.useState("");
+  const [error, setError] = React.useState("");
   const [items, setItems] = React.useState<RegisteredOrderListItem[]>([]);
-  const [q, setQ] = React.useState("");
-  const [role, setRole] = React.useState("user");
+  const [query, setQuery] = React.useState("");
   const [deletingUuid, setDeletingUuid] = React.useState<string | null>(null);
-  const [verifyingUuid, setVerifyingUuid] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const access = localStorage.getItem("access");
-    if (!access) {
+    if (!localStorage.getItem("access")) {
       router.replace("/login");
       return;
     }
-    setRole(localStorage.getItem("role") || "user");
     setReady(true);
   }, [router]);
-
-  const isAdmin = role === "admin";
 
   const load = React.useCallback(() => {
     const ac = new AbortController();
     setLoading(true);
-    setErr("");
+    setError("");
     fetchMyOrders(ac.signal)
       .then(setItems)
-      .catch((e: any) => setErr(e?.message || "Error"))
+      .catch((err: any) => setError(err?.message || "خطا"))
       .finally(() => setLoading(false));
     return () => ac.abort();
   }, []);
@@ -162,61 +139,26 @@ export default function MyOrdersPage() {
   }, [ready, load]);
 
   const filtered = React.useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return items;
-    return items.filter((o) =>
-      `${o.order_number ?? ""} ${o.id ?? ""} ${o.uuid ?? ""}`
+    const text = query.trim().toLowerCase();
+    if (!text) return items;
+    return items.filter((item) =>
+      `${item.order_number ?? ""} ${item.id ?? ""} ${item.uuid ?? ""}`
         .toLowerCase()
-        .includes(s),
+        .includes(text),
     );
-  }, [items, q]);
+  }, [items, query]);
 
   async function onDelete(uuid: string) {
-    if (!window.confirm("Delete this order?")) return;
+    if (!window.confirm("این ثبت سفارش حذف شود؟")) return;
     setDeletingUuid(uuid);
-    setErr("");
+    setError("");
     try {
       await deleteOrder(uuid);
-      setItems((prev) => prev.filter((x) => x.uuid !== uuid));
-    } catch (e: any) {
-      setErr(e?.message || "Delete failed.");
+      setItems((prev) => prev.filter((item) => item.uuid !== uuid));
+    } catch (err: any) {
+      setError(err?.message || "خطا در حذف");
     } finally {
       setDeletingUuid(null);
-    }
-  }
-
-  async function onModerate(
-    item: RegisteredOrderListItem,
-    nextStatus: "approved" | "rejected" | "pending",
-  ) {
-    const reason =
-      nextStatus === "rejected"
-        ? window.prompt("دلیل رد شدن را وارد کنید:", item.rejection_reason || "") || ""
-        : "";
-    if (!window.confirm("وضعیت این ثبت سفارش تغییر کند؟")) return;
-    setVerifyingUuid(item.uuid);
-    setErr("");
-    try {
-      const updated = await setOrderModeration(item.uuid, nextStatus, reason);
-      setItems((prev) =>
-        prev.map((x) =>
-          x.uuid === item.uuid
-            ? { ...x, verified: Boolean(updated.verified) }
-            : x,
-        ).map((x) =>
-          x.uuid === item.uuid
-            ? {
-                ...x,
-                rejected: Boolean(updated.rejected),
-                rejection_reason: updated.rejection_reason,
-              }
-            : x,
-        ),
-      );
-    } catch (e: any) {
-      setErr(e?.message || "Verification update failed.");
-    } finally {
-      setVerifyingUuid(null);
     }
   }
 
@@ -256,18 +198,18 @@ export default function MyOrdersPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {err ? (
+            {error ? (
               <Alert variant="destructive">
                 <AlertTitle>خطا</AlertTitle>
-                <AlertDescription>{err}</AlertDescription>
+                <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : null}
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Input
-                placeholder="جستجو با Order Number / ID / UUID ..."
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
+                placeholder="جستجو با شناسه یا UUID..."
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
                 className="sm:max-w-[360px]"
               />
               <div className="text-sm text-muted-foreground">
@@ -278,23 +220,18 @@ export default function MyOrdersPage() {
             <Separator />
 
             <div className="overflow-auto rounded-lg border">
-              <table className="w-full min-w-[980px] text-sm">
+              <table className="w-full min-w-[860px] text-sm">
                 <thead className="bg-muted/40">
                   <tr className="text-right [&>th]:px-3 [&>th]:py-2">
-                    <th>Order#</th>
-                    <th>ID</th>
+                    <th>شناسه</th>
                     <th>انقضا</th>
                     <th>ارز</th>
-                    {isAdmin ? <th>متقاضی</th> : null}
                     <th>نوع فی</th>
-                    <th>مبلغ فی (تومان)</th>
-                    {isAdmin ? <th>کاربر</th> : null}
-                    {isAdmin ? <th>Email</th> : null}
-                    {isAdmin ? <th>Phone</th> : null}
-                    {isAdmin ? <th>وضعیت تایید</th> : null}
+                    <th>مبلغ فی (تومان) </th>
+                    <th>وضعیت تایید</th>
                     <th>تعداد کالا</th>
                     <th>جمع تقریبی</th>
-                    <th className="w-[180px]">عملیات</th>
+                    <th className="w-[160px]">عملیات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -302,102 +239,48 @@ export default function MyOrdersPage() {
                     <tr>
                       <td
                         className="px-3 py-6 text-center text-muted-foreground"
-                        colSpan={isAdmin ? 14 : 8}
+                        colSpan={9}
                       >
                         موردی یافت نشد.
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((o) => {
-                      const goodsCount = Array.isArray(o.goods)
-                        ? o.goods.length
-                        : 0;
-                      const total = safeNum(o.sub_total);
-                      return (
-                        <tr
-                          key={o.uuid}
-                          className="border-t [&>td]:px-3 [&>td]:py-2"
-                        >
-                          <td className="font-medium">
-                            {o.order_number || "-"}
-                          </td>
-                          <td>{o.id || "-"}</td>
-                          <td>{formatExpireDate(o.expire_date)}</td>
-                          <td>{o.currency_type || "-"}</td>
-                          {isAdmin ? <td>{o.applicant_name || "-"}</td> : null}
-                          <td>{o.fee_type || "-"}</td>
-                          <td>
-                            {safeNum(o.fee_amount)
-                              ? fmt(safeNum(o.fee_amount))
-                              : "-"}
-                          </td>
-                          {isAdmin ? <td>{o.user || "-"}</td> : null}
-                          {isAdmin ? <td>{o.user_email || "-"}</td> : null}
-                          {isAdmin ? <td>{o.user_phone || "-"}</td> : null}
-                          {isAdmin ? (
-                            <td>
-                              {o.rejected ? (
-                                <span className="text-red-700">
-                                  رد شده
-                                  {o.rejection_reason ? `: ${o.rejection_reason}` : ""}
-                                </span>
-                              ) : o.verified ? (
-                                <span className="text-emerald-700">
-                                  تایید شده
-                                </span>
-                              ) : (
-                                <span className="text-amber-700">
-                                  در انتظار تایید
-                                </span>
-                              )}
-                            </td>
-                          ) : null}
-                          <td>{goodsCount || "-"}</td>
-                          <td>{total ? fmt(total) : "-"}</td>
-                          <td>
-                            <div className="flex gap-2">
-                              <Button asChild size="sm" variant="outline">
-                                <Link
-                                  href={`/my-orders/${encodeURIComponent(o.uuid)}`}
-                                >
-                                  ویرایش
-                                </Link>
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => onDelete(o.uuid)}
-                                disabled={deletingUuid === o.uuid}
+                    filtered.map((item) => (
+                      <tr
+                        key={item.uuid}
+                        className="border-t [&>td]:px-3 [&>td]:py-2"
+                      >
+                        <td className="font-medium">{item.id || item.uuid}</td>
+                        <td>{formatExpireDate(item.expire_date)}</td>
+                        <td>{item.currency_type || "-"}</td>
+                        <td>{item.fee_type || "-"}</td>
+                        <td>{fmt(item.fee_amount)}</td>
+                        <td>{statusText(item)}</td>
+                        <td>
+                          {Array.isArray(item.goods) ? item.goods.length : "-"}
+                        </td>
+                        <td>{fmt(item.sub_total)}</td>
+                        <td>
+                          <div className="flex gap-2">
+                            <Button asChild size="sm" variant="outline">
+                              <Link
+                                href={`/my-orders/${encodeURIComponent(item.uuid)}`}
                               >
-                                {deletingUuid === o.uuid ? "..." : "حذف"}
-                              </Button>
-                              {isAdmin ? (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => onModerate(o, "approved")}
-                                    disabled={verifyingUuid === o.uuid}
-                                  >
-                                    {verifyingUuid === o.uuid
-                                      ? "..."
-                                      : "تایید"}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => onModerate(o, "rejected")}
-                                    disabled={verifyingUuid === o.uuid}
-                                  >
-                                    رد
-                                  </Button>
-                                </>
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
+                                ویرایش
+                              </Link>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => onDelete(item.uuid)}
+                              disabled={deletingUuid === item.uuid}
+                            >
+                              {deletingUuid === item.uuid ? "..." : "حذف"}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, CheckCheck, RefreshCw } from "lucide-react";
 
@@ -9,6 +10,7 @@ import {
   markNotificationRead,
   type UserNotification,
 } from "@/lib/auth-api";
+import { notificationTargetHref } from "@/lib/notification-links";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -30,12 +32,14 @@ export default function NotificationsPage() {
   const [loading, setLoading] = React.useState(true);
   const [items, setItems] = React.useState<UserNotification[]>([]);
   const [error, setError] = React.useState("");
+  const [role, setRole] = React.useState("");
 
   React.useEffect(() => {
     if (!localStorage.getItem("access")) {
       router.replace("/login");
       return;
     }
+    setRole(localStorage.getItem("role") || "");
     setReady(true);
   }, [router]);
 
@@ -128,16 +132,23 @@ export default function NotificationsPage() {
                       {fmtDate(item.created_at)}
                     </div>
                   </div>
-                  {!item.read ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => markRead(item)}
-                    >
-                      <CheckCheck className="h-4 w-4" />
-                      خواندم
+                  <div className="flex flex-wrap gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={notificationTargetHref(item, role)}>
+                        مشاهده مورد
+                      </Link>
                     </Button>
-                  ) : null}
+                    {!item.read ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => markRead(item)}
+                      >
+                        <CheckCheck className="h-4 w-4" />
+                        خواندم
+                      </Button>
+                    ) : null}
+                  </div>
                 </CardContent>
               </Card>
             ))

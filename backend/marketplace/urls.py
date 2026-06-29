@@ -1,5 +1,7 @@
 from django.urls import path
 from .views import (
+    AdminGoodsNeedListAPIView,
+    AdminRegisteredOrderListAPIView,
     RegisteredOrderListCreateAPIView,
     RegisteredOrderDetailAPIView,
     RegisteredOrderVerifyAPIView,
@@ -14,6 +16,8 @@ from .views import (
 )
 
 urlpatterns = [
+    path("admin/registered-orders/", AdminRegisteredOrderListAPIView.as_view(), name="admin-registeredorder-list"),
+    path("admin/goods-needs/", AdminGoodsNeedListAPIView.as_view(), name="admin-goodsneed-list"),
     path("registered-orders/", RegisteredOrderListCreateAPIView.as_view(), name="registeredorder-list-create"),
     path("registered-orders/<str:uuid>/", RegisteredOrderDetailAPIView.as_view(), name="registeredorder-detail"),
     path("registered-orders/<str:uuid>/verify/", RegisteredOrderVerifyAPIView.as_view(), name="registeredorder-verify"),

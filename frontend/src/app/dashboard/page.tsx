@@ -221,6 +221,18 @@ export default function DashboardPage() {
       href: "/user-management",
       icon: <UsersRound className="h-5 w-5" />,
     },
+    {
+      title: "مدیریت ثبت سفارش‌ها",
+      description: "مشاهده، ویرایش، حذف، تایید یا رد همه ثبت سفارش‌ها",
+      href: "/admin-orders",
+      icon: <ClipboardList className="h-5 w-5" />,
+    },
+    {
+      title: "مدیریت پروفرماها",
+      description: "مشاهده، ویرایش، حذف، تایید یا رد همه پروفرماها",
+      href: "/admin-proformas",
+      icon: <FileText className="h-5 w-5" />,
+    },
   ];
 
   return (

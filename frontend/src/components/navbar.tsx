@@ -23,6 +23,7 @@ import {
   markNotificationRead,
   type UserNotification,
 } from "@/lib/auth-api";
+import { notificationTargetHref } from "@/lib/notification-links";
 import {
   Popover,
   PopoverContent,
@@ -66,6 +67,7 @@ export function Navbar() {
   const pathname = usePathname();
 
   const [authed, setAuthed] = React.useState(false);
+  const [role, setRole] = React.useState("");
   const [open, setOpen] = React.useState(false);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [notifications, setNotifications] = React.useState<UserNotification[]>(
@@ -74,7 +76,10 @@ export function Navbar() {
 
   // ✅ keep authed in sync in the SAME tab + other tabs
   React.useEffect(() => {
-    const sync = () => setAuthed(hasToken());
+    const sync = () => {
+      setAuthed(hasToken());
+      setRole(localStorage.getItem("role") || "");
+    };
 
     // initial
     sync();
@@ -325,6 +330,12 @@ export function Navbar() {
                               خواندم
                             </button>
                           ) : null}
+                          <Link
+                            href={notificationTargetHref(item, role)}
+                            className="mr-3 mt-2 inline-block text-xs font-medium text-primary hover:underline"
+                          >
+                            مشاهده مورد
+                          </Link>
                         </div>
                       ))
                     ) : (
@@ -406,6 +417,12 @@ export function Navbar() {
                             خواندم
                           </button>
                         ) : null}
+                        <Link
+                          href={notificationTargetHref(item, role)}
+                          className="mr-3 mt-2 inline-block text-xs font-medium text-primary hover:underline"
+                        >
+                          مشاهده مورد
+                        </Link>
                       </div>
                     ))
                   ) : (

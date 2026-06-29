@@ -75,6 +75,7 @@ export default function AdminUsersPage() {
           router.replace("/dashboard");
           return;
         }
+        setSearch(new URLSearchParams(window.location.search).get("search") || "");
         setReady(true);
       })
       .catch(() => router.replace("/login"));

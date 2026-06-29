@@ -259,7 +259,7 @@ export default function HomePage() {
             </div>
 
             <div className="space-y-4">
-              <h1 className="text-3xl font-black leading-tight tracking-tight md:text-5xl">
+              <h1 className="text-3xl  leading-tight tracking-tight md:text-5xl">
                 تسهیل در تجارت براساس تعرفه و ارزش
               </h1>
               <p className="max-w-2xl text-base leading-8 text-muted-foreground md:text-lg">
@@ -339,7 +339,7 @@ export default function HomePage() {
             <section className="mt-14 space-y-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 className="text-2xl font-black">آخرین ثبت سفارش‌ها</h2>
+                  <h2 className="text-2xl ">آخرین ثبت سفارش‌ها</h2>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">
                     نمونه‌ای از ثبت سفارش‌های تاییدشده که در مارکت‌پلیس قابل
                     مشاهده هستند.
@@ -372,7 +372,7 @@ export default function HomePage() {
             <section className="mt-14 space-y-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 className="text-2xl font-black">آخرین بارها</h2>
+                  <h2 className="text-2xl ">آخرین بارها</h2>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">
                     بارهای جدیدی که می‌توانند با ثبت سفارش‌های مشابه مچ شوند.
                   </p>

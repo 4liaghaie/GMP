@@ -1,12 +1,14 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { FilePlus2, ListChecks, RefreshCw } from "lucide-react";
 
+import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/page-header";
 import {
   Card,
   CardContent,
@@ -36,8 +38,6 @@ type GoodsNeed = {
   verified?: boolean;
   rejected?: boolean;
   rejection_reason?: string | null;
-  created_at: string;
-  user: string;
   status: string;
   country_of_origin: string;
   currency_type: string;
@@ -56,16 +56,20 @@ const customsOptions = [
   })),
 ];
 
-function fmt(value: string | number | null | undefined) {
+function fmt(value: unknown) {
   const n = Number(value);
   if (!Number.isFinite(n)) return value ? String(value) : "-";
   return n.toLocaleString("fa-IR", { maximumFractionDigits: 2 });
 }
 
 function customsLabel(value: string) {
-  return (
-    customsOptions.find((item) => item.value === value)?.label || value || "-"
-  );
+  return customsOptions.find((item) => item.value === value)?.label || value || "-";
+}
+
+function statusText(item: GoodsNeed) {
+  if (item.rejected) return item.rejection_reason ? `رد شده: ${item.rejection_reason}` : "رد شده";
+  if (item.verified) return "تایید شده";
+  return "در انتظار تایید";
 }
 
 async function fetchNeeds(signal?: AbortSignal) {
@@ -82,33 +86,12 @@ async function fetchNeeds(signal?: AbortSignal) {
 
 async function deleteNeed(uuid: string) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
-  const res = await authFetch(
-    `${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`,
-    {
-      method: "DELETE",
-    },
-  );
+  const res = await authFetch(`${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/`, {
+    method: "DELETE",
+  });
   if (res.status === 204) return;
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) throw new Error(data?.detail || "خطا در حذف بار");
-}
-
-async function setNeedModeration(
-  uuid: string,
-  status: "approved" | "rejected",
-  reason = "",
-) {
-  if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
-  const res = await authFetch(
-    `${API_BASE}/goods-needs/${encodeURIComponent(uuid)}/verify/`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ status, reason }),
-    },
-  );
-  const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "خطا در تغییر وضعیت بار");
-  return data as GoodsNeed;
 }
 
 export default function MyNeedsPage() {
@@ -118,21 +101,14 @@ export default function MyNeedsPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [deletingUuid, setDeletingUuid] = React.useState<string | null>(null);
-  const [moderatingUuid, setModeratingUuid] = React.useState<string | null>(
-    null,
-  );
-  const [role, setRole] = React.useState("user");
 
   React.useEffect(() => {
-    const access = localStorage.getItem("access");
-    if (!access) {
+    if (!localStorage.getItem("access")) {
       router.replace("/login");
       return;
     }
-    setRole(localStorage.getItem("role") || "user");
     setReady(true);
   }, [router]);
-  const isAdmin = role === "admin";
 
   const load = React.useCallback(() => {
     const ac = new AbortController();
@@ -165,27 +141,6 @@ export default function MyNeedsPage() {
     }
   }
 
-  async function onModerate(item: GoodsNeed, status: "approved" | "rejected") {
-    const reason =
-      status === "rejected"
-        ? window.prompt(
-            "دلیل رد شدن را وارد کنید:",
-            item.rejection_reason || "",
-          ) || ""
-        : "";
-    if (!window.confirm("وضعیت این پروفرما تغییر کند؟")) return;
-    setModeratingUuid(item.uuid);
-    setError("");
-    try {
-      const updated = await setNeedModeration(item.uuid, status, reason);
-      setItems((prev) => prev.map((x) => (x.uuid === item.uuid ? updated : x)));
-    } catch (err: any) {
-      setError(err?.message || "خطا در تغییر وضعیت");
-    } finally {
-      setModeratingUuid(null);
-    }
-  }
-
   if (!ready) return null;
 
   return (
@@ -199,10 +154,7 @@ export default function MyNeedsPage() {
           accentClassName="bg-rose-600"
           actions={
             <>
-              <Button
-                variant="outline"
-                onClick={() => router.push("/add-need")}
-              >
+              <Button variant="outline" onClick={() => router.push("/add-need")}>
                 <FilePlus2 className="h-4 w-4" />
                 ایجاد بار
               </Button>
@@ -217,9 +169,7 @@ export default function MyNeedsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">لیست بارها</CardTitle>
-            <CardDescription>
-              هر بار می‌تواند چند کالا داشته باشد.
-            </CardDescription>
+            <CardDescription>هر بار می‌تواند چند کالا داشته باشد.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {error ? (
@@ -230,29 +180,26 @@ export default function MyNeedsPage() {
             ) : null}
 
             <div className="overflow-auto rounded-lg border">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[980px] text-sm">
                 <thead className="bg-muted/40">
-                  <tr className="[&>th]:px-3 [&>th]:py-2 text-right">
-                    <th>ID</th>
+                  <tr className="text-right [&>th]:px-3 [&>th]:py-2">
+                    <th>شناسه</th>
                     <th>کالای اول</th>
                     <th>تعداد کالا</th>
-                    <th>وضعیت</th>
+                    <th>وضعیت بار</th>
                     <th>کشور مبدا</th>
                     <th>ارز</th>
                     <th>فی</th>
                     <th>مرز ورودی</th>
                     <th>گمرک</th>
-                    {isAdmin ? <th>وضعیت تایید</th> : null}
+                    <th>وضعیت تایید</th>
                     <th className="w-[160px]">عملیات</th>
                   </tr>
                 </thead>
                 <tbody>
                   {!loading && items.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={isAdmin ? 11 : 10}
-                        className="px-3 py-6 text-center text-muted-foreground"
-                      >
+                      <td colSpan={11} className="px-3 py-6 text-center text-muted-foreground">
                         موردی یافت نشد.
                       </td>
                     </tr>
@@ -260,16 +207,12 @@ export default function MyNeedsPage() {
                     items.map((item) => {
                       const first = item.goods?.[0];
                       return (
-                        <tr
-                          key={item.uuid}
-                          className="border-t [&>td]:px-3 [&>td]:py-2"
-                        >
+                        <tr key={item.uuid} className="border-t [&>td]:px-3 [&>td]:py-2">
                           <td>{item.uuid}</td>
                           <td className="font-medium">
                             {first?.description || "-"}
                             <div className="text-xs text-muted-foreground">
-                              HS {first?.hs_code || "-"}، {fmt(first?.quantity)}{" "}
-                              {first?.unit || ""}
+                              HS {first?.hs_code || "-"}، {fmt(first?.quantity)} {first?.unit || ""}
                             </div>
                           </td>
                           <td>{fmt(item.goods?.length || 0)}</td>
@@ -281,37 +224,10 @@ export default function MyNeedsPage() {
                           </td>
                           <td>{item.entry_border || "-"}</td>
                           <td>{customsLabel(item.customs)}</td>
-                          {isAdmin ? (
-                            <td>
-                              {item.rejected ? (
-                                <span className="text-red-700">
-                                  رد شده
-                                  {item.rejection_reason
-                                    ? `: ${item.rejection_reason}`
-                                    : ""}
-                                </span>
-                              ) : item.verified ? (
-                                <span className="text-emerald-700">
-                                  تایید شده
-                                </span>
-                              ) : (
-                                <span className="text-amber-700">
-                                  در انتظار تایید
-                                </span>
-                              )}
-                            </td>
-                          ) : null}
+                          <td>{statusText(item)}</td>
                           <td>
                             <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  router.push(
-                                    `/my-needs/${encodeURIComponent(item.uuid)}`,
-                                  )
-                                }
-                              >
+                              <Button size="sm" variant="outline" onClick={() => router.push(`/my-needs/${encodeURIComponent(item.uuid)}`)}>
                                 ویرایش
                               </Button>
                               <Button
@@ -322,26 +238,6 @@ export default function MyNeedsPage() {
                               >
                                 {deletingUuid === item.uuid ? "..." : "حذف"}
                               </Button>
-                              {isAdmin ? (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => onModerate(item, "approved")}
-                                    disabled={moderatingUuid === item.uuid}
-                                  >
-                                    تایید
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => onModerate(item, "rejected")}
-                                    disabled={moderatingUuid === item.uuid}
-                                  >
-                                    رد
-                                  </Button>
-                                </>
-                              ) : null}
                             </div>
                           </td>
                         </tr>

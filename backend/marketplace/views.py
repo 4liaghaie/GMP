@@ -31,6 +31,13 @@ def is_admin_user(user):
     )
 
 
+class IsAdminUser(permissions.BasePermission):
+    message = "فقط مدیر به این بخش دسترسی دارد."
+
+    def has_permission(self, request, view):
+        return is_admin_user(request.user)
+
+
 def create_moderation_notification(obj, kind: str, reason: str = ""):
     is_order = isinstance(obj, RegisteredOrder)
     title = "ثبت سفارش تایید شد" if is_order else "پروفرما تایید شد"
@@ -76,10 +83,7 @@ class RegisteredOrderListCreateAPIView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
-        if is_admin_user(request.user):
-            qs = RegisteredOrder.objects.select_related("user").order_by("-created_at")
-        else:
-            qs = RegisteredOrder.objects.filter(user=request.user).select_related("user").order_by("-created_at")
+        qs = RegisteredOrder.objects.filter(user=request.user).select_related("user").order_by("-created_at")
         return Response(RegisteredOrderReadSerializer(qs, many=True, context={"request": request}).data)
 
     def post(self, request):
@@ -169,6 +173,14 @@ class RegisteredOrderVerifyAPIView(APIView):
         return Response(RegisteredOrderReadSerializer(order, context={"request": request}).data, status=status.HTTP_200_OK)
 
 
+class AdminRegisteredOrderListAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        qs = RegisteredOrder.objects.select_related("user").prefetch_related("goods__hs_code").order_by("-created_at")
+        return Response(RegisteredOrderReadSerializer(qs, many=True, context={"request": request}).data)
+
+
 class MarketplaceRegisteredOrderListAPIView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = PublicRegisteredOrderSerializer
@@ -217,16 +229,13 @@ class GoodsNeedListCreateAPIView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
-        if is_admin_user(request.user):
-            qs = GoodsNeed.objects.select_related("user", "hs_code").prefetch_related("goods__hs_code").order_by("-created_at")
-        else:
-            qs = (
-                GoodsNeed.objects
-                .filter(user=request.user)
-                .select_related("user", "hs_code")
-                .prefetch_related("goods__hs_code")
-                .order_by("-created_at")
-            )
+        qs = (
+            GoodsNeed.objects
+            .filter(user=request.user)
+            .select_related("user", "hs_code")
+            .prefetch_related("goods__hs_code")
+            .order_by("-created_at")
+        )
         return Response(GoodsNeedSerializer(qs, many=True, context={"request": request}).data)
 
     def post(self, request):
@@ -314,6 +323,14 @@ class GoodsNeedVerifyAPIView(APIView):
             need.save(update_fields=["verified", "rejected", "rejection_reason"])
 
         return Response(GoodsNeedSerializer(need, context={"request": request}).data, status=status.HTTP_200_OK)
+
+
+class AdminGoodsNeedListAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        qs = GoodsNeed.objects.select_related("user", "hs_code").prefetch_related("goods__hs_code").order_by("-created_at")
+        return Response(GoodsNeedSerializer(qs, many=True, context={"request": request}).data)
 
 
 class MarketplaceGoodsNeedListAPIView(generics.ListAPIView):
