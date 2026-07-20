@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  BadgeCheck,
   Check,
   Copy,
   ExternalLink,
@@ -52,7 +51,12 @@ import { countries } from "@/lib/countryList";
 import { iranCustoms } from "@/lib/customsList";
 import { cn } from "@/lib/utils";
 
-const WHATSAPP_NUMBER = "989307878446";
+const WHATSAPP_NUMBER = "989008116606";
+const RUBIKA_LINK =
+  process.env.NEXT_PUBLIC_RUBIKA_LINK ||
+  process.env.NEXT_PUBLIC_RUBIKA_USERNAME ||
+  "";
+const BALE_USERNAME = process.env.NEXT_PUBLIC_BALE_USERNAME || "";
 const WHATSAPP_MESSAGE = "سلام، درباره همین پروفرما پیام می‌دهم.";
 
 function formatNumLike(x: string | number | null | undefined) {
@@ -123,6 +127,32 @@ function buildWhatsAppLink(phone: string, text?: string) {
   const msg = text ? `?text=${encodeURIComponent(text)}` : "";
 
   return `https://wa.me/${clean}${msg}`;
+}
+
+function normalizeMessengerUsername(value: string) {
+  return String(value || "")
+    .trim()
+    .replace(/^https?:\/\/(?:www\.)?(?:rubika\.ir|ble\.ir)\//i, "")
+    .replace(/^@+/, "")
+    .replace(/\/+$/, "");
+}
+
+function buildRubikaLink() {
+  const raw = String(RUBIKA_LINK || "").trim();
+  if (/^https?:\/\/web\.rubika\.ir/i.test(raw)) return raw;
+  if (/^#c=/i.test(raw)) return `https://web.rubika.ir/${raw}`;
+
+  const username = normalizeMessengerUsername(raw);
+  return username
+    ? `https://rubika.ir/${encodeURIComponent(username)}`
+    : "https://web.rubika.ir/";
+}
+
+function buildBaleLink() {
+  const username = normalizeMessengerUsername(BALE_USERNAME);
+  return username
+    ? `https://ble.ir/${encodeURIComponent(username)}`
+    : "https://web.bale.ai/";
 }
 
 function useMediaQuery(query: string) {
@@ -323,57 +353,6 @@ function GoodsTable({ need }: { need: GoodsNeed }) {
   );
 }
 
-function SummaryCard({ need }: { need: GoodsNeed }) {
-  const total = goodsTotal(need);
-  const freight = Number(need.freight_price ?? 0);
-  const subtotal = total + (Number.isFinite(freight) ? freight : 0);
-
-  return (
-    <Card className="rounded-2xl shadow-sm">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-start gap-2 text-right">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border bg-muted">
-            <BadgeCheck className="h-4 w-4" />
-          </span>
-
-          <div>
-            <div className="text-sm font-semibold">خلاصه مالی</div>
-
-            <div className="text-xs text-muted-foreground">
-              ارقام به {safeText(need.currency_type)}
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-3 text-sm">
-        <KeyValue label="ارزش کالا" value={formatNumLike(total)} />
-
-        <KeyValue label="کرایه حمل" value={formatNumLike(need.freight_price)} />
-
-        <KeyValue label="نوع فی" value={safeText(need.fee_type)} />
-
-        <KeyValue
-          label="مبلغ فی (تومان)"
-          value={formatNumLike(need.fee_amount)}
-        />
-
-        <Separator />
-
-        <div className="rounded-2xl border bg-muted/40 p-3">
-          <div className="flex flex-col gap-1 text-right sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-sm text-muted-foreground">جمع کل</span>
-
-            <span className="text-base font-bold tabular-nums">
-              {formatNumLike(subtotal)}
-            </span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function MetaCard({ need }: { need: GoodsNeed }) {
   return (
     <Card className="rounded-2xl shadow-sm">
@@ -473,6 +452,32 @@ function ContactCard({ referenceText }: { referenceText: string }) {
             باز کردن چت
           </a>
         </Button>
+
+        <Button asChild variant="outline" className="rounded-2xl">
+          <a
+            href={buildRubikaLink()}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex flex-row-reverse items-center justify-center gap-2"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span>باز کردن روبیکا</span>
+            <ExternalLink className="h-4 w-4 opacity-70" />
+          </a>
+        </Button>
+
+        <Button asChild variant="outline" className="rounded-2xl">
+          <a
+            href={buildBaleLink()}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex flex-row-reverse items-center justify-center gap-2"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span>باز کردن بله</span>
+            <ExternalLink className="h-4 w-4 opacity-70" />
+          </a>
+        </Button>
       </CardContent>
     </Card>
   );
@@ -564,10 +569,6 @@ function DetailsContent({
               کالاها
             </TabsTrigger>
 
-            <TabsTrigger className="rounded-2xl px-5" value="summary">
-              مالی
-            </TabsTrigger>
-
             <TabsTrigger className="rounded-2xl px-5" value="meta">
               اطلاعات
             </TabsTrigger>
@@ -580,10 +581,6 @@ function DetailsContent({
 
         <TabsContent value="goods" className="mt-4">
           <GoodsTable need={need} />
-        </TabsContent>
-
-        <TabsContent value="summary" className="mt-4">
-          <SummaryCard need={need} />
         </TabsContent>
 
         <TabsContent value="meta" className="mt-4">
@@ -645,7 +642,7 @@ export default function ProformaDetails({ need }: { need: GoodsNeed }) {
               </DialogTitle>
 
               <DialogDescription className="text-right">
-                کالاها، خلاصه مالی و اطلاعات حمل پروفرما
+                کالاها و اطلاعات حمل پروفرما
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -681,7 +678,7 @@ export default function ProformaDetails({ need }: { need: GoodsNeed }) {
             </SheetTitle>
 
             <SheetDescription className="text-right">
-              کالاها، خلاصه مالی و اطلاعات حمل پروفرما
+              کالاها و اطلاعات حمل پروفرما
             </SheetDescription>
           </SheetHeader>
         </div>

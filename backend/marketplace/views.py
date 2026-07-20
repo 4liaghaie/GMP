@@ -337,6 +337,11 @@ class MarketplaceGoodsNeedListAPIView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = GoodsNeedSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["hide_fee_fields"] = True
+        return context
+
     def get_queryset(self):
         qs = GoodsNeed.objects.filter(verified=True, rejected=False).select_related("user", "hs_code").prefetch_related("goods__hs_code").order_by("-created_at")
         hs_code = (self.request.query_params.get("hs_code") or "").strip()

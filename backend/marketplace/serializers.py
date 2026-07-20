@@ -751,6 +751,14 @@ class PublicRegisteredOrderSerializer(serializers.ModelSerializer):
             return obj.payment_instrument
         return None
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        if not (request and is_admin_user(request.user)):
+            data.pop("fee_type", None)
+            data.pop("fee_amount", None)
+        return data
+
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:

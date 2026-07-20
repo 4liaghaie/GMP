@@ -83,8 +83,8 @@ export type MarketplaceOrder = {
   sub_total: string;
 
   currency_type: string;
-  fee_type: string;
-  fee_amount: string;
+  fee_type?: string;
+  fee_amount?: string;
   applicant_name?: string | null;
   currency_supply: string;
   bank_name: string;

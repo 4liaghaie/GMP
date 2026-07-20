@@ -47,6 +47,9 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://194.48.198.250/api}
+        NEXT_PUBLIC_RUBIKA_USERNAME: ${NEXT_PUBLIC_RUBIKA_USERNAME:-}
+        NEXT_PUBLIC_RUBIKA_LINK: ${NEXT_PUBLIC_RUBIKA_LINK:-}
+        NEXT_PUBLIC_BALE_USERNAME: ${NEXT_PUBLIC_BALE_USERNAME:-}
     container_name: reged-frontend
     restart: unless-stopped
     depends_on:

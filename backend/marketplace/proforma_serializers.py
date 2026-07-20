@@ -180,6 +180,9 @@ class GoodsNeedSerializer(serializers.ModelSerializer):
         data["goods"] = data.pop("goods_read", [])
         if not self.can_view_uploaded_file():
             data["proforma_file"] = None
+        if self.context.get("hide_fee_fields") and not self.can_view_uploaded_file():
+            data.pop("fee_type", None)
+            data.pop("fee_amount", None)
         return data
 
     def _sync_legacy_fields(self, instance: GoodsNeed) -> None:

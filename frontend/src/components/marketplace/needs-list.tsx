@@ -93,8 +93,8 @@ export type GoodsNeed = {
   status: string;
   country_of_origin: string;
   currency_type: string;
-  fee_type: string;
-  fee_amount: string | number;
+  fee_type?: string;
+  fee_amount?: string | number;
   freight_price?: string | number;
   entry_border: string;
   customs: string;
