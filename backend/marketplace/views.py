@@ -40,8 +40,8 @@ class IsAdminUser(permissions.BasePermission):
 
 def create_moderation_notification(obj, kind: str, reason: str = ""):
     is_order = isinstance(obj, RegisteredOrder)
-    title = "ثبت سفارش تایید شد" if is_order else "پروفرما تایید شد"
-    rejected_title = "ثبت سفارش رد شد" if is_order else "پروفرما رد شد"
+    title = "ثبت سفارش تایید شد" if is_order else "بار تایید شد"
+    rejected_title = "ثبت سفارش رد شد" if is_order else "بار رد شد"
     model_name = "registered_order" if is_order else "proforma"
     if kind == "approved":
         message = f"{title}: {obj.uuid}"
@@ -243,8 +243,8 @@ class GoodsNeedListCreateAPIView(APIView):
         ser.is_valid(raise_exception=True)
         need = ser.save(user=request.user)
         notify_admins_of_submission(
-            title="پروفرمای جدید در انتظار تایید",
-            message=f"پروفرما {need.uuid} توسط کاربر {request.user.username} ایجاد شد و منتظر تایید است.",
+            title="باری جدید در انتظار تایید",
+            message=f"بار {need.uuid} توسط کاربر {request.user.username} ایجاد شد و منتظر تایید است.",
             related_model="proforma",
             related_uuid=need.uuid,
         )

@@ -74,7 +74,7 @@ export default function NotificationsPage() {
         <PageHeader
           eyebrow="اعلان‌ها"
           title="اعلان‌های حساب"
-          description="نتیجه تایید یا رد ثبت سفارش‌ها و پروفرماهای شما اینجا نمایش داده می‌شود."
+          description="نتیجه تایید یا رد ثبت سفارش‌ها و بارهای شما اینجا نمایش داده می‌شود."
           icon={<Bell className="h-6 w-6" />}
           accentClassName="bg-slate-900"
           actions={
@@ -101,7 +101,10 @@ export default function NotificationsPage() {
             </Card>
           ) : items.length ? (
             items.map((item) => (
-              <Card key={item.id} className={!item.read ? "border-primary/50" : ""}>
+              <Card
+                key={item.id}
+                className={!item.read ? "border-primary/50" : ""}
+              >
                 <CardContent className="space-y-3 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -122,7 +125,9 @@ export default function NotificationsPage() {
                               ? "در انتظار بررسی"
                               : "رد"}
                         </Badge>
-                        {!item.read ? <Badge variant="secondary">جدید</Badge> : null}
+                        {!item.read ? (
+                          <Badge variant="secondary">جدید</Badge>
+                        ) : null}
                       </div>
                       <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
                         {item.message}

@@ -85,7 +85,7 @@ const steps = [
   {
     icon: Box,
     title: "ثبت اطلاعات کالا",
-    text: "صاحب کالا مشخصات محموله و پروفرما را ثبت می‌کند.",
+    text: "صاحب کالا مشخصات محموله و بار را ثبت می‌کند.",
   },
   {
     icon: FileCheck2,
@@ -471,8 +471,8 @@ export default function HomePage() {
                       key={need.uuid}
                       accent="teal"
                       badge={need.currency_type || need.status}
-                      title={need.goods?.[0]?.description || "پروفرما"}
-                      description={`پروفرما ${need.uuid}`}
+                      title={need.goods?.[0]?.description || "بار"}
+                      description={`بار ${need.uuid}`}
                       hsCode={need.goods?.[0]?.hs_code}
                       value={need.goods?.[0]?.price}
                       href="/marketplace/needs"
@@ -480,7 +480,7 @@ export default function HomePage() {
                   ))
                 ) : (
                   <p className="col-span-full rounded-2xl border border-dashed p-8 text-center text-sm text-slate-500">
-                    هنوز پروفرمای تاییدشده‌ای برای نمایش وجود ندارد.
+                    هنوز باری تاییدشده‌ای برای نمایش وجود ندارد.
                   </p>
                 )}
               </div>

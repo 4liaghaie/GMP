@@ -170,7 +170,7 @@ async function fetchAdminProformas(signal?: AbortSignal) {
     signal,
   });
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت پروفرماها");
+  if (!res.ok) throw new Error(data?.detail || "خطا در دریافت بارها");
   return (Array.isArray(data) ? data : data?.results || []) as AdminProforma[];
 }
 
@@ -184,7 +184,7 @@ async function deleteProforma(uuid: string) {
   );
   if (res.status === 204) return;
   const data = (await res.json().catch(() => ({}))) as any;
-  if (!res.ok) throw new Error(data?.detail || "خطا در حذف پروفرما");
+  if (!res.ok) throw new Error(data?.detail || "خطا در حذف بار");
 }
 
 async function setProformaModeration(
@@ -280,7 +280,7 @@ export default function AdminProformasPage() {
             item.rejection_reason || "",
           ) || ""
         : "";
-    if (!window.confirm("وضعیت این پروفرما تغییر کند؟")) return;
+    if (!window.confirm("وضعیت این بار تغییر کند؟")) return;
     setBusyUuid(item.uuid);
     setError("");
     try {
@@ -302,7 +302,7 @@ export default function AdminProformasPage() {
   }
 
   async function remove(item: AdminProforma) {
-    if (!window.confirm("این پروفرما حذف شود؟")) return;
+    if (!window.confirm("این بار حذف شود؟")) return;
     setBusyUuid(item.uuid);
     setError("");
     try {
@@ -322,14 +322,14 @@ export default function AdminProformasPage() {
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-10">
         <PageHeader
           eyebrow="پنل مدیر"
-          title="مدیریت پروفرماها"
+          title="مدیریت بارها"
           description="ردیف‌های فشرده برای بررسی سریع؛ جزئیات کامل داخل پنجره باز می‌شود."
           icon={<FileText className="h-6 w-6" />}
           accentClassName="bg-slate-900"
           actions={
             <>
               <Button asChild variant="outline">
-                <Link href="/add-need">ایجاد پروفرما</Link>
+                <Link href="/add-need">ایجاد بار</Link>
               </Button>
               <Button
                 variant="outline"
@@ -538,7 +538,7 @@ function ProformaDetailsDialog({
       >
         <div className="border-b bg-background">
           <DialogHeader className="p-5 text-right">
-            <DialogTitle className="text-right">جزئیات پروفرما</DialogTitle>
+            <DialogTitle className="text-right">جزئیات بار</DialogTitle>
             <DialogDescription className="text-right">
               {item.uuid}
             </DialogDescription>

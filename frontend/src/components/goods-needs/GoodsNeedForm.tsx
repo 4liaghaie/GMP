@@ -773,7 +773,7 @@ export function GoodsNeedForm(props: {
       const values = schema.parse(raw);
       const file = selectedFile(values.proforma_file);
       if (mode === "create" && !file) {
-        setError("فایل PDF یا JPG پروفرما الزامی است.");
+        setError("فایل PDF یا JPG بار الزامی است.");
         setStep(0);
         return;
       }
@@ -799,7 +799,7 @@ export function GoodsNeedForm(props: {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle>
-                {mode === "edit" ? "ویرایش پروفرما" : "ایجاد پروفرما"}
+                {mode === "edit" ? "ویرایش بار" : "ایجاد بار"}
               </CardTitle>
               <CardDescription>
                 فرم در سه مرحله تکمیل می‌شود؛ کالاها در مرحله آخر اضافه می‌شوند.
@@ -842,7 +842,7 @@ export function GoodsNeedForm(props: {
           {step === 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
               <Field
-                label="فایل پروفرما (PDF یا JPG)"
+                label="فایل بار (PDF یا JPG)"
                 error={(errors.proforma_file as any)?.message}
               >
                 <Input
@@ -1115,7 +1115,7 @@ export function GoodsNeedForm(props: {
                   ? "در حال ذخیره..."
                   : mode === "edit"
                     ? "ذخیره تغییرات"
-                    : "ایجاد پروفرما"}
+                    : "ایجاد بار"}
               </Button>
             )}
           </div>

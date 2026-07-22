@@ -4,7 +4,10 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, FilePlus2, ListChecks } from "lucide-react";
 
-import { GoodsNeedForm, type GoodsNeedFormInput } from "@/components/goods-needs/GoodsNeedForm";
+import {
+  GoodsNeedForm,
+  type GoodsNeedFormInput,
+} from "@/components/goods-needs/GoodsNeedForm";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 
@@ -44,16 +47,19 @@ export default function AddNeedPage() {
     <div dir="rtl">
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-10">
         <PageHeader
-          eyebrow="پروفرما"
-          title="ایجاد پروفرما"
-          description="پروفرمای جدید را با اطلاعات کلی، مالی و کالاها ثبت کنید."
+          eyebrow="بار"
+          title="ایجاد بار"
+          description="باری جدید را با اطلاعات کلی، مالی و کالاها ثبت کنید."
           icon={<FilePlus2 className="h-6 w-6" />}
           accentClassName="bg-amber-600"
           actions={
             <>
-              <Button variant="outline" onClick={() => router.push("/my-needs")}>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/my-needs")}
+              >
                 <ListChecks className="h-4 w-4" />
-                لیست پروفرماهای من
+                لیست بارهای من
               </Button>
               <Button variant="outline" onClick={() => router.back()}>
                 <ArrowRight className="h-4 w-4" />
@@ -63,7 +69,10 @@ export default function AddNeedPage() {
           }
         />
 
-        <GoodsNeedForm initialValues={defaultValues()} onDone={() => router.push("/my-needs")} />
+        <GoodsNeedForm
+          initialValues={defaultValues()}
+          onDone={() => router.push("/my-needs")}
+        />
       </main>
     </div>
   );

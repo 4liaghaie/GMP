@@ -70,6 +70,12 @@ MEDIA_HOST_PATH=/var/www/gmp-media
 
 Keep `DJANGO_DEBUG=0` in `backend/.env.docker` and retain the SMS provider settings there. The root `.env` supplies the required Django secret to Compose. Never commit either production environment file.
 
+If you provide `DATABASE_URL` explicitly in the root `.env`, its hostname must be `db` for the Compose PostgreSQL service. `127.0.0.1` inside the backend container points back to the backend container itself. Example:
+
+```dotenv
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db:5432/customs_dev
+```
+
 Before changing an existing deployment, take a database backup using its current container and credentials. With the old default setup this is typically:
 
 ```bash

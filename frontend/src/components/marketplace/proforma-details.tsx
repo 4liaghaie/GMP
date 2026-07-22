@@ -57,7 +57,7 @@ const RUBIKA_LINK =
   process.env.NEXT_PUBLIC_RUBIKA_USERNAME ||
   "";
 const BALE_USERNAME = process.env.NEXT_PUBLIC_BALE_USERNAME || "";
-const WHATSAPP_MESSAGE = "سلام، درباره همین پروفرما پیام می‌دهم.";
+const WHATSAPP_MESSAGE = "سلام، درباره همین بار پیام می‌دهم.";
 
 function formatNumLike(x: string | number | null | undefined) {
   if (x === null || x === undefined || x === "") return "—";
@@ -267,7 +267,7 @@ function GoodsTable({ need }: { need: GoodsNeed }) {
 
       <div className="hidden rounded-2xl border bg-card shadow-sm md:block">
         <div className="flex items-center justify-between border-b px-4 py-3">
-          <div className="text-sm font-semibold">اقلام پروفرما</div>
+          <div className="text-sm font-semibold">اقلام بار</div>
 
           <div className="text-xs text-muted-foreground tabular-nums">
             {need.goods?.length
@@ -357,7 +357,7 @@ function MetaCard({ need }: { need: GoodsNeed }) {
   return (
     <Card className="rounded-2xl shadow-sm">
       <CardHeader className="pb-2 text-right">
-        <div className="text-sm font-semibold">اطلاعات پروفرما</div>
+        <div className="text-sm font-semibold">اطلاعات بار</div>
 
         <div className="text-xs text-muted-foreground">
           اطلاعات مبدا، مرز، گمرک و حمل
@@ -373,7 +373,7 @@ function MetaCard({ need }: { need: GoodsNeed }) {
 
         <KeyValue label="شناسه" value={safeText(need.uuid)} />
 
-        <KeyValue label="وضعیت پروفرما" value={safeText(need.status)} />
+        <KeyValue label="وضعیت بار" value={safeText(need.status)} />
 
         <KeyValue
           label="کشور مبدا"
@@ -403,7 +403,7 @@ function MetaCard({ need }: { need: GoodsNeed }) {
               className="inline-flex flex-row-reverse items-center justify-center gap-2"
             >
               <FileText className="h-4 w-4" />
-              <span>مشاهده فایل پروفرما</span>
+              <span>مشاهده فایل بار</span>
               <ExternalLink className="h-4 w-4 opacity-70" />
             </a>
           </Button>
@@ -416,7 +416,7 @@ function MetaCard({ need }: { need: GoodsNeed }) {
 function ContactCard({ referenceText }: { referenceText: string }) {
   const waLink = buildWhatsAppLink(
     WHATSAPP_NUMBER,
-    `${WHATSAPP_MESSAGE}\nشناسه پروفرما: ${referenceText}`,
+    `${WHATSAPP_MESSAGE}\nشناسه بار: ${referenceText}`,
   );
 
   return (
@@ -501,7 +501,7 @@ function DetailsContent({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center justify-start gap-2">
-                <Badge variant="secondary">پروفرما</Badge>
+                <Badge variant="secondary">بار</Badge>
 
                 <Badge variant="outline">{safeText(need.status)}</Badge>
 
@@ -638,11 +638,11 @@ export default function ProformaDetails({ need }: { need: GoodsNeed }) {
           <div className="border-b bg-background">
             <DialogHeader className="p-5 text-right">
               <DialogTitle className="text-right text-lg">
-                جزئیات پروفرما
+                جزئیات بار
               </DialogTitle>
 
               <DialogDescription className="text-right">
-                کالاها و اطلاعات حمل پروفرما
+                کالاها و اطلاعات حمل بار
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -674,11 +674,11 @@ export default function ProformaDetails({ need }: { need: GoodsNeed }) {
         <div className="border-b bg-background">
           <SheetHeader className="p-4 text-right">
             <SheetTitle className="break-all text-right text-lg tabular-nums">
-              پروفرما {safeText(need.uuid)}
+              بار {safeText(need.uuid)}
             </SheetTitle>
 
             <SheetDescription className="text-right">
-              کالاها و اطلاعات حمل پروفرما
+              کالاها و اطلاعات حمل بار
             </SheetDescription>
           </SheetHeader>
         </div>

@@ -195,7 +195,7 @@ export function Navbar() {
     },
     {
       href: "/my-needs",
-      label: "پروفرماهای من",
+      label: "بارهای من",
       icon: <Boxes className="h-5 w-5" />,
     },
     {
@@ -217,7 +217,7 @@ export function Navbar() {
     },
     {
       href: "/marketplace/needs",
-      label: "بازار پروفرما",
+      label: "بازار بار",
       icon: <PackageSearch className="h-5 w-5" />,
     },
     {
@@ -227,7 +227,7 @@ export function Navbar() {
     },
     {
       href: "/add-need",
-      label: "ثبت پروفرمای جدید",
+      label: "ثبت باری جدید",
       icon: <Boxes className="h-5 w-5" />,
     },
   ];
@@ -258,21 +258,28 @@ export function Navbar() {
           </div>
 
           <div className="min-w-0 leading-tight">
-            <p className="truncate text-base font-black tracking-[.18em]">GMP</p>
+            <p className="truncate text-base font-black tracking-[.18em]">
+              GMP
+            </p>
             <p className="truncate text-[9px] font-medium tracking-wide text-slate-500 max-sm:hidden dark:text-slate-400">
               CUSTOMS MARKETPLACE
             </p>
           </div>
         </Link>
 
-        <nav className="order-2 hidden flex-1 items-center justify-center gap-1 lg:flex" aria-label="ناوبری اصلی">
+        <nav
+          className="order-2 hidden flex-1 items-center justify-center gap-1 lg:flex"
+          aria-label="ناوبری اصلی"
+        >
           {desktopLinks.map((link) => (
             <Link
               key={`${link.href}-${link.label}`}
               href={link.href}
               className={[
                 "rounded-lg px-3 py-2 text-sm font-semibold transition-colors hover:bg-[#e9f8f9] hover:text-[#078e9d] dark:hover:bg-white/5",
-                pathname === link.href ? "text-[#078e9d]" : "text-[#173c60] dark:text-slate-200",
+                pathname === link.href
+                  ? "text-[#078e9d]"
+                  : "text-[#173c60] dark:text-slate-200",
               ].join(" ")}
             >
               {link.label}
@@ -286,10 +293,20 @@ export function Navbar() {
 
           {!authed ? (
             <>
-              <Button asChild variant="outline" size="sm" className="h-10 min-w-20 rounded-lg border-[#0a4774]/35 bg-transparent text-[#0a3158] dark:text-white">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-10 min-w-20 rounded-lg border-[#0a4774]/35 bg-transparent text-[#0a3158] dark:text-white"
+              >
                 <Link href="/login">ورود</Link>
               </Button>
-              <Button asChild variant="default" size="sm" className="h-10 min-w-20 rounded-lg bg-[#078e9d] hover:bg-[#087d89]">
+              <Button
+                asChild
+                variant="default"
+                size="sm"
+                className="h-10 min-w-20 rounded-lg bg-[#078e9d] hover:bg-[#087d89]"
+              >
                 <Link href="/register">ثبت‌نام</Link>
               </Button>
             </>
@@ -461,7 +478,12 @@ export function Navbar() {
               </PopoverContent>
             </Popover>
           ) : null}
-          <Button variant="ghost" size="icon" onClick={() => setOpen(true)} aria-label="باز کردن منو">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setOpen(true)}
+            aria-label="باز کردن منو"
+          >
             <Menu className="h-5 w-5" />
           </Button>
         </div>
@@ -476,15 +498,29 @@ export function Navbar() {
           <div className="flex items-center justify-between border-b bg-[#072f53] px-4 py-4 text-white">
             <div className="flex items-center gap-3">
               <span className="relative h-11 w-12 overflow-hidden rounded-xl bg-white">
-                <Image src="/logo2.png" alt="GMP" fill className="object-contain p-1" />
+                <Image
+                  src="/logo2.png"
+                  alt="GMP"
+                  fill
+                  className="object-contain p-1"
+                />
               </span>
               <div>
-                <DialogTitle className="text-right text-base font-black">منوی GMP</DialogTitle>
-                <p className="mt-1 text-[11px] text-white/60">Customs Marketplace Platform</p>
+                <DialogTitle className="text-right text-base font-black">
+                  منوی GMP
+                </DialogTitle>
+                <p className="mt-1 text-[11px] text-white/60">
+                  Customs Marketplace Platform
+                </p>
               </div>
             </div>
             <DialogClose asChild>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white" aria-label="بستن منو">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/10 hover:text-white"
+                aria-label="بستن منو"
+              >
                 <X className="h-5 w-5" />
               </Button>
             </DialogClose>
@@ -496,33 +532,64 @@ export function Navbar() {
                 <div className="rounded-2xl border border-[#078e9d]/20 bg-[#eef9fa] p-4 dark:bg-[#078e9d]/10">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <span className="grid h-10 w-10 place-items-center rounded-full bg-[#078e9d] text-white"><User className="h-5 w-5" /></span>
+                      <span className="grid h-10 w-10 place-items-center rounded-full bg-[#078e9d] text-white">
+                        <User className="h-5 w-5" />
+                      </span>
                       <div>
                         <p className="text-sm font-black">حساب کاربری</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">به GMP خوش آمدید</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          به GMP خوش آمدید
+                        </p>
                       </div>
                     </div>
-                    {unreadCount ? <span className="rounded-full bg-destructive px-2 py-1 text-[10px] font-bold text-white">{unreadCount} اعلان</span> : null}
+                    {unreadCount ? (
+                      <span className="rounded-full bg-destructive px-2 py-1 text-[10px] font-bold text-white">
+                        {unreadCount} اعلان
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               ) : (
                 <div className="rounded-2xl bg-[#eef9fa] p-4 text-center dark:bg-[#078e9d]/10">
-                  <p className="text-sm font-black">برای مشاهده بازار وارد شوید</p>
-                  <p className="mt-2 text-xs leading-6 text-muted-foreground">دسترسی به فرصت‌ها پس از ورود و تایید حساب امکان‌پذیر است.</p>
+                  <p className="text-sm font-black">
+                    برای مشاهده بازار وارد شوید
+                  </p>
+                  <p className="mt-2 text-xs leading-6 text-muted-foreground">
+                    دسترسی به فرصت‌ها پس از ورود و تایید حساب امکان‌پذیر است.
+                  </p>
                   <div className="mt-4 grid grid-cols-2 gap-2">
-                    <Button asChild variant="outline" className="h-10 rounded-xl bg-background"><Link href="/login">ورود</Link></Button>
-                    <Button asChild className="h-10 rounded-xl bg-[#078e9d] hover:bg-[#087d89]"><Link href="/register">ثبت‌نام</Link></Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="h-10 rounded-xl bg-background"
+                    >
+                      <Link href="/login">ورود</Link>
+                    </Button>
+                    <Button
+                      asChild
+                      className="h-10 rounded-xl bg-[#078e9d] hover:bg-[#087d89]"
+                    >
+                      <Link href="/register">ثبت‌نام</Link>
+                    </Button>
                   </div>
                 </div>
               )}
 
               {authed ? (
                 <section>
-                  <p className="mb-3 px-1 text-xs font-bold text-muted-foreground">دسترسی سریع</p>
+                  <p className="mb-3 px-1 text-xs font-bold text-muted-foreground">
+                    دسترسی سریع
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     {mobileQuickActions.map((link) => (
-                      <Link key={link.href} href={link.href} className="flex min-h-24 flex-col items-start justify-between rounded-2xl border bg-card p-3 text-sm font-bold shadow-sm transition-colors hover:border-[#078e9d]/40 hover:bg-[#eef9fa] dark:hover:bg-[#078e9d]/10">
-                        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e7f7f8] text-[#078e9d] dark:bg-[#078e9d]/15">{link.icon}</span>
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="flex min-h-24 flex-col items-start justify-between rounded-2xl border bg-card p-3 text-sm font-bold shadow-sm transition-colors hover:border-[#078e9d]/40 hover:bg-[#eef9fa] dark:hover:bg-[#078e9d]/10"
+                      >
+                        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e7f7f8] text-[#078e9d] dark:bg-[#078e9d]/15">
+                          {link.icon}
+                        </span>
                         <span>{link.label}</span>
                       </Link>
                     ))}
@@ -532,11 +599,23 @@ export function Navbar() {
 
               {authed ? (
                 <section>
-                  <p className="mb-2 px-1 text-xs font-bold text-muted-foreground">حساب من</p>
+                  <p className="mb-2 px-1 text-xs font-bold text-muted-foreground">
+                    حساب من
+                  </p>
                   <nav className="space-y-1">
                     {accountMobileLinks.map((link) => (
-                      <Link key={link.href} href={link.href} className={["flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors", pathname === link.href ? "bg-[#e7f7f8] text-[#078e9d] dark:bg-[#078e9d]/15" : "hover:bg-muted/50"].join(" ")}>
-                        {link.icon}<span>{link.label}</span>
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className={[
+                          "flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors",
+                          pathname === link.href
+                            ? "bg-[#e7f7f8] text-[#078e9d] dark:bg-[#078e9d]/15"
+                            : "hover:bg-muted/50",
+                        ].join(" ")}
+                      >
+                        {link.icon}
+                        <span>{link.label}</span>
                       </Link>
                     ))}
                   </nav>
@@ -544,11 +623,23 @@ export function Navbar() {
               ) : null}
 
               <section>
-                <p className="mb-2 px-1 text-xs font-bold text-muted-foreground">راهنما</p>
+                <p className="mb-2 px-1 text-xs font-bold text-muted-foreground">
+                  راهنما
+                </p>
                 <nav className="space-y-1">
                   {publicMobileLinks.map((link) => (
-                    <Link key={link.href} href={link.href} className={["flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors", pathname === link.href ? "bg-[#e7f7f8] text-[#078e9d] dark:bg-[#078e9d]/15" : "hover:bg-muted/50"].join(" ")}>
-                      {link.icon}<span>{link.label}</span>
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={[
+                        "flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors",
+                        pathname === link.href
+                          ? "bg-[#e7f7f8] text-[#078e9d] dark:bg-[#078e9d]/15"
+                          : "hover:bg-muted/50",
+                      ].join(" ")}
+                    >
+                      {link.icon}
+                      <span>{link.label}</span>
                     </Link>
                   ))}
                 </nav>
@@ -557,7 +648,11 @@ export function Navbar() {
 
             {authed ? (
               <div className="mt-auto border-t p-4">
-                <button type="button" onClick={logout} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/20 text-sm font-bold text-destructive hover:bg-destructive/10">
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/20 text-sm font-bold text-destructive hover:bg-destructive/10"
+                >
                   <LogOut className="h-4 w-4" /> خروج از حساب
                 </button>
               </div>

@@ -35,7 +35,7 @@ const values = [
 ];
 
 const audiences = [
-  { icon: PackageCheck, label: "صاحبان کالا و پروفرما" },
+  { icon: PackageCheck, label: "صاحبان کالا و بار" },
   { icon: Target, label: "دارندگان ثبت سفارش" },
   { icon: Building2, label: "شرکت‌های بازرگانی" },
   { icon: Users, label: "فعالان تجارت خارجی" },
@@ -55,16 +55,28 @@ export default function AboutPage() {
               بستری تخصصی برای ساختن ارتباط‌های تجاری بهتر
             </h1>
             <p className="mt-5 max-w-2xl text-sm leading-8 text-slate-600 dark:text-slate-300 sm:text-base">
-              GMP با هدف ساده‌تر کردن ارتباط میان صاحبان کالا و دارندگان ثبت سفارش شکل گرفته است. کاربران اطلاعات خود را ثبت می‌کنند، فرصت‌های مرتبط را می‌بینند و برای ادامه همکاری مستقیما با یکدیگر ارتباط می‌گیرند.
+              GMP با هدف ساده‌تر کردن ارتباط میان صاحبان کالا و دارندگان ثبت
+              سفارش شکل گرفته است. کاربران اطلاعات خود را ثبت می‌کنند، فرصت‌های
+              مرتبط را می‌بینند و برای ادامه همکاری مستقیما با یکدیگر ارتباط
+              می‌گیرند.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg" className="h-12 rounded-xl bg-[#078e9d] px-6 hover:bg-[#087d89]">
+              <Button
+                asChild
+                size="lg"
+                className="h-12 rounded-xl bg-[#078e9d] px-6 hover:bg-[#087d89]"
+              >
                 <Link href="/register">
                   ایجاد حساب کاربری
                   <ArrowLeft className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="h-12 rounded-xl bg-white px-6 dark:bg-transparent">
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 rounded-xl bg-white px-6 dark:bg-transparent"
+              >
                 <Link href="/how-it-works">آشنایی با نحوه کار</Link>
               </Button>
             </div>
@@ -86,17 +98,26 @@ export default function AboutPage() {
 
       <section>
         <div className="text-center">
-          <p className="text-sm font-bold text-[#078e9d]">آنچه برای ما مهم است</p>
-          <h2 className="mt-2 text-2xl font-black text-[#092e54] dark:text-white">ارزش پیشنهادی GMP</h2>
+          <p className="text-sm font-bold text-[#078e9d]">
+            آنچه برای ما مهم است
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-[#092e54] dark:text-white">
+            ارزش پیشنهادی GMP
+          </h2>
         </div>
         <div className="mt-7 grid gap-4 md:grid-cols-3">
           {values.map(({ icon: Icon, title, description }) => (
-            <article key={title} className="rounded-[1.5rem] border bg-card p-6 shadow-sm">
+            <article
+              key={title}
+              className="rounded-[1.5rem] border bg-card p-6 shadow-sm"
+            >
               <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#e9f8f9] text-[#087f8d] dark:bg-[#078e9d]/15">
                 <Icon className="h-6 w-6" />
               </span>
               <h3 className="mt-5 text-lg font-black">{title}</h3>
-              <p className="mt-3 text-sm leading-7 text-muted-foreground">{description}</p>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                {description}
+              </p>
             </article>
           ))}
         </div>
@@ -106,14 +127,20 @@ export default function AboutPage() {
         <div className="grid gap-8 lg:grid-cols-[.75fr_1.25fr] lg:items-center">
           <div>
             <p className="text-sm font-bold text-[#078e9d]">جامعه کاربران</p>
-            <h2 className="mt-2 text-2xl font-black">GMP برای چه کسانی ساخته شده است؟</h2>
+            <h2 className="mt-2 text-2xl font-black">
+              GMP برای چه کسانی ساخته شده است؟
+            </h2>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              این پلتفرم برای فعالانی طراحی شده که در فرایند تامین، ثبت سفارش، واردات و عرضه کالا نقش دارند و به دنبال فرصت همکاری تخصصی هستند.
+              این پلتفرم برای فعالانی طراحی شده که در فرایند تامین، ثبت سفارش،
+              واردات و عرضه کالا نقش دارند و به دنبال فرصت همکاری تخصصی هستند.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {audiences.map(({ icon: Icon, label }) => (
-              <div key={label} className="rounded-2xl border bg-background p-4 text-center">
+              <div
+                key={label}
+                className="rounded-2xl border bg-background p-4 text-center"
+              >
                 <Icon className="mx-auto h-7 w-7 text-[#087f8d]" />
                 <p className="mt-3 text-xs font-bold leading-6">{label}</p>
               </div>
@@ -125,10 +152,18 @@ export default function AboutPage() {
       <section className="overflow-hidden rounded-[2rem] bg-[#072f53] p-7 text-white sm:p-9">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-black">برای پیدا کردن فرصت مناسب آماده‌اید؟</h2>
-            <p className="mt-3 text-sm leading-7 text-white/70">پس از ثبت‌نام و تایید حساب، می‌توانید وارد بازار GMP شوید.</p>
+            <h2 className="text-2xl font-black">
+              برای پیدا کردن فرصت مناسب آماده‌اید؟
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-white/70">
+              پس از ثبت‌نام و تایید حساب، می‌توانید وارد بازار GMP شوید.
+            </p>
           </div>
-          <Button asChild size="lg" className="h-12 rounded-xl bg-[#079d58] px-7 hover:bg-[#07864d]">
+          <Button
+            asChild
+            size="lg"
+            className="h-12 rounded-xl bg-[#079d58] px-7 hover:bg-[#07864d]"
+          >
             <Link href="/register">شروع ثبت‌نام</Link>
           </Button>
         </div>

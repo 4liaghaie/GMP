@@ -228,8 +228,8 @@ export default function DashboardPage() {
       icon: <ClipboardList className="h-5 w-5" />,
     },
     {
-      title: "مدیریت پروفرماها",
-      description: "مشاهده، ویرایش، حذف، تایید یا رد همه پروفرماها",
+      title: "مدیریت بارها",
+      description: "مشاهده، ویرایش، حذف، تایید یا رد همه بارها",
       href: "/admin-proformas",
       icon: <FileText className="h-5 w-5" />,
     },
