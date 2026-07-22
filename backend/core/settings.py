@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 
+from django.core.exceptions import ImproperlyConfigured
+
 import dj_database_url
 from dotenv import load_dotenv
 from corsheaders.defaults import default_headers
@@ -25,10 +27,38 @@ load_dotenv(BASE_DIR / ".env")
 # ----------------------------
 # Core
 # ----------------------------
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret")
 
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,194.48.198.250").split(",") if h.strip()]
+INSECURE_SECRET_KEYS = {
+    "dev-secret",
+    "change-me-in-production",
+    "replace-with-a-long-random-django-secret",
+}
+
+if not DEBUG and SECRET_KEY in INSECURE_SECRET_KEYS:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set in production.")
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+SECURE_SSL_REDIRECT = os.getenv("DJANGO_SECURE_SSL_REDIRECT", "0") == "1"
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
+SECURE_HSTS_PRELOAD = os.getenv("DJANGO_SECURE_HSTS_PRELOAD", "0") == "1"
 
 
 # ----------------------------
@@ -130,7 +160,7 @@ USE_TZ = True
 # ----------------------------
 # Static files
 # ----------------------------
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -162,8 +192,8 @@ CORS_ALLOWED_ORIGINS = [
     if o.strip()
 ]
 
-# If you later use cookies (httpOnly refresh), enable credentials:
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "0") == "1"
+CORS_ALLOW_CREDENTIALS = False
 # Allow custom request headers used by the frontend (preflight).
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "cache-control",

@@ -13,8 +13,20 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-  title: "GMP",
+  metadataBase: new URL("https://gomrokmp.com"),
+  title: {
+    default: "GMP | بازار هوشمند تجارت خارجی",
+    template: "%s | GMP",
+  },
   description: "پلتفرم ارتباط دارندگان ثبت سفارش و دارندگان کالا در گمرک",
+  openGraph: {
+    type: "website",
+    locale: "fa_IR",
+    siteName: "GMP",
+    title: "GMP | بازار هوشمند تجارت خارجی",
+    description: "پلتفرم ارتباط دارندگان ثبت سفارش و دارندگان کالا در گمرک",
+    url: "https://gomrokmp.com",
+  },
 };
 
 export default function RootLayout({
