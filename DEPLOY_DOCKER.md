@@ -60,6 +60,7 @@ POSTGRES_DB=gmp
 POSTGRES_USER=gmp
 POSTGRES_PASSWORD=PASTE_THE_32_BYTE_VALUE
 
+PYPI_INDEX_URL=https://pypi.org/simple
 NEXT_PUBLIC_API_BASE=https://gomrokmp.com/api
 NEXT_PUBLIC_RUBIKA_LINK=YOUR_FULL_RUBIKA_LINK
 NEXT_PUBLIC_BALE_USERNAME=YOUR_BALE_USERNAME
@@ -183,3 +184,14 @@ docker compose exec backend python manage.py check --deploy
 ```
 
 If certificate issuance fails, confirm both DNS records resolve to this VPS, ports 80/443 are open, and no host process conflicts with Docker.
+
+If the backend build reports an HTTP `402` from `mirror-pypi.runflare.com`, ensure the latest `backend/Dockerfile` is present and `.env` contains the official package index, then rebuild the backend package layer:
+
+```dotenv
+PYPI_INDEX_URL=https://pypi.org/simple
+```
+
+```bash
+docker compose build --no-cache backend
+docker compose up -d
+```

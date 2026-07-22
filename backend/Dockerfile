@@ -1,5 +1,7 @@
 FROM python:3.13-slim
 
+ARG PYPI_INDEX_URL=https://pypi.org/simple
+
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
@@ -16,7 +18,7 @@ RUN sed -i 's|http://deb.debian.org/debian|https://repo.abrha.net/debian|g' /etc
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir \
-    -i https://mirror-pypi.runflare.com/simple/ \
+    --index-url "${PYPI_INDEX_URL}" \
     -r requirements.txt
     
 COPY . .
