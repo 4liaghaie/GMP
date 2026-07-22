@@ -1,9 +1,16 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
+import { Vazirmatn } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+
+const vazirmatn = Vazirmatn({
+  subsets: ["arabic", "latin"],
+  display: "swap",
+  variable: "--font-vazirmatn",
+});
 
 export const metadata: Metadata = {
   title: "GMP",
@@ -16,8 +23,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fa" dir="rtl" suppressHydrationWarning className="h-full">
-      <body className="min-h-screen h-full antialiased">
+    <html
+      lang="fa"
+      dir="rtl"
+      suppressHydrationWarning
+      className={`${vazirmatn.variable} h-full`}
+    >
+      <body className="min-h-screen h-full font-sans antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -31,7 +43,7 @@ export default function RootLayout({
           >
             <SiteHeader />
 
-            <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
+            <main className="site-content flex-1 mx-auto w-full max-w-6xl px-4 py-10">
               {children}
             </main>
             <SiteFooter />

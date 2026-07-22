@@ -65,8 +65,6 @@
 
 :root {
   --radius: 0.625rem;
-  --font-vazirmatn: "Vazirmatn", sans-serif;
-
   /* Surfaces (light) */
   --background: oklch(1 0 0);
   --foreground: oklch(from #0c2b56 l c h); /* navy text */
@@ -182,7 +180,11 @@
     @apply border-border outline-ring/50;
   }
   html,
-  body {
+  body,
+  button,
+  input,
+  select,
+  textarea {
     @apply bg-background text-foreground;
     font-family: var(--font-vazirmatn), sans-serif;
   }
@@ -194,6 +196,13 @@
   h6 {
     font-family: inherit;
   }
+}
+
+/* The landing page owns its full-width section layout. Other routes keep the
+   shared centered content container from app/layout.tsx. */
+.site-content:has(> .gmp-home-page) {
+  max-width: none;
+  padding: 0;
 }
 
 /* ----------------------------
