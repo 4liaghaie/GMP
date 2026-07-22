@@ -59,6 +59,7 @@ LETSENCRYPT_EMAIL=YOUR_REAL_EMAIL
 POSTGRES_DB=gmp
 POSTGRES_USER=gmp
 POSTGRES_PASSWORD=PASTE_THE_32_BYTE_VALUE
+DJANGO_SECRET_KEY=PASTE_THE_48_BYTE_VALUE
 
 PYPI_INDEX_URL=https://pypi.org/simple
 NEXT_PUBLIC_API_BASE=https://gomrokmp.com/api
@@ -67,7 +68,7 @@ NEXT_PUBLIC_BALE_USERNAME=YOUR_BALE_USERNAME
 MEDIA_HOST_PATH=/var/www/gmp-media
 ```
 
-Edit `backend/.env.docker` and replace `DJANGO_SECRET_KEY` with the generated 48-byte value. Keep `DJANGO_DEBUG=0`. Never commit either production environment file.
+Keep `DJANGO_DEBUG=0` in `backend/.env.docker` and retain the SMS provider settings there. The root `.env` supplies the required Django secret to Compose. Never commit either production environment file.
 
 Before changing an existing deployment, take a database backup using its current container and credentials. With the old default setup this is typically:
 

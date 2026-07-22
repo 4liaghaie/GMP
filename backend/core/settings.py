@@ -34,6 +34,7 @@ INSECURE_SECRET_KEYS = {
     "dev-secret",
     "change-me-in-production",
     "replace-with-a-long-random-django-secret",
+    "replace-with-the-output-of-openssl-rand-hex-48",
 }
 
 if not DEBUG and SECRET_KEY in INSECURE_SECRET_KEYS:

@@ -36,6 +36,7 @@ services:
       - ./backend/.env.docker
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env}
       DJANGO_DEBUG: "0"
       DJANGO_ALLOWED_HOSTS: ${DOMAIN:-gomrokmp.com},www.${DOMAIN:-gomrokmp.com},backend
       DJANGO_CSRF_TRUSTED_ORIGINS: https://${DOMAIN:-gomrokmp.com},https://www.${DOMAIN:-gomrokmp.com}
