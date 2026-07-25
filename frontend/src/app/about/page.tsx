@@ -5,13 +5,20 @@ import {
   BrainCircuit,
   Building2,
   Handshake,
+  MessageCircle,
   PackageCheck,
+  Phone,
   ShieldCheck,
   Target,
   Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  formatSupportPhone,
+  SUPPORT_PHONE_HREF,
+  SUPPORT_WHATSAPP_HREF,
+} from "@/lib/contact";
 
 const values = [
   {
@@ -146,6 +153,39 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section
+        id="support"
+        className="rounded-[2rem] border bg-white p-6 shadow-sm dark:bg-slate-950 sm:p-8"
+      >
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#e9f8f9] text-[#087f8d] dark:bg-[#078e9d]/15">
+              <Phone className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="text-sm font-bold text-[#078e9d]">شماره پشتیبانی</p>
+              <a
+                href={SUPPORT_PHONE_HREF}
+                dir="ltr"
+                className="mt-1 block text-xl font-black text-[#092e54] hover:text-[#078e9d] dark:text-white"
+              >
+                {formatSupportPhone()}
+              </a>
+            </div>
+          </div>
+          <Button
+            asChild
+            variant="outline"
+            className="h-11 rounded-xl border-[#078e9d]/30 text-[#087f8d] hover:bg-[#e9f8f9]"
+          >
+            <a href={SUPPORT_WHATSAPP_HREF} target="_blank" rel="noreferrer">
+              <MessageCircle className="h-4 w-4" />
+              گفتگو در واتساپ
+            </a>
+          </Button>
         </div>
       </section>
 

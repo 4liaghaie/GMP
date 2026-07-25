@@ -13,6 +13,9 @@ from .views import (
     MarketplaceGoodsNeedListAPIView,
     NotificationListAPIView,
     NotificationMarkReadAPIView,
+    SupportMessageListCreateAPIView,
+    AdminSupportConversationListAPIView,
+    AdminSupportMessageListCreateAPIView,
 )
 
 urlpatterns = [
@@ -29,4 +32,7 @@ urlpatterns = [
     path("marketplace/goods-needs/", MarketplaceGoodsNeedListAPIView.as_view()),
     path("notifications/", NotificationListAPIView.as_view(), name="notification-list"),
     path("notifications/<int:pk>/read/", NotificationMarkReadAPIView.as_view(), name="notification-read"),
+    path("support-chat/messages/", SupportMessageListCreateAPIView.as_view(), name="support-chat-messages"),
+    path("admin/support-chat/conversations/", AdminSupportConversationListAPIView.as_view(), name="admin-support-chat-conversations"),
+    path("admin/support-chat/conversations/<int:user_id>/messages/", AdminSupportMessageListCreateAPIView.as_view(), name="admin-support-chat-messages"),
 ]

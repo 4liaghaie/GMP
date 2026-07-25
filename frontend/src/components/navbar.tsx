@@ -18,9 +18,16 @@ import {
   FilePlus2,
   Info,
   PackageSearch,
+  MessagesSquare,
   Store,
 } from "lucide-react";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -40,6 +47,15 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const AUTH_EVENT = "auth-changed";
 
@@ -67,6 +83,7 @@ export function Navbar() {
   const [authed, setAuthed] = React.useState(false);
   const [role, setRole] = React.useState("");
   const [open, setOpen] = React.useState(false);
+  const [desktopMenuOpen, setDesktopMenuOpen] = React.useState(false);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [notifications, setNotifications] = React.useState<UserNotification[]>(
     [],
@@ -122,7 +139,10 @@ export function Navbar() {
   }, [authed, pathname]);
 
   // close menu on route change
-  React.useEffect(() => setOpen(false), [pathname]);
+  React.useEffect(() => {
+    setOpen(false);
+    setDesktopMenuOpen(false);
+  }, [pathname]);
 
   // close on Esc
   React.useEffect(() => {
@@ -161,14 +181,6 @@ export function Navbar() {
   }
 
   const recentNotifications = notifications.slice(0, 5);
-  const desktopLinks = [
-    { href: "/", label: "خانه" },
-    { href: authed ? "/marketplace" : "/login", label: "فرصت‌های همکاری" },
-    { href: authed ? "/add-need" : "/login", label: "ثبت کالا" },
-    { href: authed ? "/add-order" : "/login", label: "ثبت سفارش" },
-    { href: "/how-it-works", label: "نحوه کار" },
-    { href: "/about", label: "درباره ما" },
-  ];
   const publicMobileLinks: MobileLink[] = [
     { href: "/", label: "خانه", icon: <Home className="h-5 w-5" /> },
     {
@@ -208,6 +220,11 @@ export function Navbar() {
       label: unreadCount ? `اعلان‌ها (${unreadCount})` : "اعلان‌ها",
       icon: <Bell className="h-5 w-5" />,
     },
+    {
+      href: role === "admin" ? "/admin-chat" : "/support-chat",
+      label: role === "admin" ? "گفتگوهای پشتیبانی" : "گفتگو با پشتیبانی",
+      icon: <MessagesSquare className="h-5 w-5" />,
+    },
   ];
   const mobileQuickActions: MobileLink[] = [
     {
@@ -231,6 +248,67 @@ export function Navbar() {
       icon: <Boxes className="h-5 w-5" />,
     },
   ];
+  const adminLinks: MobileLink[] = [
+    {
+      href: "/user-management",
+      label: "مدیریت کاربران",
+      icon: <User className="h-5 w-5" />,
+    },
+    {
+      href: "/admin-orders",
+      label: "مدیریت ثبت سفارش‌ها",
+      icon: <ClipboardList className="h-5 w-5" />,
+    },
+    {
+      href: "/admin-proformas",
+      label: "مدیریت بارها",
+      icon: <Boxes className="h-5 w-5" />,
+    },
+    {
+      href: "/admin-chat",
+      label: "گفتگوهای پشتیبانی",
+      icon: <MessagesSquare className="h-5 w-5" />,
+    },
+    {
+      href: "/import-hs",
+      label: "مدیریت کدهای HS",
+      icon: <PackageSearch className="h-5 w-5" />,
+    },
+  ];
+  const desktopMenuSections = [
+    {
+      value: "public",
+      title: "راهنمای سایت",
+      description: "صفحات عمومی و معرفی GMP",
+      links: publicMobileLinks,
+    },
+    ...(authed
+      ? [
+          {
+            value: "marketplace",
+            title: "بازار و ثبت اطلاعات",
+            description: "مشاهده بازار یا ثبت مورد جدید",
+            links: mobileQuickActions,
+          },
+          {
+            value: "account",
+            title: "حساب کاربری",
+            description: "مدیریت موارد شخصی و ارتباط با پشتیبانی",
+            links: accountMobileLinks,
+          },
+        ]
+      : []),
+    ...(authed && role === "admin"
+      ? [
+          {
+            value: "admin",
+            title: "مدیریت سامانه",
+            description: "ابزارهای اختصاصی مدیران",
+            links: adminLinks,
+          },
+        ]
+      : []),
+  ];
 
   async function markRead(id: number) {
     try {
@@ -245,47 +323,146 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 text-[#092e54] shadow-[0_8px_30px_-28px_rgba(8,40,73,.55)] backdrop-blur-xl dark:border-white/10 dark:bg-[#07182c]/90 dark:text-white">
       <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between gap-5 px-4 lg:px-8">
-        {/* Left: Brand */}
-        <Link href="/" className="flex min-w-0 items-center gap-3 md:order-3">
-          <div className="relative h-12 w-14 shrink-0 overflow-hidden">
-            <Image
-              src="/logo2.png"
-              alt="Logo"
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
+        <div className="flex min-w-0 items-center gap-2 md:order-3">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
+            <div className="relative h-12 w-14 shrink-0 overflow-hidden">
+              <Image
+                src="/logo2.png"
+                alt="Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
 
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-base font-black tracking-[.18em]">
-              GMP
-            </p>
-            <p className="truncate text-[9px] font-medium tracking-wide text-slate-500 max-sm:hidden dark:text-slate-400">
-              CUSTOMS MARKETPLACE
-            </p>
-          </div>
-        </Link>
+            <div className="min-w-0 leading-tight">
+              <p className="truncate text-base font-black tracking-[.18em]">
+                GMP
+              </p>
+              <p className="truncate text-[9px] font-medium tracking-wide text-slate-500 max-sm:hidden dark:text-slate-400">
+                CUSTOMS MARKETPLACE
+              </p>
+            </div>
+          </Link>
 
-        <nav
-          className="order-2 hidden flex-1 items-center justify-center gap-1 lg:flex"
-          aria-label="ناوبری اصلی"
-        >
-          {desktopLinks.map((link) => (
-            <Link
-              key={`${link.href}-${link.label}`}
-              href={link.href}
-              className={[
-                "rounded-lg px-3 py-2 text-sm font-semibold transition-colors hover:bg-[#e9f8f9] hover:text-[#078e9d] dark:hover:bg-white/5",
-                pathname === link.href
-                  ? "text-[#078e9d]"
-                  : "text-[#173c60] dark:text-slate-200",
-              ].join(" ")}
+          <Sheet open={desktopMenuOpen} onOpenChange={setDesktopMenuOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                className="hidden h-10 rounded-xl border-[#078e9d]/25 bg-[#e9f8f9]/70 px-3 text-[#087f8d] hover:bg-[#dff4f5] md:inline-flex dark:bg-[#078e9d]/10"
+              >
+                <Menu className="h-4 w-4" />
+                منو
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="right"
+              showCloseButton={false}
+              dir="rtl"
+              className="h-dvh w-[min(92vw,430px)] gap-0 overflow-hidden border-l p-0 sm:max-w-[430px]"
             >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+              <SheetHeader className="relative border-b bg-[linear-gradient(145deg,#082f54,#075f73)] px-5 py-6 text-right text-white">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-12 w-14 overflow-hidden rounded-xl bg-white/95 p-1">
+                      <Image
+                        src="/logo2.png"
+                        alt="GMP"
+                        fill
+                        className="object-contain p-1"
+                      />
+                    </div>
+                    <div>
+                      <SheetTitle className="text-right text-lg font-black text-white">
+                        منوی GMP
+                      </SheetTitle>
+                      <SheetDescription className="mt-1 text-right text-xs text-white/65">
+                        دسترسی به همه بخش‌های سامانه
+                      </SheetDescription>
+                    </div>
+                  </div>
+                  <SheetClose asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0 rounded-xl text-white hover:bg-white/10 hover:text-white"
+                      aria-label="بستن منو"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </SheetClose>
+                </div>
+              </SheetHeader>
+
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2">
+                <Accordion
+                  type="single"
+                  collapsible
+                  defaultValue={authed ? "marketplace" : "public"}
+                >
+                  {desktopMenuSections.map((section) => (
+                    <AccordionItem key={section.value} value={section.value}>
+                      <AccordionTrigger className="py-4 text-right hover:no-underline">
+                        <span>
+                          <span className="block font-bold">
+                            {section.title}
+                          </span>
+                          <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                            {section.description}
+                          </span>
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-1.5">
+                          {section.links.map((link) => (
+                            <Link
+                              key={`${section.value}-${link.href}-${link.label}`}
+                              href={link.href}
+                              onClick={() => setDesktopMenuOpen(false)}
+                              className={[
+                                "flex items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm font-semibold transition",
+                                pathname === link.href
+                                  ? "border-[#078e9d]/20 bg-[#e9f8f9] text-[#078e9d] dark:bg-[#078e9d]/10"
+                                  : "hover:border-border hover:bg-muted/60",
+                              ].join(" ")}
+                            >
+                              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-muted text-[#087f8d]">
+                                {link.icon}
+                              </span>
+                              {link.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
+
+              {!authed ? (
+                <div className="flex gap-2 border-t bg-muted/30 p-4">
+                  <Button asChild className="flex-1 rounded-xl">
+                    <Link href="/register">ثبت‌نام</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="flex-1 rounded-xl">
+                    <Link href="/login">ورود</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="border-t bg-muted/30 p-4">
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl"
+                    onClick={logout}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    خروج از حساب
+                  </Button>
+                </div>
+              )}
+            </SheetContent>
+          </Sheet>
+        </div>
 
         {/* Desktop actions */}
         <div className="order-1 hidden items-center gap-2 md:flex">
@@ -312,11 +489,16 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/dashboard">داشبورد</Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/profile">پروفایل</Link>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-10 rounded-xl"
+              >
+                <Link href="/dashboard">
+                  <LayoutDashboard className="h-4 w-4" />
+                  داشبورد
+                </Link>
               </Button>
               <Popover>
                 <PopoverTrigger asChild>
@@ -390,8 +572,15 @@ export function Navbar() {
                   </div>
                 </PopoverContent>
               </Popover>
-              <Button variant="outline" size="sm" onClick={logout}>
-                خروج
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={logout}
+                aria-label="خروج"
+                title="خروج"
+                className="h-10 w-10 rounded-xl"
+              >
+                <LogOut className="h-4 w-4" />
               </Button>
             </>
           )}

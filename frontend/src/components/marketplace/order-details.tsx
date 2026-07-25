@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   BadgeCheck,
   Check,
@@ -46,9 +47,9 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBankBranch } from "@/lib/bankBranch";
+import { SUPPORT_WHATSAPP_NUMBER } from "@/lib/contact";
 import { cn } from "@/lib/utils";
 
-const WHATSAPP_NUMBER = "989008116606";
 const RUBIKA_LINK =
   process.env.NEXT_PUBLIC_RUBIKA_LINK ||
   process.env.NEXT_PUBLIC_RUBIKA_USERNAME ||
@@ -345,9 +346,9 @@ function MetaCard({
 }
 
 function ContactCard({ referenceText }: { referenceText: string }) {
-  const displayPhone = WHATSAPP_NUMBER;
+  const displayPhone = SUPPORT_WHATSAPP_NUMBER;
   const waLink = buildWhatsAppLink(
-    WHATSAPP_NUMBER,
+    SUPPORT_WHATSAPP_NUMBER,
     `${WHATSAPP_MESSAGE}\nشناسه سفارش: ${referenceText}`,
   );
 
@@ -362,6 +363,13 @@ function ContactCard({ referenceText }: { referenceText: string }) {
 
       <CardContent className="grid gap-2">
         <Button asChild className="rounded-2xl">
+          <Link href="/support-chat">
+            <MessageCircle className="h-4 w-4" />
+            گفتگو با پشتیبانی در سایت
+          </Link>
+        </Button>
+
+        <Button asChild variant="outline" className="rounded-2xl">
           <a
             href={waLink}
             target="_blank"
@@ -376,7 +384,7 @@ function ContactCard({ referenceText }: { referenceText: string }) {
 
         <Button asChild variant="outline" className="rounded-2xl">
           <a
-            href={buildWhatsAppLink(WHATSAPP_NUMBER)}
+            href={buildWhatsAppLink(SUPPORT_WHATSAPP_NUMBER)}
             target="_blank"
             rel="noreferrer"
           >

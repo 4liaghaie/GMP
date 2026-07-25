@@ -74,7 +74,7 @@ export default function NotificationsPage() {
         <PageHeader
           eyebrow="اعلان‌ها"
           title="اعلان‌های حساب"
-          description="نتیجه تایید یا رد ثبت سفارش‌ها و بارهای شما اینجا نمایش داده می‌شود."
+          description="نتیجه بررسی موارد و پیام‌های جدید پشتیبانی اینجا نمایش داده می‌شود."
           icon={<Bell className="h-6 w-6" />}
           accentClassName="bg-slate-900"
           actions={
@@ -114,6 +114,8 @@ export default function NotificationsPage() {
                           variant={
                             item.notification_type === "approved"
                               ? "default"
+                              : item.notification_type === "message"
+                                ? "secondary"
                               : item.notification_type === "submitted"
                                 ? "secondary"
                                 : "destructive"
@@ -121,6 +123,8 @@ export default function NotificationsPage() {
                         >
                           {item.notification_type === "approved"
                             ? "تایید"
+                            : item.notification_type === "message"
+                              ? "پیام"
                             : item.notification_type === "submitted"
                               ? "در انتظار بررسی"
                               : "رد"}
@@ -140,7 +144,9 @@ export default function NotificationsPage() {
                   <div className="flex flex-wrap gap-2">
                     <Button asChild variant="outline" size="sm">
                       <Link href={notificationTargetHref(item, role)}>
-                        مشاهده مورد
+                        {item.notification_type === "message"
+                          ? "مشاهده گفتگو"
+                          : "مشاهده مورد"}
                       </Link>
                     </Button>
                     {!item.read ? (

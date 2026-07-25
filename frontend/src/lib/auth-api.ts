@@ -293,7 +293,7 @@ export type UserNotification = {
   id: number;
   title: string;
   message: string;
-  notification_type: "submitted" | "approved" | "rejected";
+  notification_type: "submitted" | "approved" | "rejected" | "message";
   related_model: string;
   related_uuid: string;
   read: boolean;

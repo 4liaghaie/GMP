@@ -7,7 +7,15 @@ from rest_framework import serializers
 from customs.models import HSCode
 
 from .bank_branches import format_bank_branch
-from .models import GoodsNeed, GoodsNeedGood, Notification, OrderGood, RegisteredOrder
+from .models import (
+    GoodsNeed,
+    GoodsNeedGood,
+    Notification,
+    OrderGood,
+    RegisteredOrder,
+    SupportConversation,
+    SupportMessage,
+)
 
 
 def is_admin_user(user) -> bool:
@@ -773,6 +781,95 @@ class NotificationSerializer(serializers.ModelSerializer):
             "read",
             "created_at",
         ]
+
+
+class SupportMessageSerializer(serializers.ModelSerializer):
+    sender_username = serializers.CharField(source="sender.username", read_only=True)
+    sender_role = serializers.SerializerMethodField()
+    is_mine = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SupportMessage
+        fields = [
+            "id",
+            "body",
+            "sender_username",
+            "sender_role",
+            "is_mine",
+            "related_model",
+            "related_uuid",
+            "read_at",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "sender_username",
+            "sender_role",
+            "is_mine",
+            "read_at",
+            "created_at",
+        ]
+
+    def validate_body(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("متن پیام نمی‌تواند خالی باشد.")
+        if len(value) > 4000:
+            raise serializers.ValidationError("متن پیام نباید بیشتر از ۴۰۰۰ نویسه باشد.")
+        return value
+
+    def get_sender_role(self, obj):
+        return "admin" if is_admin_user(obj.sender) else "user"
+
+    def get_is_mine(self, obj):
+        request = self.context.get("request")
+        return bool(request and request.user.pk == obj.sender_id)
+
+
+class SupportConversationSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(source="user.pk", read_only=True)
+    username = serializers.CharField(source="user.username", read_only=True)
+    full_name = serializers.SerializerMethodField()
+    phone = serializers.CharField(source="user.phone", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    last_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SupportConversation
+        fields = [
+            "id",
+            "user_id",
+            "username",
+            "full_name",
+            "phone",
+            "email",
+            "last_message",
+            "unread_count",
+            "created_at",
+            "updated_at",
+            "last_message_at",
+        ]
+
+    def get_full_name(self, obj):
+        return obj.user.get_full_name().strip()
+
+    def get_last_message(self, obj):
+        message = obj.messages.select_related("sender").order_by("-created_at", "-id").first()
+        if not message:
+            return None
+        return SupportMessageSerializer(
+            message,
+            context=self.context,
+        ).data
+
+    def get_unread_count(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return 0
+        if is_admin_user(request.user):
+            return obj.messages.filter(sender_id=obj.user_id, read_at__isnull=True).count()
+        return obj.messages.exclude(sender_id=obj.user_id).filter(read_at__isnull=True).count()
 
 class GoodsNeedSerializer(serializers.ModelSerializer):
     hs_code_id = serializers.PrimaryKeyRelatedField(

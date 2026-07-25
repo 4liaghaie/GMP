@@ -197,10 +197,12 @@ class Notification(models.Model):
     TYPE_SUBMITTED = "submitted"
     TYPE_APPROVED = "approved"
     TYPE_REJECTED = "rejected"
+    TYPE_MESSAGE = "message"
     TYPE_CHOICES = [
         (TYPE_SUBMITTED, "Submitted"),
         (TYPE_APPROVED, "Approved"),
         (TYPE_REJECTED, "Rejected"),
+        (TYPE_MESSAGE, "Message"),
     ]
 
     user = models.ForeignKey(User, related_name="notifications", on_delete=models.CASCADE)
@@ -214,3 +216,57 @@ class Notification(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
+
+
+class SupportConversation(models.Model):
+    user = models.OneToOneField(
+        User,
+        related_name="support_conversation",
+        on_delete=models.CASCADE,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
+    last_message_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ["-last_message_at", "-updated_at"]
+
+    def __str__(self):
+        return f"Support chat: {self.user.username}"
+
+
+class SupportMessage(models.Model):
+    RELATED_GENERAL = "general"
+    RELATED_ORDER = "registered_order"
+    RELATED_PROFORMA = "proforma"
+    RELATED_MODEL_CHOICES = [
+        (RELATED_GENERAL, "General"),
+        (RELATED_ORDER, "Registered order"),
+        (RELATED_PROFORMA, "Proforma"),
+    ]
+
+    conversation = models.ForeignKey(
+        SupportConversation,
+        related_name="messages",
+        on_delete=models.CASCADE,
+    )
+    sender = models.ForeignKey(
+        User,
+        related_name="support_messages",
+        on_delete=models.CASCADE,
+    )
+    body = models.TextField()
+    related_model = models.CharField(
+        max_length=32,
+        choices=RELATED_MODEL_CHOICES,
+        default=RELATED_GENERAL,
+    )
+    related_uuid = models.CharField(max_length=64, blank=True, default="")
+    read_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+    def __str__(self):
+        return f"{self.sender.username}: {self.body[:40]}"

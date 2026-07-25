@@ -8,11 +8,13 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         "/admin-orders",
         "/admin-proformas",
+        "/admin-chat",
         "/dashboard",
         "/my-needs",
         "/my-orders",
         "/notifications",
         "/profile",
+        "/support-chat",
         "/user-management",
       ],
     },

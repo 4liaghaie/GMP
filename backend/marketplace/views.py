@@ -3,18 +3,30 @@ from rest_framework.views import APIView
 from rest_framework import generics, permissions, status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 from django.db.models import Prefetch, Q
+from django.utils import timezone
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .filters import RegisteredOrderMarketplaceFilter
 
-from .models import GoodsNeed, GoodsNeedGood, Notification, RegisteredOrder, OrderGood
+from .models import (
+    GoodsNeed,
+    GoodsNeedGood,
+    Notification,
+    RegisteredOrder,
+    OrderGood,
+    SupportConversation,
+    SupportMessage,
+)
 from .notifications import notify_admins_of_submission
 from .serializers import (
     NotificationSerializer,
     RegisteredOrderCreateUpdateSerializer,
     RegisteredOrderReadSerializer,
     PublicRegisteredOrderSerializer,
+    SupportConversationSerializer,
+    SupportMessageSerializer,
 )
 from .proforma_serializers import GoodsNeedSerializer
 
@@ -409,3 +421,161 @@ class NotificationMarkReadAPIView(APIView):
         notification.read = True
         notification.save(update_fields=["read"])
         return Response(NotificationSerializer(notification).data)
+
+
+def create_support_message_notification(message):
+    conversation = message.conversation
+    reference = f" ({message.related_uuid})" if message.related_uuid else ""
+    if message.sender_id == conversation.user_id:
+        User = get_user_model()
+        admins = User.objects.filter(
+            Q(role="admin") | Q(is_staff=True) | Q(is_superuser=True)
+        ).exclude(pk=message.sender_id).distinct()
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    user=admin,
+                    title="پیام جدید پشتیبانی",
+                    message=f"کاربر {conversation.user.username} یک پیام جدید ارسال کرد{reference}.",
+                    notification_type=Notification.TYPE_MESSAGE,
+                    related_model="support_chat",
+                    related_uuid=str(conversation.user_id),
+                )
+                for admin in admins
+            ]
+        )
+        return
+
+    Notification.objects.create(
+        user=conversation.user,
+        title="پاسخ جدید پشتیبانی",
+        message=f"پشتیبانی به گفتگوی شما پاسخ داد{reference}.",
+        notification_type=Notification.TYPE_MESSAGE,
+        related_model="support_chat",
+        related_uuid=str(conversation.user_id),
+    )
+
+
+def serialize_support_messages(request, conversation):
+    if is_admin_user(request.user):
+        conversation.messages.filter(
+            sender_id=conversation.user_id,
+            read_at__isnull=True,
+        ).update(read_at=timezone.now())
+    else:
+        conversation.messages.exclude(
+            sender_id=conversation.user_id,
+        ).filter(read_at__isnull=True).update(read_at=timezone.now())
+
+    messages = list(
+        conversation.messages.select_related("sender").order_by("-created_at", "-id")[:200]
+    )
+    messages.reverse()
+    return SupportMessageSerializer(
+        messages,
+        many=True,
+        context={"request": request},
+    ).data
+
+
+def create_support_message(request, conversation):
+    serializer = SupportMessageSerializer(
+        data=request.data,
+        context={"request": request},
+    )
+    serializer.is_valid(raise_exception=True)
+    message = SupportMessage.objects.create(
+        conversation=conversation,
+        sender=request.user,
+        **serializer.validated_data,
+    )
+    conversation.last_message_at = message.created_at
+    conversation.save(update_fields=["last_message_at", "updated_at"])
+    create_support_message_notification(message)
+    return SupportMessageSerializer(
+        message,
+        context={"request": request},
+    ).data
+
+
+class SupportMessageListCreateAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_conversation(self, request):
+        if is_admin_user(request.user):
+            return None
+        conversation, _ = SupportConversation.objects.get_or_create(user=request.user)
+        return conversation
+
+    def get(self, request):
+        conversation = self.get_conversation(request)
+        if conversation is None:
+            return Response(
+                {"detail": "مدیر باید از صندوق گفتگوی پشتیبانی استفاده کند."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return Response(serialize_support_messages(request, conversation))
+
+    def post(self, request):
+        conversation = self.get_conversation(request)
+        if conversation is None:
+            return Response(
+                {"detail": "مدیر باید از صندوق گفتگوی پشتیبانی استفاده کند."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return Response(
+            create_support_message(request, conversation),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AdminSupportConversationListAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        conversations = (
+            SupportConversation.objects.filter(messages__isnull=False)
+            .select_related("user")
+            .distinct()
+            .order_by("-last_message_at", "-updated_at")
+        )
+        return Response(
+            SupportConversationSerializer(
+                conversations,
+                many=True,
+                context={"request": request},
+            ).data
+        )
+
+
+class AdminSupportMessageListCreateAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+
+    def get_conversation(self, user_id):
+        User = get_user_model()
+        user = get_object_or_404(User, pk=user_id)
+        if is_admin_user(user):
+            return None
+        conversation, _ = SupportConversation.objects.get_or_create(user=user)
+        return conversation
+
+    def get(self, request, user_id):
+        conversation = self.get_conversation(user_id)
+        if conversation is None:
+            return Response(
+                {"detail": "گفتگوی پشتیبانی فقط برای کاربران عادی ایجاد می‌شود."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(serialize_support_messages(request, conversation))
+
+    def post(self, request, user_id):
+        conversation = self.get_conversation(user_id)
+        if conversation is None:
+            return Response(
+                {"detail": "گفتگوی پشتیبانی فقط برای کاربران عادی ایجاد می‌شود."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(
+            create_support_message(request, conversation),
+            status=status.HTTP_201_CREATED,
+        )

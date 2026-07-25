@@ -13,6 +13,7 @@ import {
   Sparkles,
   Store,
   FileText,
+  MessagesSquare,
   UsersRound,
 } from "lucide-react";
 
@@ -215,6 +216,12 @@ export default function DashboardPage() {
   ];
 
   const adminLinks: DashboardLink[] = [
+    {
+      title: "گفتگوهای پشتیبانی",
+      description: "مشاهده پیام کاربران و پاسخ به گفتگوها",
+      href: "/admin-chat",
+      icon: <MessagesSquare className="h-5 w-5" />,
+    },
     {
       title: "مدیریت کاربران",
       description: "تایید، رد یا مسدود کردن درخواست‌ها و کاربران",

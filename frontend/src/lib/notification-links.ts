@@ -23,5 +23,9 @@ export function notificationTargetHref(
     return `/user-management${search}`;
   }
 
+  if (model === "support_chat") {
+    return isAdmin ? `/admin-chat${search}` : "/support-chat";
+  }
+
   return "/notifications";
 }
