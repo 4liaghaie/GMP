@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { ClipboardList, ExternalLink, RefreshCw, Search } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { PaginationControls } from "@/components/pagination-controls";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authFetch } from "@/lib/auth-api";
+import type { PaginatedResponse } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
@@ -113,16 +114,31 @@ function statusVariant(
   return "secondary";
 }
 
-async function fetchAdminOrders(signal?: AbortSignal) {
+type AdminOrderResponse = PaginatedResponse<AdminOrder> & {
+  status_counts: Record<StatusFilter, number>;
+};
+
+async function fetchAdminOrders(args: {
+  q: string;
+  status: StatusFilter;
+  page: number;
+  pageSize: number;
+  signal?: AbortSignal;
+}) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است.");
-  const res = await authFetch(`${API_BASE}/admin/registered-orders/`, {
+  const url = new URL(`${API_BASE}/admin/registered-orders/`);
+  if (args.q) url.searchParams.set("q", args.q);
+  if (args.status !== "all") url.searchParams.set("status", args.status);
+  url.searchParams.set("page", String(args.page));
+  url.searchParams.set("page_size", String(args.pageSize));
+  const res = await authFetch(url.toString(), {
     method: "GET",
     cache: "no-store",
-    signal,
+    signal: args.signal,
   });
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) throw new Error(data?.detail || "خطا در دریافت ثبت سفارش‌ها");
-  return (Array.isArray(data) ? data : data?.results || []) as AdminOrder[];
+  return data as AdminOrderResponse;
 }
 
 async function deleteOrder(uuid: string) {
@@ -163,7 +179,17 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [query, setQuery] = React.useState("");
+  const [debouncedQuery, setDebouncedQuery] = React.useState("");
   const [status, setStatus] = React.useState<StatusFilter>("all");
+  const [page, setPage] = React.useState(1);
+  const pageSize = 20;
+  const [total, setTotal] = React.useState(0);
+  const [counts, setCounts] = React.useState<Record<StatusFilter, number>>({
+    all: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  });
   const [busyUuid, setBusyUuid] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -179,43 +205,39 @@ export default function AdminOrdersPage() {
     setReady(true);
   }, [router]);
 
+  React.useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedQuery(query.trim()), 350);
+    return () => window.clearTimeout(timeout);
+  }, [query]);
+
+  React.useEffect(() => setPage(1), [debouncedQuery, status]);
+
   const load = React.useCallback(() => {
     const ac = new AbortController();
     setLoading(true);
     setError("");
-    fetchAdminOrders(ac.signal)
-      .then(setItems)
+    fetchAdminOrders({
+      q: debouncedQuery,
+      status,
+      page,
+      pageSize,
+      signal: ac.signal,
+    })
+      .then((data) => {
+        setItems(data.results);
+        setTotal(data.count);
+        setCounts(data.status_counts);
+      })
       .catch((err: any) => setError(err?.message || "خطا"))
       .finally(() => setLoading(false));
     return () => ac.abort();
-  }, []);
+  }, [debouncedQuery, page, status]);
 
   React.useEffect(() => {
     if (!ready) return;
     const cleanup = load();
     return cleanup;
   }, [ready, load]);
-
-  const counts = React.useMemo(
-    () => ({
-      all: items.length,
-      pending: items.filter((item) => orderStatus(item) === "pending").length,
-      approved: items.filter((item) => orderStatus(item) === "approved").length,
-      rejected: items.filter((item) => orderStatus(item) === "rejected").length,
-    }),
-    [items],
-  );
-
-  const filtered = React.useMemo(() => {
-    const text = query.trim().toLowerCase();
-    return items.filter((item) => {
-      if (status !== "all" && orderStatus(item) !== status) return false;
-      if (!text) return true;
-      return `${item.uuid ?? ""} ${item.order_number ?? ""} ${item.user ?? ""} ${item.user_email ?? ""} ${item.user_phone ?? ""} ${item.applicant_name ?? ""} ${item.bank_name ?? ""}`
-        .toLowerCase()
-        .includes(text);
-    });
-  }, [items, query, status]);
 
   async function moderate(
     item: AdminOrder,
@@ -319,14 +341,14 @@ export default function AdminOrdersPage() {
               <div className="relative lg:w-[460px]">
                 <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="جستجو با کاربر، ایمیل، متقاضی، بانک، UUID یا شماره سفارش..."
+                  placeholder="جستجو با کد HS، کاربر، متقاضی، بانک، UUID یا شماره سفارش..."
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   className="pr-9"
                 />
               </div>
               <div className="text-sm text-muted-foreground">
-                {loading ? "در حال دریافت..." : `${fmt(filtered.length)} مورد`}
+                {loading ? "در حال دریافت..." : `${fmt(total)} مورد`}
               </div>
             </div>
 
@@ -347,7 +369,7 @@ export default function AdminOrdersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {!loading && filtered.length === 0 ? (
+                    {!loading && items.length === 0 ? (
                       <tr>
                         <td
                           colSpan={9}
@@ -357,7 +379,7 @@ export default function AdminOrdersPage() {
                         </td>
                       </tr>
                     ) : (
-                      filtered.map((item) => (
+                      items.map((item) => (
                         <tr
                           key={item.uuid}
                           className="border-t [&>td]:px-3 [&>td]:py-2"
@@ -403,6 +425,13 @@ export default function AdminOrdersPage() {
                 </table>
               </div>
             </div>
+            <PaginationControls
+              page={page}
+              total={total}
+              pageSize={pageSize}
+              loading={loading}
+              onPageChange={setPage}
+            />
           </CardContent>
         </Card>
       </main>

@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from marketplace.notifications import notify_admins_of_submission
 
 from .premissions import IsAdmin
+from core.pagination import StandardPageNumberPagination
 from .serializers import (
     AdminUserSerializer,
     AdminUserStatusSerializer,
@@ -135,9 +136,10 @@ class AdminUserListView(APIView):
                 | Q(phone__icontains=search)
             )
 
-        return Response(
-            AdminUserSerializer(users, many=True).data,
-            status=status.HTTP_200_OK,
+        paginator = StandardPageNumberPagination()
+        page = paginator.paginate_queryset(users, request, view=self)
+        return paginator.get_paginated_response(
+            AdminUserSerializer(page, many=True).data
         )
 
 

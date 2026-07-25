@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { ClipboardList, PlusCircle, RefreshCw } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { PaginationControls } from "@/components/pagination-controls";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { authFetch } from "@/lib/auth-api";
+import type { PaginatedResponse } from "@/lib/pagination";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -77,18 +79,25 @@ function statusText(item: RegisteredOrderListItem) {
   return "در انتظار تایید";
 }
 
-async function fetchMyOrders(signal?: AbortSignal) {
+async function fetchMyOrders(args: {
+  q: string;
+  page: number;
+  pageSize: number;
+  signal?: AbortSignal;
+}) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است.");
-  const res = await authFetch(`${API_BASE}/registered-orders/`, {
+  const url = new URL(`${API_BASE}/registered-orders/`);
+  if (args.q) url.searchParams.set("q", args.q);
+  url.searchParams.set("page", String(args.page));
+  url.searchParams.set("page_size", String(args.pageSize));
+  const res = await authFetch(url.toString(), {
     method: "GET",
     cache: "no-store",
-    signal,
+    signal: args.signal,
   });
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) throw new Error(data?.detail || "خطا در دریافت ثبت سفارش‌ها");
-  return (
-    Array.isArray(data) ? data : data?.results || []
-  ) as RegisteredOrderListItem[];
+  return data as PaginatedResponse<RegisteredOrderListItem>;
 }
 
 async function deleteOrder(uuid: string) {
@@ -111,6 +120,10 @@ export default function MyOrdersPage() {
   const [error, setError] = React.useState("");
   const [items, setItems] = React.useState<RegisteredOrderListItem[]>([]);
   const [query, setQuery] = React.useState("");
+  const [debouncedQuery, setDebouncedQuery] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const pageSize = 20;
+  const [total, setTotal] = React.useState(0);
   const [deletingUuid, setDeletingUuid] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -121,32 +134,37 @@ export default function MyOrdersPage() {
     setReady(true);
   }, [router]);
 
+  React.useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedQuery(query.trim()), 350);
+    return () => window.clearTimeout(timeout);
+  }, [query]);
+
+  React.useEffect(() => setPage(1), [debouncedQuery]);
+
   const load = React.useCallback(() => {
     const ac = new AbortController();
     setLoading(true);
     setError("");
-    fetchMyOrders(ac.signal)
-      .then(setItems)
+    fetchMyOrders({
+      q: debouncedQuery,
+      page,
+      pageSize,
+      signal: ac.signal,
+    })
+      .then((data) => {
+        setItems(data.results);
+        setTotal(data.count);
+      })
       .catch((err: any) => setError(err?.message || "خطا"))
       .finally(() => setLoading(false));
     return () => ac.abort();
-  }, []);
+  }, [debouncedQuery, page]);
 
   React.useEffect(() => {
     if (!ready) return;
     const cleanup = load();
     return cleanup;
   }, [ready, load]);
-
-  const filtered = React.useMemo(() => {
-    const text = query.trim().toLowerCase();
-    if (!text) return items;
-    return items.filter((item) =>
-      `${item.order_number ?? ""} ${item.id ?? ""} ${item.uuid ?? ""}`
-        .toLowerCase()
-        .includes(text),
-    );
-  }, [items, query]);
 
   async function onDelete(uuid: string) {
     if (!window.confirm("این ثبت سفارش حذف شود؟")) return;
@@ -213,7 +231,7 @@ export default function MyOrdersPage() {
                 className="sm:max-w-[360px]"
               />
               <div className="text-sm text-muted-foreground">
-                {loading ? "در حال دریافت..." : `${filtered.length} مورد`}
+                {loading ? "در حال دریافت..." : `${total} مورد`}
               </div>
             </div>
 
@@ -235,7 +253,7 @@ export default function MyOrdersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {!loading && filtered.length === 0 ? (
+                  {!loading && items.length === 0 ? (
                     <tr>
                       <td
                         className="px-3 py-6 text-center text-muted-foreground"
@@ -245,7 +263,7 @@ export default function MyOrdersPage() {
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((item) => (
+                    items.map((item) => (
                       <tr
                         key={item.uuid}
                         className="border-t [&>td]:px-3 [&>td]:py-2"
@@ -285,6 +303,13 @@ export default function MyOrdersPage() {
                 </tbody>
               </table>
             </div>
+            <PaginationControls
+              page={page}
+              total={total}
+              pageSize={pageSize}
+              loading={loading}
+              onPageChange={setPage}
+            />
           </CardContent>
         </Card>
       </main>

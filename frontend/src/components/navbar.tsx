@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -385,7 +385,7 @@ export function Navbar() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 shrink-0 rounded-xl text-white hover:bg-white/10 hover:text-white"
+                      className="h-9 w-9 shrink-0 rounded-xl text-foreground hover:bg-white/10 hover:text-white"
                       aria-label="بستن منو"
                     >
                       <X className="h-5 w-5" />
@@ -444,7 +444,11 @@ export function Navbar() {
                   <Button asChild className="flex-1 rounded-xl">
                     <Link href="/register">ثبت‌نام</Link>
                   </Button>
-                  <Button asChild variant="outline" className="flex-1 rounded-xl">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="flex-1 rounded-xl"
+                  >
                     <Link href="/login">ورود</Link>
                   </Button>
                 </div>

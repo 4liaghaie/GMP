@@ -11,6 +11,7 @@ import {
   type AdminUser,
 } from "@/lib/auth-api";
 import { PageHeader } from "@/components/page-header";
+import { PaginationControls } from "@/components/pagination-controls";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,10 @@ export default function AdminUsersPage() {
   const [users, setUsers] = React.useState<AdminUser[]>([]);
   const [status, setStatus] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const pageSize = 20;
+  const [total, setTotal] = React.useState(0);
   const [error, setError] = React.useState("");
 
   React.useEffect(() => {
@@ -81,15 +86,33 @@ export default function AdminUsersPage() {
       .catch(() => router.replace("/login"));
   }, [router]);
 
+  React.useEffect(() => {
+    const timeout = window.setTimeout(
+      () => setDebouncedSearch(search.trim()),
+      350,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [search]);
+
+  React.useEffect(() => setPage(1), [debouncedSearch, status]);
+
   const load = React.useCallback(() => {
     if (!ready) return;
     setLoading(true);
     setError("");
-    getAdminUsers({ status, search: search.trim() })
-      .then(setUsers)
+    getAdminUsers({
+      status,
+      search: debouncedSearch,
+      page,
+      pageSize,
+    })
+      .then((data) => {
+        setUsers(data.results);
+        setTotal(data.count);
+      })
       .catch((err: any) => setError(err?.message || "خطا در دریافت کاربران"))
       .finally(() => setLoading(false));
-  }, [ready, search, status]);
+  }, [debouncedSearch, page, ready, status]);
 
   React.useEffect(() => {
     load();
@@ -272,6 +295,13 @@ export default function AdminUsersPage() {
                 </tbody>
               </table>
             </div>
+            <PaginationControls
+              page={page}
+              total={total}
+              pageSize={pageSize}
+              loading={loading}
+              onPageChange={setPage}
+            />
           </CardContent>
         </Card>
       </main>

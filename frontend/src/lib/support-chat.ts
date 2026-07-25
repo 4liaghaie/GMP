@@ -1,4 +1,5 @@
 import { authFetch } from "@/lib/auth-api";
+import type { PaginatedResponse } from "@/lib/pagination";
 
 const API = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -64,12 +65,21 @@ export async function sendSupportMessage(payload: MessagePayload) {
   return parseResponse<SupportMessage>(res, "خطا در ارسال پیام");
 }
 
-export async function getAdminSupportConversations() {
-  const res = await authFetch(`${API}/admin/support-chat/conversations/`, {
+export async function getAdminSupportConversations(params?: {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const url = new URL(`${API}/admin/support-chat/conversations/`);
+  if (params?.q) url.searchParams.set("q", params.q);
+  if (params?.page) url.searchParams.set("page", String(params.page));
+  if (params?.pageSize)
+    url.searchParams.set("page_size", String(params.pageSize));
+  const res = await authFetch(url.toString(), {
     method: "GET",
     cache: "no-store",
   });
-  return parseResponse<SupportConversation[]>(
+  return parseResponse<PaginatedResponse<SupportConversation>>(
     res,
     "خطا در دریافت گفتگوهای پشتیبانی",
   );

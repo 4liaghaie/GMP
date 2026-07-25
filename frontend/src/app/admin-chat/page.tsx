@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { PaginationControls } from "@/components/pagination-controls";
 import { SupportChatPanel } from "@/components/support-chat-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,10 @@ export default function AdminChatPage() {
     null,
   );
   const [query, setQuery] = React.useState("");
+  const [debouncedQuery, setDebouncedQuery] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const pageSize = 20;
+  const [total, setTotal] = React.useState(0);
   const [error, setError] = React.useState("");
 
   React.useEffect(() => {
@@ -55,10 +60,20 @@ export default function AdminChatPage() {
           router.replace("/forbidden");
           return;
         }
+        setQuery(
+          new URLSearchParams(window.location.search).get("search") || "",
+        );
         setReady(true);
       })
       .catch(() => router.replace("/login"));
   }, [router]);
+
+  React.useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedQuery(query.trim()), 350);
+    return () => window.clearTimeout(timeout);
+  }, [query]);
+
+  React.useEffect(() => setPage(1), [debouncedQuery]);
 
   React.useEffect(() => {
     if (!ready) return;
@@ -67,9 +82,15 @@ export default function AdminChatPage() {
     async function load(silent = false) {
       if (!silent) setLoading(true);
       try {
-        const items = await getAdminSupportConversations();
+        const data = await getAdminSupportConversations({
+          q: debouncedQuery,
+          page,
+          pageSize,
+        });
         if (cancelled) return;
+        const items = data.results;
         setConversations(items);
+        setTotal(data.count);
         const requestedUserId = Number(
           new URLSearchParams(window.location.search).get("search"),
         );
@@ -101,18 +122,8 @@ export default function AdminChatPage() {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [ready]);
+  }, [debouncedQuery, page, ready]);
 
-  const normalizedQuery = query.trim().toLowerCase();
-  const filtered = conversations.filter((conversation) => {
-    if (!normalizedQuery) return true;
-    return [
-      conversation.username,
-      conversation.full_name,
-      conversation.phone,
-      conversation.email,
-    ].some((value) => String(value || "").toLowerCase().includes(normalizedQuery));
-  });
   const selected = conversations.find(
     (conversation) => conversation.user_id === selectedUserId,
   );
@@ -164,8 +175,8 @@ export default function AdminChatPage() {
               <div className="grid h-48 place-items-center">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : filtered.length ? (
-              filtered.map((conversation) => (
+            ) : conversations.length ? (
+              conversations.map((conversation) => (
                 <button
                   key={conversation.id}
                   type="button"
@@ -210,6 +221,15 @@ export default function AdminChatPage() {
                 </p>
               </div>
             )}
+          </div>
+          <div className="p-3">
+            <PaginationControls
+              page={page}
+              total={total}
+              pageSize={pageSize}
+              loading={loading}
+              onPageChange={setPage}
+            />
           </div>
         </aside>
 

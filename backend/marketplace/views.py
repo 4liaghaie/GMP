@@ -1,6 +1,6 @@
 # marketplace/views.py
 from rest_framework.views import APIView
-from rest_framework import generics, permissions, status
+from rest_framework import filters as drf_filters, generics, permissions, status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
@@ -9,6 +9,7 @@ from django.utils import timezone
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .filters import RegisteredOrderMarketplaceFilter
+from core.pagination import StandardPageNumberPagination
 
 from .models import (
     GoodsNeed,
@@ -95,8 +96,19 @@ class RegisteredOrderListCreateAPIView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
-        qs = RegisteredOrder.objects.filter(user=request.user).select_related("user").order_by("-created_at")
-        return Response(RegisteredOrderReadSerializer(qs, many=True, context={"request": request}).data)
+        qs = RegisteredOrder.objects.filter(user=request.user).select_related("user").prefetch_related("goods__hs_code").order_by("-created_at")
+        query = (request.query_params.get("q") or "").strip()
+        if query:
+            qs = qs.filter(
+                Q(uuid__icontains=query)
+                | Q(order_number__icontains=query)
+                | Q(goods__hs_code__code__icontains=query)
+                | Q(goods__description__icontains=query)
+            ).distinct()
+        paginator = StandardPageNumberPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+        data = RegisteredOrderReadSerializer(page, many=True, context={"request": request}).data
+        return paginator.get_paginated_response(data)
 
     def post(self, request):
         ser = RegisteredOrderCreateUpdateSerializer(data=request.data, context={"request": request})
@@ -190,15 +202,49 @@ class AdminRegisteredOrderListAPIView(APIView):
 
     def get(self, request):
         qs = RegisteredOrder.objects.select_related("user").prefetch_related("goods__hs_code").order_by("-created_at")
-        return Response(RegisteredOrderReadSerializer(qs, many=True, context={"request": request}).data)
+        query = (request.query_params.get("q") or "").strip()
+        moderation_status = (request.query_params.get("status") or "").strip()
+        if query:
+            qs = qs.filter(
+                Q(uuid__icontains=query)
+                | Q(order_number__icontains=query)
+                | Q(user__username__icontains=query)
+                | Q(user__email__icontains=query)
+                | Q(user__phone__icontains=query)
+                | Q(applicant_name__icontains=query)
+                | Q(bank_name__icontains=query)
+                | Q(goods__description__icontains=query)
+                | Q(goods__hs_code__code__icontains=query)
+            ).distinct()
+        counts = {
+            "all": qs.count(),
+            "pending": qs.filter(verified=False, rejected=False).count(),
+            "approved": qs.filter(verified=True, rejected=False).count(),
+            "rejected": qs.filter(rejected=True).count(),
+        }
+        if moderation_status == "pending":
+            qs = qs.filter(verified=False, rejected=False)
+        elif moderation_status == "approved":
+            qs = qs.filter(verified=True, rejected=False)
+        elif moderation_status == "rejected":
+            qs = qs.filter(rejected=True)
+        paginator = StandardPageNumberPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+        data = RegisteredOrderReadSerializer(page, many=True, context={"request": request}).data
+        response = paginator.get_paginated_response(data)
+        response.data["status_counts"] = counts
+        return response
 
 
 class MarketplaceRegisteredOrderListAPIView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = PublicRegisteredOrderSerializer
 
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, drf_filters.OrderingFilter]
     filterset_class = RegisteredOrderMarketplaceFilter
+    pagination_class = StandardPageNumberPagination
+    ordering_fields = ["created_at", "total_value"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
         return (
@@ -248,7 +294,17 @@ class GoodsNeedListCreateAPIView(APIView):
             .prefetch_related("goods__hs_code")
             .order_by("-created_at")
         )
-        return Response(GoodsNeedSerializer(qs, many=True, context={"request": request}).data)
+        query = (request.query_params.get("q") or "").strip()
+        if query:
+            qs = qs.filter(
+                Q(uuid__icontains=query)
+                | Q(goods__description__icontains=query)
+                | Q(goods__hs_code__code__icontains=query)
+            ).distinct()
+        paginator = StandardPageNumberPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+        data = GoodsNeedSerializer(page, many=True, context={"request": request}).data
+        return paginator.get_paginated_response(data)
 
     def post(self, request):
         ser = GoodsNeedSerializer(data=request.data, context={"request": request})
@@ -342,12 +398,46 @@ class AdminGoodsNeedListAPIView(APIView):
 
     def get(self, request):
         qs = GoodsNeed.objects.select_related("user", "hs_code").prefetch_related("goods__hs_code").order_by("-created_at")
-        return Response(GoodsNeedSerializer(qs, many=True, context={"request": request}).data)
+        query = (request.query_params.get("q") or "").strip()
+        moderation_status = (request.query_params.get("status") or "").strip()
+        if query:
+            qs = qs.filter(
+                Q(uuid__icontains=query)
+                | Q(user__username__icontains=query)
+                | Q(user__email__icontains=query)
+                | Q(user__phone__icontains=query)
+                | Q(status__icontains=query)
+                | Q(country_of_origin__icontains=query)
+                | Q(entry_border__icontains=query)
+                | Q(customs__icontains=query)
+                | Q(goods__description__icontains=query)
+                | Q(goods__hs_code__code__icontains=query)
+                | Q(goods__manufacturer_country__icontains=query)
+            ).distinct()
+        counts = {
+            "all": qs.count(),
+            "pending": qs.filter(verified=False, rejected=False).count(),
+            "approved": qs.filter(verified=True, rejected=False).count(),
+            "rejected": qs.filter(rejected=True).count(),
+        }
+        if moderation_status == "pending":
+            qs = qs.filter(verified=False, rejected=False)
+        elif moderation_status == "approved":
+            qs = qs.filter(verified=True, rejected=False)
+        elif moderation_status == "rejected":
+            qs = qs.filter(rejected=True)
+        paginator = StandardPageNumberPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+        data = GoodsNeedSerializer(page, many=True, context={"request": request}).data
+        response = paginator.get_paginated_response(data)
+        response.data["status_counts"] = counts
+        return response
 
 
 class MarketplaceGoodsNeedListAPIView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = GoodsNeedSerializer
+    pagination_class = StandardPageNumberPagination
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -539,13 +629,26 @@ class AdminSupportConversationListAPIView(APIView):
             .distinct()
             .order_by("-last_message_at", "-updated_at")
         )
-        return Response(
-            SupportConversationSerializer(
-                conversations,
-                many=True,
-                context={"request": request},
-            ).data
-        )
+        query = (request.query_params.get("q") or "").strip()
+        if query:
+            conversation_query = (
+                Q(user__username__icontains=query)
+                | Q(user__first_name__icontains=query)
+                | Q(user__last_name__icontains=query)
+                | Q(user__email__icontains=query)
+                | Q(user__phone__icontains=query)
+            )
+            if query.isdigit():
+                conversation_query |= Q(user_id=int(query))
+            conversations = conversations.filter(conversation_query)
+        paginator = StandardPageNumberPagination()
+        page = paginator.paginate_queryset(conversations, request, view=self)
+        data = SupportConversationSerializer(
+            page,
+            many=True,
+            context={"request": request},
+        ).data
+        return paginator.get_paginated_response(data)
 
 
 class AdminSupportMessageListCreateAPIView(APIView):

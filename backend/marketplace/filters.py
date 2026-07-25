@@ -13,6 +13,7 @@ class RegisteredOrderMarketplaceFilter(filters.FilterSet):
     currency_supply = filters.CharFilter(field_name="currency_supply", lookup_expr="icontains")
     bank_name = filters.CharFilter(field_name="bank_name", lookup_expr="icontains")
     currency_type = filters.CharFilter(field_name="currency_type", lookup_expr="icontains")
+    applicant_name = filters.CharFilter(field_name="applicant_name", lookup_expr="icontains")
 
     hs_code = filters.CharFilter(method="filter_hscode")
 
@@ -50,4 +51,5 @@ class RegisteredOrderMarketplaceFilter(filters.FilterSet):
             "currency_supply",
             "bank_name",
             "currency_type",
+            "applicant_name",
         ]

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { PaginationControls } from "@/components/pagination-controls";
 import {
   Accordion,
   AccordionContent,
@@ -63,6 +64,7 @@ import { borders } from "@/lib/borderList";
 import { countries } from "@/lib/countryList";
 import { iranCustoms } from "@/lib/customsList";
 import { cn } from "@/lib/utils";
+import type { PaginatedResponse } from "@/lib/pagination";
 import ProformaDetails from "@/components/marketplace/proforma-details";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
@@ -509,6 +511,8 @@ async function fetchNeeds(args: {
   manufacturerCountry?: string;
   countryOfOrigin?: string;
   meansOfTransport?: string;
+  page: number;
+  pageSize: number;
   signal?: AbortSignal;
 }) {
   if (!API_BASE) throw new Error("NEXT_PUBLIC_API_BASE تنظیم نشده است");
@@ -534,6 +538,8 @@ async function fetchNeeds(args: {
     url.searchParams.set("country_of_origin", args.countryOfOrigin.trim());
   if (args.meansOfTransport?.trim())
     url.searchParams.set("means_of_transport", args.meansOfTransport.trim());
+  url.searchParams.set("page", String(args.page));
+  url.searchParams.set("page_size", String(args.pageSize));
 
   const res = await authFetch(url.toString(), {
     method: "GET",
@@ -542,7 +548,7 @@ async function fetchNeeds(args: {
   });
   const data = (await res.json().catch(() => ({}))) as any;
   if (!res.ok) throw new Error(data?.detail || "خطا در دریافت نیازهای کالا");
-  return (Array.isArray(data) ? data : data?.results || []) as GoodsNeed[];
+  return data as PaginatedResponse<GoodsNeed>;
 }
 
 function ProformaCard({ need }: { need: GoodsNeed }) {
@@ -644,6 +650,7 @@ function ProformaCard({ need }: { need: GoodsNeed }) {
 
 export default function NeedsMarketplaceList() {
   const [q, setQ] = React.useState("");
+  const [debouncedQ, setDebouncedQ] = React.useState("");
   const [hsCode, setHsCode] = React.useState("");
   const [draftHsCode, setDraftHsCode] = React.useState("");
   const [status, setStatus] = React.useState("");
@@ -668,6 +675,29 @@ export default function NeedsMarketplaceList() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [filterOpen, setFilterOpen] = React.useState(false);
+  const [page, setPage] = React.useState(1);
+  const pageSize = 12;
+  const [total, setTotal] = React.useState(0);
+
+  React.useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedQ(q.trim()), 350);
+    return () => window.clearTimeout(timeout);
+  }, [q]);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [
+    debouncedQ,
+    hsCode,
+    status,
+    goodsStatus,
+    currencyType,
+    entryBorder,
+    customs,
+    manufacturerCountry,
+    countryOfOrigin,
+    meansOfTransport,
+  ]);
 
   const load = React.useCallback(() => {
     const hasTokens =
@@ -686,7 +716,7 @@ export default function NeedsMarketplaceList() {
     setLoading(true);
     setError("");
     fetchNeeds({
-      q,
+      q: debouncedQ,
       hsCode,
       status,
       goodsStatus,
@@ -696,9 +726,14 @@ export default function NeedsMarketplaceList() {
       manufacturerCountry,
       countryOfOrigin,
       meansOfTransport,
+      page,
+      pageSize,
       signal: ac.signal,
     })
-      .then(setItems)
+      .then((data) => {
+        setItems(data.results);
+        setTotal(data.count);
+      })
       .catch((err: any) => {
         if (err?.name === "AbortError") return;
         setError(err?.message || "خطا");
@@ -707,7 +742,7 @@ export default function NeedsMarketplaceList() {
       .finally(() => setLoading(false));
     return () => ac.abort();
   }, [
-    q,
+    debouncedQ,
     hsCode,
     status,
     goodsStatus,
@@ -717,6 +752,7 @@ export default function NeedsMarketplaceList() {
     manufacturerCountry,
     countryOfOrigin,
     meansOfTransport,
+    page,
   ]);
 
   React.useEffect(() => {
@@ -816,7 +852,7 @@ export default function NeedsMarketplaceList() {
               <div>
                 <CardTitle className="text-base">جستجو و فیلتر</CardTitle>
                 <CardDescription>
-                  جستجو سریع در صفحه، فیلترهای دقیق داخل پنل کناری
+                  جستجو در تمام داده‌ها، فیلترهای دقیق داخل پنل کناری
                 </CardDescription>
               </div>
               <div className="flex gap-2">
@@ -1229,7 +1265,7 @@ export default function NeedsMarketplaceList() {
               </div>
             ) : null}
             <div className="text-sm text-muted-foreground">
-              {loading ? "در حال دریافت..." : `${fmt(items.length)} نیاز کالا`}
+              {loading ? "در حال دریافت..." : `${fmt(total)} نیاز کالا`}
             </div>
           </CardContent>
         </Card>
@@ -1251,6 +1287,15 @@ export default function NeedsMarketplaceList() {
               </CardContent>
             </Card>
           ) : null}
+        </div>
+        <div className="mt-5">
+          <PaginationControls
+            page={page}
+            total={total}
+            pageSize={pageSize}
+            loading={loading}
+            onPageChange={setPage}
+          />
         </div>
       </main>
     </div>

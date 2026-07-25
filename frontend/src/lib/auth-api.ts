@@ -1,4 +1,6 @@
 // src/lib/auth-api.ts
+import type { PaginatedResponse } from "@/lib/pagination";
+
 const API = process.env.NEXT_PUBLIC_API_BASE!;
 
 const AUTH_EVENT = "auth-changed";
@@ -265,15 +267,20 @@ export type AdminUser = {
 export async function getAdminUsers(params?: {
   status?: string;
   search?: string;
+  page?: number;
+  pageSize?: number;
 }) {
   const url = new URL(`${API}/admin/users/`);
   if (params?.status) url.searchParams.set("status", params.status);
   if (params?.search) url.searchParams.set("search", params.search);
+  if (params?.page) url.searchParams.set("page", String(params.page));
+  if (params?.pageSize)
+    url.searchParams.set("page_size", String(params.pageSize));
 
   const res = await authFetch(url.toString(), { method: "GET" });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(firstErrorMessage(data, "خطا در دریافت کاربران"));
-  return data as AdminUser[];
+  return data as PaginatedResponse<AdminUser>;
 }
 
 export async function updateAdminUserStatus(
